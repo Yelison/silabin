@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { curriculum } from "@/content/index";
+import { buildCurriculum, curriculum } from "@/content/index";
 import { templates } from "@/content/templates";
-import { MAX_PRESENTATIONS, planSession } from "@/engine/planner";
+import { MAX_PRESENTATIONS, owningUnits, planSession } from "@/engine/planner";
 import {
 	emptyItemProgress,
 	emptyProgressState,
@@ -413,6 +413,111 @@ describe("el plan siempre es coherente, sobre muchas semillas y estados", () => 
 		);
 		expect(repaso.length).toBeGreaterThan(0);
 		expect(repaso[0]?.itemId).toBe(ids[1]);
+	});
+});
+
+describe("las opciones solo traen contenido que el niño ya ha visto", () => {
+	const indiceDeUnidad = new Map(
+		curriculum.unitOrder.map((id, i) => [id, i] as const),
+	);
+	const dueños = owningUnits(curriculum);
+
+	/**
+	 * La única excepción permitida, y sale de la propia spec §4: "nivel fácil = formas muy
+	 * distintas (a vs i vs u); nivel medio = vocales restantes". En phase1:vowel-a el niño
+	 * solo ha visto la a, y en vowel-e la a y la e, así que no hay con qué llenar las 2 o 3
+	 * opciones de listen-tap sin las vocales que aún no tocan. Ninguna otra cosa puede
+	 * colarse: ni una consonante de la Fase 2, ni una palabra de cuatro letras.
+	 */
+	const EXCEPCIONES: Record<string, string[]> = {
+		"phase1:vowel-a": ["letter:e", "letter:i", "letter:o", "letter:u"],
+		"phase1:vowel-e": ["letter:i", "letter:o", "letter:u"],
+	};
+
+	it("cuando ni la fase alcanza, tira del currículo entero antes que dejar al niño sin ejercicio", () => {
+		// Red de seguridad para contenido futuro: aquí la única unidad enseña la a y no hay
+		// ninguna otra unidad de su fase, así que las dos opciones de listen-tap solo pueden
+		// salir de un ítem que no introduce ninguna unidad. Es preferible una opción lejana a
+		// cortarle la sesión al niño con un error.
+		const contenido = buildCurriculum({
+			items: ["a", "z"].map((letra) => ({
+				id: `letter:${letra}`,
+				kind: "letter" as const,
+				text: letra,
+				phonemes: [letra],
+				audioKey: `phoneme:${letra}`,
+				display: { upper: letra.toUpperCase(), lower: letra },
+			})),
+			units: [
+				{
+					id: "sola",
+					phase: 1 as const,
+					title: "Sola",
+					audioKey: "unit:sola",
+					requires: [],
+					introduces: ["letter:a"],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+			],
+		});
+		const sesion = planSession({
+			content: contenido,
+			state: emptyProgressState(),
+			activeUnitId: "sola",
+			sessionLength: 5,
+			seed: 1,
+		});
+		const conOpciones = sesion.filter((e) => e.optionIds.length > 0);
+		expect(conOpciones.length).toBeGreaterThan(0);
+		for (const ejercicio of conOpciones) {
+			expect(ejercicio.optionIds).toContain("letter:z");
+		}
+	});
+
+	it("ninguna opción sale de una unidad posterior a la activa", () => {
+		// Lo medido antes de arreglarlo, en phase1:vowel-a: con nivel difícil aparecía letter:s,
+		// que no se enseña hasta doce unidades después, y con nivel fácil word:amo y word:masa,
+		// palabras de cuatro letras hechas con consonantes que el niño no conoce.
+		let revisadas = 0;
+		let excepciones = 0;
+		for (const unitId of jugables) {
+			const indiceActivo = indiceDeUnidad.get(unitId) ?? -1;
+			// Los dos estados dan los dos niveles de distractor: sin ningún acierto, fácil (el
+			// mínimo de opciones); con un acierto, difícil (el máximo).
+			for (const state of [emptyProgressState(), presented(unitId)]) {
+				for (const length of [5, 6] as const) {
+					for (let seed = 1; seed <= 30; seed += 1) {
+						for (const ejercicio of plan(state, unitId, length, seed)) {
+							for (const optionId of ejercicio.optionIds) {
+								const item = curriculum.items.get(optionId);
+								// Las imágenes quedan fuera: el niño las mira y las oye, no las lee.
+								if (item === undefined || item.kind === "picture") continue;
+								revisadas += 1;
+								const dueño = dueños.get(optionId);
+								const indiceOpcion =
+									dueño === undefined
+										? Number.POSITIVE_INFINITY
+										: (indiceDeUnidad.get(dueño) ?? Number.POSITIVE_INFINITY);
+								if (indiceOpcion <= indiceActivo) continue;
+								excepciones += 1;
+								const permitida = (EXCEPCIONES[unitId] ?? []).includes(
+									optionId,
+								);
+								expect([unitId, optionId, permitida]).toEqual([
+									unitId,
+									optionId,
+									true,
+								]);
+							}
+						}
+					}
+				}
+			}
+		}
+		// Un barrido que no mirara casi nada pasaría por vacío.
+		expect(revisadas).toBeGreaterThan(3000);
+		// Y si las excepciones dejaran de hacer falta, este permiso estaría tapando un hueco.
+		expect(excepciones).toBeGreaterThan(0);
 	});
 });
 

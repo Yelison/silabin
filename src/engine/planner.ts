@@ -2,7 +2,11 @@ import type { CurriculumIndex } from "@/content/index";
 import { pictures } from "@/content/pictures";
 import { type TemplateId, templates } from "@/content/templates";
 import type { Item, Unit } from "@/content/types";
-import { type DistractorLevel, pickDistractors } from "@/engine/distractors";
+import {
+	type DistractorLevel,
+	isForbiddenDistractor,
+	pickDistractors,
+} from "@/engine/distractors";
 import { isDue } from "@/engine/leitner";
 import { itemProgressOf } from "@/engine/mastery";
 import { createRng, type Rng } from "@/engine/random";
@@ -61,12 +65,79 @@ function pickTemplate(
 	return rng.pick(underCap.length > 0 ? underCap : pool);
 }
 
-function optionPool(content: CurriculumIndex, templateId: TemplateId): Item[] {
+/** Ítems que el niño ya ha visto: los que introducen las unidades hasta la activa, incluida. */
+function seenItemIds(
+	content: CurriculumIndex,
+	activeUnitId: string,
+): Set<string> {
+	const hasta = content.unitOrder.indexOf(activeUnitId);
+	const out = new Set<string>();
+	for (const unitId of content.unitOrder.slice(0, hasta + 1)) {
+		for (const id of content.units.get(unitId)?.introduces ?? []) out.add(id);
+	}
+	return out;
+}
+
+/** Ítems de todas las unidades de la misma fase que la activa, se hayan visto o no. */
+function samePhaseItemIds(content: CurriculumIndex, unit: Unit): Set<string> {
+	const out = new Set<string>();
+	for (const otra of content.units.values()) {
+		if (otra.phase !== unit.phase) continue;
+		for (const id of otra.introduces) out.add(id);
+	}
+	return out;
+}
+
+/**
+ * De dónde salen las opciones falsas. Se prefiere siempre lo que el niño ya ha visto: sin
+ * este filtro, en phase1:vowel-a la a se ofrecía junto a la s (que no se enseña hasta doce
+ * unidades después) o junto a palabras de cuatro letras como amo o masa, hechas con
+ * consonantes que el niño no conoce. Eso no es un distractor, es ruido.
+ *
+ * Cuando lo visto no alcanza, se completa con la misma fase. En la Fase 1 eso es justo lo
+ * que pide la spec §4: "nivel fácil = formas muy distintas (a vs i vs u); nivel medio =
+ * vocales restantes". En phase1:vowel-a el niño solo ha visto la a, así que las otras
+ * cuatro vocales son los distractores que la especificación nombra una por una; la i y la
+ * u, de otro grupo de trazo, son además las del nivel fácil. Solo hace falta en vowel-a y
+ * en vowel-e: desde vowel-o ya hay letras vistas de sobra, y en la Fase 2 nunca, porque al
+ * llegar a phase2:m hay 6 letras, 5 sílabas y 5 palabras vistas.
+ *
+ * El tercer nivel, el currículo entero, es la red de seguridad: con contenido nuevo que
+ * dejara una fase sin distractores suficientes, es preferible una opción lejana a dejar al
+ * niño a medias de la sesión con un error.
+ */
+function optionPool(input: {
+	content: CurriculumIndex;
+	templateId: TemplateId;
+	target: Item;
+	needed: number;
+	seen: ReadonlySet<string>;
+	samePhase: ReadonlySet<string>;
+}): Item[] {
+	const { content, templateId, target, needed, seen, samePhase } = input;
+	// Las imágenes del sonido inicial no se leen: el niño mira y escucha, así que no tienen
+	// que haberse "enseñado" antes.
 	if (templateId === "initial-sound") return [...pictures];
+
 	const kinds = templates[templateId].itemKinds;
-	return [...content.items.values()].filter((candidate) =>
+	const todos = [...content.items.values()].filter((candidate) =>
 		kinds.includes(candidate.kind),
 	);
+	const utiles = (pool: Item[]): number =>
+		pool.filter(
+			(candidate) =>
+				candidate.id !== target.id && !isForbiddenDistractor(target, candidate),
+		).length;
+
+	const vistos = todos.filter((candidate) => seen.has(candidate.id));
+	if (utiles(vistos) >= needed) return vistos;
+
+	const conFase = todos.filter(
+		(candidate) => seen.has(candidate.id) || samePhase.has(candidate.id),
+	);
+	if (utiles(conFase) >= needed) return conFase;
+
+	return todos;
 }
 
 function buildOptions(input: {
@@ -75,8 +146,10 @@ function buildOptions(input: {
 	templateId: TemplateId;
 	level: DistractorLevel;
 	rng: Rng;
+	seen: ReadonlySet<string>;
+	samePhase: ReadonlySet<string>;
 }): { optionIds: string[]; correctOptionId: string | null } {
-	const { content, item, templateId, level, rng } = input;
+	const { content, item, templateId, level, rng, seen, samePhase } = input;
 	const range = templates[templateId].options;
 	if (range === undefined) return { optionIds: [], correctOptionId: null };
 
@@ -98,7 +171,14 @@ function buildOptions(input: {
 
 	const distractors = pickDistractors({
 		target: correct,
-		pool: optionPool(content, templateId).filter((c) => c.id !== correct.id),
+		pool: optionPool({
+			content,
+			templateId,
+			target: correct,
+			needed: total - 1,
+			seen,
+			samePhase,
+		}).filter((c) => c.id !== correct.id),
 		count: total - 1,
 		rng,
 		level,
@@ -241,6 +321,8 @@ export function planSession(input: {
 		);
 	const sessionIndex = state.sessionCounter;
 	const owners = owningUnits(content);
+	const seen = seenItemIds(content, activeUnitId);
+	const samePhase = samePhaseItemIds(content, unit);
 
 	// Cuenta cuántas evaluaciones ya usaron cada plantilla, para no dejar que una domine la
 	// sesión hasta el punto de que ninguna disposición pueda evitar dos seguidas.
@@ -268,7 +350,15 @@ export function planSession(input: {
 		const { optionIds, correctOptionId } =
 			kind === "presentation"
 				? { optionIds: [], correctOptionId: null }
-				: buildOptions({ content, item, templateId, level, rng });
+				: buildOptions({
+						content,
+						item,
+						templateId,
+						level,
+						rng,
+						seen,
+						samePhase,
+					});
 		counter += 1;
 		return {
 			id: `ex-${counter}`,
