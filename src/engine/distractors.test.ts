@@ -113,40 +113,30 @@ describe("pickDistractors", () => {
 		expect(new Set(out.map((i) => i.id)).size).toBe(4);
 	});
 
-	it("en nivel fácil prefiere formas distintas", () => {
-		const pool = [letter("o"), letter("e"), letter("m"), letter("i")];
-		const out = pickDistractors({
-			target: letter("a"),
+	it("para sílabas en nivel difícil prefiere mayor similitud que en fácil", () => {
+		const pool = ["me", "mi", "la", "pe"].map(syllable);
+		const target = syllable("ma");
+		const easy = pickDistractors({
+			target,
 			pool,
 			count: 2,
-			rng: createRng(4),
+			rng: createRng(5),
 			level: "easy",
 		});
-		expect(out.map((i) => i.text).sort()).toEqual(["i", "m"]);
-	});
-
-	it("en nivel difícil prefiere las más parecidas", () => {
-		const pool = [letter("o"), letter("e"), letter("m"), letter("i")];
-		const out = pickDistractors({
-			target: letter("a"),
-			pool,
-			count: 2,
-			rng: createRng(4),
-			level: "hard",
-		});
-		expect(out.map((i) => i.text).sort()).toEqual(["e", "o"]);
-	});
-
-	it("para sílabas en nivel difícil elige las que comparten consonante", () => {
-		const pool = ["me", "mi", "la", "pe"].map(syllable);
-		const out = pickDistractors({
-			target: syllable("ma"),
+		const hard = pickDistractors({
+			target,
 			pool,
 			count: 2,
 			rng: createRng(5),
 			level: "hard",
 		});
-		expect(out.map((i) => i.text).sort()).toEqual(["me", "mi"]);
+		const easyAvg =
+			easy.reduce((sum, item) => sum + similarity(target, item), 0) /
+			easy.length;
+		const hardAvg =
+			hard.reduce((sum, item) => sum + similarity(target, item), 0) /
+			hard.length;
+		expect(hardAvg).toBeGreaterThanOrEqual(easyAvg);
 	});
 
 	it("nunca elige un distractor prohibido aunque sea el único parecido", () => {
@@ -198,6 +188,24 @@ describe("pickDistractors", () => {
 				}
 			}
 		}
+	});
+
+	it("sobre un banco con empates, muchas semillas producen combinaciones distintas", () => {
+		// Protege el barajado previo: sin él, el resultado es fijo y el niño acaba
+		// reconociendo la terna en vez de leyendo la letra.
+		const pool = ["ma", "me", "mi", "mo", "mu"].map(syllable);
+		const vistas = new Set<string>();
+		for (let seed = 1; seed <= 20; seed += 1) {
+			const salida = pickDistractors({
+				target: syllable("ma"),
+				pool,
+				count: 2,
+				rng: createRng(seed),
+				level: "hard",
+			});
+			vistas.add([...salida.map((i) => i.text)].sort().join("+"));
+		}
+		expect(vistas.size).toBeGreaterThanOrEqual(3);
 	});
 
 	it("el nivel fácil elige, en promedio, opciones menos parecidas que el difícil", () => {

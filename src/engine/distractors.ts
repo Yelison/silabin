@@ -88,5 +88,10 @@ export function pickDistractors(input: {
 		return level === "hard" ? diff : -diff;
 	});
 
-	return sorted.slice(0, count);
+	// Se toma una ventana un poco más amplia que lo pedido y se baraja dentro de ella.
+	// Quedarse con los primeros del orden produce siempre el mismo resultado cuando el
+	// banco es pequeño y no hay empates, y un niño que ve veinte veces la misma terna
+	// aprende a descartar por eliminación en vez de a leer.
+	const ventana = sorted.slice(0, Math.min(sorted.length, count + 1));
+	return rng.shuffle(ventana).slice(0, count);
 }
