@@ -119,7 +119,7 @@ type Unit = {
 | `build` | Arrastra consonante + vocal para formar la sílaba que oye | sílabas | arrastre |
 | `read-word` | Ve una palabra CV-CV con imagen oculta, la lee en voz alta; se revela la imagen | palabras | voz |
 
-Cada plantilla define: número de opciones, cómo elegir distractores (nunca b/d/p/q juntos; primero formas muy distintas, luego parecidas), y sus 3 pistas.
+Cada plantilla define: número de opciones, cómo elegir distractores (nunca b/d/p/q juntos; primero formas muy distintas, luego parecidas), y sus 3 pistas concretas (tabla en §5).
 
 ### Distractores
 
@@ -142,18 +142,20 @@ Cada unidad introduce `phoneme:X` y `letter:X`. Plantillas: `initial-sound`, `li
 
 Cada unidad introduce `phoneme:C`, `letter:C` y `syllable:Ca..Cu` (5). Plantillas: `listen-tap`, `build`, `say-it`, `trace` de la consonante, y `read-word` con palabras formadas solo con letras ya introducidas:
 
-- m: mamá, mimo, mima, mío, ama, amo.
+- m: mamá, mimo, mima, ama, amo.
 - l: lima, loma, mula, mala, malo, lelo, ala, ola.
 - s: mesa, masa, misa, suma, sumo, sola, sala, oso, uso, eso, asa.
 - p: papá, pipa, mapa, sapo, sopa, pesa, puma, pala, pelo, polo, lupa, paso, piso.
 
 Las palabras con vocal aislada como sílaba (ala, oso) se permiten porque las 5 vocales ya están dominadas.
 
+**Restricción de estructura**: toda palabra de Fase 2 debe descomponerse únicamente en sílabas **CV o V**. Quedan excluidas las palabras con hiato (mío = mí-o), diptongo, CVC o tilde, aunque todas sus letras estén introducidas. Es un invariante distinto del de pertenencia de letras y se verifica con su propio test (§10).
+
 **Fases 3+**: definidas como unidades vacías en `content/` para que el mapa muestre el camino futuro bloqueado; sin ítems en v1.
 
 ### Audio
 
-Todas las locuciones (instrucciones, letras, sílabas, palabras, celebraciones, pistas) se pregraban con síntesis neural en **3 acentos**: dominicano (`do`), mexicano (`mx`) y neutro (`neutro`, voz es-US). Un manifiesto `content/audio-manifest.ts` lista cada `audioKey` y un test verifica que existan los 3 archivos. Hasta tener la cuenta de Azure, el desarrollo usa `speechSynthesis` como placeholder detrás de la misma interfaz `audio/`.
+Todas las locuciones (instrucciones, letras, sílabas, palabras, celebraciones, pistas) se pregraban con síntesis neural en **3 acentos**: dominicano (`do`), mexicano (`mx`) y neutro (`neutro`, voz es-US). Un manifiesto `content/audio-manifest.ts` lista cada `audioKey`. El test por defecto verifica solo la **consistencia interna** del manifiesto: que todo `audioKey` referenciado por un ítem, unidad, pista o celebración exista en el manifiesto y no haya claves huérfanas. La comprobación de que los ficheros están en disco en los 3 acentos se activa con `SILABIN_CHECK_AUDIO_FILES=1`, que se enciende cuando lleguen los assets y en CI a partir de ese momento; así ningún test nace en rojo mientras se desarrolla con el placeholder de `speechSynthesis`. Hasta tener la cuenta de Azure, el desarrollo usa `speechSynthesis` como placeholder detrás de la misma interfaz `audio/`.
 
 Formato: `.m4a` (AAC) por compatibilidad Safari, con `.ogg` opcional. Se sirven desde `public/audio/{accent}/{key}.m4a` y se precachean.
 
@@ -193,13 +195,26 @@ Entrada: estado, contenido, unidad activa, `sessionLength` (5 o 6 ejercicios). S
 
 ### Pistas por intento
 
-| Intento | Qué pasa al fallar | Cuenta como |
-|---|---|---|
-| 1.º | Pista visual: la opción correcta pulsa suavemente, o se muestra la boca, o la guía de trazo reaparece | — |
-| 2.º | Pista sonora parcial: se alarga el primer sonido ("mmm…", "aaa…") | — |
-| 3.º | Modelo completo: se muestra y se oye la respuesta; el niño la toca/repite para continuar | `assisted` |
+Tres rungs fijos por ejercicio: **reducir** (acotar el campo o volver a mostrar la guía), **sonar** (dar el primer sonido) y **modelar** (dar la respuesta para que el niño la reproduzca). Lo que significa cada rung depende de la plantilla, porque en `say-it`, `read-word`, `trace` y `build` la respuesta es lo único en pantalla y no existe "opción correcta" que resaltar.
 
-Acierto en 1.º intento suma `firstTryCorrect`. Acierto en 2.º o 3.º intento no suma ni resta dominio, pero baja a caja 1. El feedback sonoro de fallo es neutro ("mmm, otra vez") y de menos de 2 s.
+| Plantilla | Rung 1: reducir | Rung 2: sonar | Rung 3: modelar |
+|---|---|---|---|
+| `listen-tap` | Se atenúa un distractor (quedan 2) y se repite el audio | La opción correcta pulsa y se alarga su primer sonido | Se marca la correcta; el niño la toca |
+| `count-syllables` | Se repite la palabra sílaba a sílaba con una luz por sílaba | Se oye "ma… no" con dos golpes audibles | Aparecen los círculos ya contados; el niño los toca |
+| `rhyme` | Se repite el par final de la palabra objetivo ("-ato") | Se oye el final de cada opción seguido | Se marca la correcta; el niño la toca |
+| `initial-sound` | Se atenúa un distractor y se repite el fonema aislado | Se oye el inicio de cada imagen ("a… vión") | Se marca la correcta; el niño la toca |
+| `trace` | Reaparece la guía completa del nivel anterior (desvanecimiento inverso) | Se oye el sonido de la letra mientras un punto recorre el trazo | El trazo se anima entero; el niño lo repite encima con la guía visible |
+| `say-it` | Se muestra la boca articulando y se repite la instrucción, sin dar el sonido | Se oye el primer sonido alargado ("mmm…") y el niño completa | Se oye la sílaba entera; el niño la repite (basta que hable) |
+| `build` | Se atenúan las piezas que no entran; quedan la consonante y las 5 vocales | La pieza de la vocal pulsa y se oye su sonido | Las dos piezas correctas quedan resaltadas en orden; el niño las arrastra |
+| `read-word` | Se separan visualmente las sílabas (ma·pa) y se repite la instrucción | Se oye la primera sílaba; el niño completa | Se oye la palabra entera; el niño la repite (basta que hable) |
+
+Reglas comunes:
+
+- Acierto en 1.º intento suma `firstTryCorrect`. Acierto en 2.º o 3.º intento no suma ni resta dominio, pero baja el ítem a caja 1.
+- El rung 3 **siempre garantiza el acierto**: la acción que se pide es reproducir lo que se acaba de mostrar u oír, y cuenta como `assisted`.
+- En los ejercicios de voz, el rung 3 se acepta con solo detectar habla, sin evaluar pronunciación.
+- El feedback sonoro de fallo es neutro ("mmm, otra vez") y de menos de 2 s. Nunca hay sonido de error ni mensaje negativo.
+- Cada plantilla implementa `hints: [HintStep, HintStep, HintStep]` y un test verifica que las 8 tengan los 3 rungs definidos.
 
 ### Estrellas por sesión
 
@@ -225,9 +240,11 @@ interface SpeechEvaluator {
 
 Cadena de resolución: `azure` → `browser` → `parent`. Se usa el primer evaluador disponible; si falla en tiempo de ejecución (red, permiso), se cae al siguiente sin interrumpir el ejercicio.
 
+**`parent` es el evaluador real del día uno, no un modo degradado.** En el dispositivo objetivo (PWA instalada en iOS) la Web Speech API no está disponible, y no hay cuenta de Azure. Los dos primeros eslabones de la cadena están ausentes al empezar, así que `parent` recibe el diseño y el pulido completos; `browser` y `azure` se añaden después detrás de la misma interfaz. Coincide además con la realidad de uso: a los 3-4 años el adulto acompaña siempre.
+
 ### Implementaciones v1
 
-- **`parent`**: no necesita audio. Tras la grabación se muestran dos botones grandes para el adulto: "Lo dijo bien" / "Otra vez". Siempre disponible. Es la implementación por defecto cuando no hay red ni API de voz.
+- **`parent`**: no necesita audio ni red. El niño ve la sílaba, pulsa el micrófono y la dice; el micrófono sirve para dar turno y mostrar que se le escucha (onda animada en vivo), no para evaluar. Después aparecen dos botones grandes dirigidos al adulto, con icono y texto: "Lo dijo bien" y "Otra vez". Tratamiento visual de primera clase, sin etiquetas de "modo limitado". Un ajuste permite ocultar el micrófono si molesta y dejar solo los dos botones. Siempre disponible.
 - **`browser`**: Web Speech API (`webkitSpeechRecognition`), `lang` según acento, `maxAlternatives: 5`. Cada alternativa se normaliza (minúsculas, sin tildes), se fonemiza con reglas del español (casi fonémico; ~40 reglas: c/qu/z/s con seseo, g/j, ll/y, h muda, rr) y se compara con `target.phonemes` por distancia de edición **aceptando prefijo** ("ma" ⊂ "mamá"). `ok` si alguna alternativa tiene distancia 0 o prefijo exacto; `retry` si la mejor distancia es 1; `unsure` en otro caso o si no está disponible (p. ej. PWA instalada en iOS). Nunca se usa como única fuente de un "fallo": `retry` de esta capa se trata como `unsure` si el VAD detectó habla clara.
 - **`azure`** (post-spike): Pronunciation Assessment con `granularity: Phoneme`, `nbestPhonemeCount: 5`, `referenceText` = sílaba o palabra portadora si las pseudopalabras fallan. `ok` si cada fonema objetivo tiene `AccuracyScore >= 55` o aparece en NBest; `retry` si 35-55; `unsure` bajo 35. Token efímero desde `/api/speech-token`.
 
@@ -323,7 +340,10 @@ Service worker precachea la app, imágenes y los audios del acento activo (los o
 
 - **`engine/`**: Vitest con TDD. Casos: planificador (proporciones 70/30, máximo 2 presentaciones, sin plantillas repetidas seguidas, determinismo por semilla), Leitner (subir/bajar caja, vencimiento), dominio (3 aciertos en sesiones distintas), pistas (transición por intento), estrellas (umbrales y mejor marca), desbloqueo de unidades y logros.
 - **`speech/`**: fonemización por reglas (tabla de casos), comparación con prefijo, cadena de fallback con evaluadores simulados.
-- **`content/`**: esquema Zod, unicidad de ids, prerrequisitos acíclicos, palabras de Fase 2 compuestas solo por letras ya introducidas, distractores válidos (nunca b/d/p/q juntos), y existencia de los 3 audios por `audioKey`.
+- **`content/`**: esquema Zod, unicidad de ids, prerrequisitos acíclicos, distractores válidos (nunca b/d/p/q juntos), las 8 plantillas con sus 3 rungs de pista definidos, y dos invariantes **separados** para las palabras de Fase 2:
+  1. **Pertenencia de letras**: cada letra de la palabra pertenece a una unidad ya introducida.
+  2. **Estructura silábica**: la palabra se descompone solo en sílabas CV o V, sin hiatos, diptongos, CVC ni tildes. Casos de test explícitos: `mapa` pasa; `mío`, `pan` y `mamá` con tilde fallan.
+  Más consistencia interna del manifiesto de audio; la existencia de los ficheros en disco se comprueba solo con `SILABIN_CHECK_AUDIO_FILES=1`.
 - **`store/`**: migraciones y recuperación de documento corrupto.
 - **UI**: Testing Library para `listen-tap`, `say-it` con evaluador simulado, PIN de padres. Playwright con viewport iPhone: recorrido completo de una sesión de Fase 1 con eventos táctiles en `trace`.
 - **Manual en iPad**: lista de verificación en `docs/checklist-ipad.md`: permiso de micrófono, audio tras el primer toque, instalación en pantalla de inicio, comportamiento sin red.
@@ -344,11 +364,17 @@ Service worker precachea la app, imágenes y los audios del acento activo (los o
 - Nube/varios niños = adaptador de persistencia en `store/` (p. ej. Supabase) manteniendo el mismo `PersistedState`.
 - App nativa = la capa `speech/` admite una implementación con reconocimiento de Apple en el dispositivo; el resto es web reutilizable.
 
-## 13. Siguientes pasos
+## 13. Secuencia de implementación
+
+Ningún paso depende de Azure ni de los audios definitivos.
 
 1. Plan de implementación (skill `writing-plans`) a partir de este spec.
-2. Andamiaje del proyecto y `content/` con esquema y tests.
-3. `engine/` con TDD.
-4. UI de sesión con las 8 plantillas, audio placeholder.
-5. `speech/` parent + browser; luego spike Azure y generación de audios en 3 acentos.
-6. Recompensas, panel de padres, PWA, pruebas en iPad.
+2. Andamiaje del proyecto; `content/` con esquema Zod, datos de las fases 0-2 y sus tests (incluidos los dos invariantes de palabras y los 3 rungs por plantilla).
+3. `engine/` completo con TDD: planificador, Leitner, dominio, pistas, estrellas, logros.
+4. **Una plantilla de punta a punta** (`listen-tap`) para fijar el contrato `engine` ↔ UI, con audio placeholder.
+5. Resto de plantillas de toque: `count-syllables`, `rhyme`, `initial-sound`.
+6. **`trace` como hito propio**: lienzo, eventos táctiles, puntuación con tolerancia y los 3 niveles de desvanecimiento. Es el componente más difícil del proyecto.
+7. `say-it` y `read-word` con el evaluador `parent` pulido; `build`.
+8. Recompensas y cosméticos; panel de padres; PWA y service worker.
+9. Pruebas en iPad con la lista de verificación.
+10. Después: spike de Azure, generación de los audios en 3 acentos, y evaluador `browser`.
