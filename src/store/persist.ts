@@ -56,10 +56,23 @@ export async function loadState(
 	return migrate(raw);
 }
 
+/**
+ * Guarda el documento y dice si lo consiguió.
+ *
+ * Un fallo de escritura —cuota agotada en un iPad, ventana privada de Safari, datos
+ * desalojados por el navegador— no lanza: tumbar la sesión de juego en curso sería peor que
+ * el fallo. Pero tampoco se calla, que era el problema de la firma anterior, Promise<void>:
+ * ningún llamador podía distinguir "se guardó" de "se perdió el progreso del niño en
+ * silencio". Se devuelve un objeto, y no un booleano suelto, para poder añadirle un motivo
+ * más adelante sin volver a romper la firma.
+ *
+ * Sí lanza cuando el documento es inválido, porque eso es un error de programación y no del
+ * entorno: hay que verlo en cuanto ocurre, no descubrirlo en un { saved: false }.
+ */
 export async function saveState(
 	adapter: StorageAdapter,
 	state: unknown,
-): Promise<void> {
+): Promise<{ saved: boolean }> {
 	const parsed = persistedStateSchema.safeParse(state);
 	if (!parsed.success) {
 		throw new Error(
@@ -69,17 +82,9 @@ export async function saveState(
 
 	try {
 		await adapter.write(parsed.data);
+		return { saved: true };
 	} catch {
-		// Quedarse sin cuota o sin permiso no debe tumbar la sesión de juego en curso.
-		//
-		// ADVERTENCIA para quien toque esto en el Plan 2: este fallo es invisible A PROPÓSITO.
-		// La firma Promise<void> (exigida por el brief de esta tarea, y con un test que exige
-		// que no lance) no deja ningún canal para avisar de un guardado que no ocurrió. Ningún
-		// llamador de saveState puede hoy distinguir "se guardó" de "se perdió el progreso del
-		// niño en silencio". Eso es tolerable solo porque en v1 no existe ningún llamador real:
-		// la interfaz llega en el Plan 2. Antes de que un niño de verdad dependa de esto, el
-		// Plan 2 debe añadir una señal explícita (un valor de retorno o un callback) para que
-		// quien llama a saveState pueda reaccionar ante un guardado fallido.
+		return { saved: false };
 	}
 }
 

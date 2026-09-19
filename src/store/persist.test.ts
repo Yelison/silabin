@@ -81,7 +81,7 @@ describe("saveState", () => {
 			stars: 2,
 			endedAt: "2026-09-18T12:00:00.000Z",
 		});
-		await saveState(adapter, state);
+		expect(await saveState(adapter, state)).toEqual({ saved: true });
 		const leido = await loadState(adapter);
 		expect(leido.state).toEqual(state);
 	});
@@ -107,7 +107,10 @@ describe("saveState", () => {
 		expect(escrituras).toBe(0);
 	});
 
-	it("no propaga el error si el almacenamiento falla al escribir", async () => {
+	it("avisa con saved en false cuando el almacenamiento falla, y no lanza", async () => {
+		// Tumbar la sesión de juego por un fallo de escritura sería peor que el fallo, pero
+		// callárselo también: quien llama tiene que poder avisar al adulto de que el progreso
+		// del niño no se guardó.
 		const soloLectura: StorageAdapter = {
 			read: () => Promise.resolve(null),
 			write: () => Promise.reject(new Error("cuota agotada")),
@@ -115,7 +118,13 @@ describe("saveState", () => {
 		};
 		await expect(
 			saveState(soloLectura, emptyPersistedState()),
-		).resolves.toBeUndefined();
+		).resolves.toEqual({ saved: false });
+	});
+
+	it("confirma con saved en true cuando la escritura sale bien", async () => {
+		await expect(
+			saveState(createMemoryAdapter(), emptyPersistedState()),
+		).resolves.toEqual({ saved: true });
 	});
 });
 
