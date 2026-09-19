@@ -2651,6 +2651,16 @@ describe('createRng', () => {
     for (let i = 0; i < 50; i += 1) expect(items).toContain(rng.pick(items));
   });
 
+  it('pick no devuelve siempre el mismo elemento', () => {
+    // Que el resultado pertenezca al arreglo es necesario pero no suficiente: una
+    // implementación que devolviera siempre el primero lo cumpliría igual, y once tareas
+    // usan pick para elegir distractores y ordenar ejercicios.
+    const rng = createRng(5);
+    const items = ['a', 'b', 'c', 'd'];
+    const vistos = new Set(Array.from({ length: 200 }, () => rng.pick(items)));
+    expect([...vistos].sort()).toEqual(items);
+  });
+
   it('pick lanza con un arreglo vacío', () => {
     expect(() => createRng(1).pick([])).toThrow(/vacío/i);
   });
@@ -2658,7 +2668,9 @@ describe('createRng', () => {
   it('shuffle conserva todos los elementos y no muta el original', () => {
     const original = [1, 2, 3, 4, 5];
     const shuffled = createRng(11).shuffle(original);
-    expect([...shuffled].sort()).toEqual(original);
+    // El comparador es explícito a propósito: sort() por omisión ordena como texto, y con
+    // números de dos cifras este test fallaría aunque shuffle fuera correcto.
+    expect([...shuffled].sort((a, b) => a - b)).toEqual(original);
     expect(original).toEqual([1, 2, 3, 4, 5]);
   });
 
@@ -2860,7 +2872,7 @@ export function createRng(seed: number): Rng {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/random.test.ts && pnpm typecheck`
-Expected: los 13 tests PASS.
+Expected: los 14 tests PASS.
 
 - [ ] **Step 6: Commit**
 
@@ -2957,6 +2969,26 @@ describe('sessionsUntilDue', () => {
     expect(sessionsUntilDue(progress({ box: 2, lastSessionIndex: 5 }), 6)).toBe(2);
     expect(sessionsUntilDue(progress({ box: 2, lastSessionIndex: 5 }), 20)).toBe(0);
   });
+
+  it('un ítem sin acertar no tiene espera pendiente', () => {
+    expect(sessionsUntilDue(progress({ box: 0, lastSessionIndex: 3 }), 4)).toBe(0);
+  });
+
+  it('coincide con el intervalo de su caja cuando acaba de verse', () => {
+    // Fija la relación entre las dos funciones: si isDue usara un intervalo distinto del
+    // que declara BOX_INTERVALS, este test lo detectaría.
+    for (const box of [1, 2, 3] as const) {
+      const p = progress({ box, lastSessionIndex: 10 });
+      expect([box, sessionsUntilDue(p, 10)]).toEqual([box, BOX_INTERVALS[box]]);
+      expect([box, isDue(p, 10 + BOX_INTERVALS[box])]).toEqual([box, true]);
+      expect([box, isDue(p, 10 + BOX_INTERVALS[box] - 1)]).toEqual([box, false]);
+    }
+  });
+
+  it('los tres intervalos son crecientes, que es lo que hace que el repaso espacie', () => {
+    expect(BOX_INTERVALS[1]).toBeLessThan(BOX_INTERVALS[2]);
+    expect(BOX_INTERVALS[2]).toBeLessThan(BOX_INTERVALS[3]);
+  });
 });
 ```
 
@@ -2998,7 +3030,7 @@ export function sessionsUntilDue(progress: ItemProgress, sessionIndex: number): 
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/leitner.test.ts`
-Expected: los 10 tests PASS.
+Expected: los 13 tests PASS.
 
 - [ ] **Step 5: Commit**
 
