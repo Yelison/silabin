@@ -78,6 +78,8 @@ describe("totalStars", () => {
 describe("condiciones de los logros", () => {
 	it("la primera sesión desbloquea el primer fondo", () => {
 		const state = emptyProgressState();
+		state.counters.sessions = 0;
+		expect(earnedRewardIds(context(state))).not.toContain("first-session");
 		state.counters.sessions = 1;
 		expect(earnedRewardIds(context(state))).toContain("first-session");
 	});
@@ -103,6 +105,10 @@ describe("condiciones de los logros", () => {
 
 	it("el primer acierto de voz desbloquea el rastro de estrellitas", () => {
 		const state = emptyProgressState();
+		state.counters.voiceOk = 0;
+		expect(earnedRewardIds(context(state))).not.toContain(
+			"first-syllable-voice",
+		);
 		state.counters.voiceOk = 1;
 		expect(earnedRewardIds(context(state))).toContain("first-syllable-voice");
 	});
@@ -117,12 +123,16 @@ describe("condiciones de los logros", () => {
 
 	it("diez sesiones desbloquean el accesorio del compañero", () => {
 		const state = emptyProgressState();
+		state.counters.sessions = 9;
+		expect(earnedRewardIds(context(state))).not.toContain("ten-sessions");
 		state.counters.sessions = 10;
 		expect(earnedRewardIds(context(state))).toContain("ten-sessions");
 	});
 
 	it("cinco palabras leídas desbloquean el rastro de burbujas", () => {
 		const state = emptyProgressState();
+		state.counters.wordsRead = 4;
+		expect(earnedRewardIds(context(state))).not.toContain("word-reader");
 		state.counters.wordsRead = 5;
 		expect(earnedRewardIds(context(state))).toContain("word-reader");
 	});
@@ -135,14 +145,29 @@ describe("condiciones de los logros", () => {
 		expect(earnedRewardIds(context(state))).toContain("phase2-done");
 	});
 
+	it("con solo tres de las cuatro unidades de la Fase 2 el trofeo no se desbloquea", () => {
+		const state = emptyProgressState();
+		for (const consonante of ["m", "l", "s"]) {
+			state.units[`phase2:${consonante}`] = { status: "done", bestStars: 2 };
+		}
+		expect(earnedRewardIds(context(state))).not.toContain("phase2-done");
+	});
+
 	it("los hitos de estrellas se desbloquean por total acumulado", () => {
 		const state = emptyProgressState();
-		state.units.u = { status: "done", bestStars: 3 };
 		const ctx = { content: curriculum, state, totalStars: 26 };
 		const earned = earnedRewardIds(ctx);
 		expect(earned).toContain("stars:10");
 		expect(earned).toContain("stars:25");
 		expect(earned).not.toContain("stars:50");
+	});
+
+	it("el hito de 100 estrellas también respeta su umbral exacto", () => {
+		const state = emptyProgressState();
+		const casiCien = { content: curriculum, state, totalStars: 99 };
+		expect(earnedRewardIds(casiCien)).not.toContain("stars:100");
+		const cien = { content: curriculum, state, totalStars: 100 };
+		expect(earnedRewardIds(cien)).toContain("stars:100");
 	});
 });
 
