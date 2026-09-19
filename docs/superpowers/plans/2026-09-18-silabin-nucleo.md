@@ -3065,7 +3065,10 @@ Crea `src/engine/mastery.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum } from '@/content/index';
-import { MASTERY_TARGET, UNIT_COMPLETION_THRESHOLD, isMastered, isUnitComplete, unitMasteryRatio } from '@/engine/mastery';
+import {
+  MASTERY_TARGET, UNIT_COMPLETION_THRESHOLD,
+  isMastered, isUnitComplete, itemProgressOf, unitMasteryRatio,
+} from '@/engine/mastery';
 import { emptyItemProgress, emptyProgressState, type ProgressState } from '@/engine/types';
 
 const content = buildCurriculum({
@@ -3121,6 +3124,26 @@ describe('isUnitComplete', () => {
     expect(UNIT_COMPLETION_THRESHOLD).toBe(0.8);
     expect(isUnitComplete(content, stateWithMastered(3), 'u')).toBe(false);
     expect(isUnitComplete(content, stateWithMastered(4), 'u')).toBe(true);
+  });
+});
+
+describe('robustez ante datos que no existen', () => {
+  it('unitMasteryRatio lanza con una unidad desconocida en vez de inventarse un valor', () => {
+    expect(() => unitMasteryRatio(content, emptyProgressState(), 'no-existe')).toThrow(/desconocida/i);
+  });
+
+  it('itemProgressOf devuelve el progreso vacío para un ítem que nunca se ha visto', () => {
+    const state = emptyProgressState();
+    expect(itemProgressOf(state, 'syllable:jamas')).toEqual(emptyItemProgress());
+  });
+
+  it('itemProgressOf no escribe en el estado al consultarlo', () => {
+    // Si el acceso creara la entrada, el estado crecería solo por leerlo y la
+    // persistencia guardaría progreso de ítems que el niño nunca vio.
+    const state = emptyProgressState();
+    itemProgressOf(state, 'syllable:jamas');
+    itemProgressOf(state, 'letter:z');
+    expect(Object.keys(state.items)).toEqual([]);
   });
 });
 ```
@@ -3188,6 +3211,21 @@ describe('activeUnitId', () => {
   it('devuelve la primera unidad activa en orden topológico', () => {
     expect(activeUnitId(content, emptyProgressState())).toBe('u1');
     expect(activeUnitId(content, withMastered(['letter:a']))).toBe('u2');
+  });
+
+  it('nunca hay más de una unidad activa a la vez', () => {
+    // Con dos unidades activas el niño podría estar a medias en dos sitios, y el
+    // planificador tendría que elegir por su cuenta cuál es "la de ahora".
+    for (const dominados of [[], ['letter:a'], ['letter:a', 'letter:b']]) {
+      const statuses = recomputeUnitStatuses(content, withMastered(dominados));
+      const activas = Object.values(statuses).filter((u) => u.status === 'active');
+      expect([dominados.length, activas.length]).toEqual([dominados.length, 1]);
+    }
+  });
+
+  it('una unidad bloqueada nunca se salta: entre done y locked no hay huecos', () => {
+    const statuses = recomputeUnitStatuses(content, withMastered(['letter:a']));
+    expect(['u1', 'u2', 'u3'].map((id) => statuses[id]?.status)).toEqual(['done', 'active', 'locked']);
   });
 
   it('con todo completo devuelve la última unidad, para poder seguir repasando', () => {
@@ -3286,7 +3324,7 @@ export function activeUnitId(content: CurriculumIndex, state: ProgressState): st
 - [ ] **Step 6: Verificar que pasan**
 
 Run: `pnpm test src/engine && pnpm typecheck`
-Expected: los 10 tests de las dos suites PASS.
+Expected: los 16 tests de las dos suites PASS.
 
 - [ ] **Step 7: Commit**
 
