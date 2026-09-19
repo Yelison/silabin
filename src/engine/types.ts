@@ -45,9 +45,16 @@ export type PlannedExercise = {
 	id: string;
 	kind: "presentation" | "evaluation";
 	templateId: TemplateId;
+	/** El ítem que se practica. En una presentación, el ítem que se enseña. */
 	itemId: string;
-	/** Opciones ya resueltas, incluida la correcta. Vacío en plantillas sin opciones. */
+	/** Opciones ya resueltas y mezcladas, incluida la correcta. Vacío en plantillas sin opciones. */
 	optionIds: string[];
+	/**
+	 * Cuál de las opciones es la correcta. Coincide con itemId en listen-tap,
+	 * pero en initial-sound la respuesta es una imagen distinta del fonema practicado.
+	 * Null en las plantillas sin opciones.
+	 */
+	correctOptionId: string | null;
 	source: "active-unit" | "review";
 };
 

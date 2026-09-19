@@ -1,0 +1,329 @@
+import type { CurriculumIndex } from "@/content/index";
+import { pictures } from "@/content/pictures";
+import { type TemplateId, templates } from "@/content/templates";
+import type { Item, Unit } from "@/content/types";
+import { type DistractorLevel, pickDistractors } from "@/engine/distractors";
+import { isDue } from "@/engine/leitner";
+import { itemProgressOf } from "@/engine/mastery";
+import { createRng, type Rng } from "@/engine/random";
+import type { PlannedExercise, ProgressState } from "@/engine/types";
+
+export const MAX_PRESENTATIONS = 2;
+export const REVIEW_SHARE = 0.3;
+
+/** Qué unidad introduce cada ítem. */
+export function owningUnits(content: CurriculumIndex): Map<string, string> {
+	const out = new Map<string, string>();
+	for (const unit of content.units.values()) {
+		for (const itemId of unit.introduces) out.set(itemId, unit.id);
+	}
+	return out;
+}
+
+function templatesFor(unit: Unit, item: Item): TemplateId[] {
+	return unit.exercises
+		.filter((exercise) =>
+			templates[exercise.templateId].itemKinds.includes(item.kind),
+		)
+		.flatMap((exercise) =>
+			Array.from({ length: exercise.weight }, () => exercise.templateId),
+		);
+}
+
+function basePool(unit: Unit, item: Item): TemplateId[] {
+	const weighted = templatesFor(unit, item);
+	if (weighted.length > 0) return weighted;
+
+	const fallback = (Object.keys(templates) as TemplateId[]).filter((id) =>
+		templates[id].itemKinds.includes(item.kind),
+	);
+	if (fallback.length === 0)
+		throw new Error(`Ninguna plantilla acepta un ítem de clase ${item.kind}`);
+	return fallback;
+}
+
+/**
+ * Elige plantilla para el ítem. Cuando se pasan `counts` y `cap`, evita las plantillas que ya
+ * alcanzaron el tope salvo que eso vacíe el conjunto elegible: sin esa salvedad, una unidad con
+ * una sola plantilla aplicable (como la de sí o no) se quedaría sin ninguna opción.
+ */
+function pickTemplate(
+	unit: Unit,
+	item: Item,
+	rng: Rng,
+	counts?: Map<TemplateId, number>,
+	cap?: number,
+): TemplateId {
+	const pool = basePool(unit, item);
+	if (counts === undefined || cap === undefined) return rng.pick(pool);
+
+	const underCap = pool.filter((id) => (counts.get(id) ?? 0) < cap);
+	return rng.pick(underCap.length > 0 ? underCap : pool);
+}
+
+function optionPool(content: CurriculumIndex, templateId: TemplateId): Item[] {
+	if (templateId === "initial-sound") return [...pictures];
+	const kinds = templates[templateId].itemKinds;
+	return [...content.items.values()].filter((candidate) =>
+		kinds.includes(candidate.kind),
+	);
+}
+
+function buildOptions(input: {
+	content: CurriculumIndex;
+	item: Item;
+	templateId: TemplateId;
+	level: DistractorLevel;
+	rng: Rng;
+}): { optionIds: string[]; correctOptionId: string | null } {
+	const { content, item, templateId, level, rng } = input;
+	const range = templates[templateId].options;
+	if (range === undefined) return { optionIds: [], correctOptionId: null };
+
+	// Las tareas orales ya traen sus opciones escritas en el dato.
+	if (item.task?.optionIds !== undefined) {
+		return {
+			optionIds: rng.shuffle(item.task.optionIds),
+			correctOptionId: item.task.answer,
+		};
+	}
+
+	const total = level === "easy" ? range.min : range.max;
+
+	// En sonido inicial la respuesta es una imagen que empieza por el fonema practicado.
+	const correct: Item =
+		templateId === "initial-sound"
+			? rng.pick(pictures.filter((p) => p.phonemes[0] === item.phonemes[0]))
+			: item;
+
+	const distractors = pickDistractors({
+		target: correct,
+		pool: optionPool(content, templateId).filter((c) => c.id !== correct.id),
+		count: total - 1,
+		rng,
+		level,
+	});
+
+	return {
+		optionIds: rng.shuffle([correct.id, ...distractors.map((d) => d.id)]),
+		correctOptionId: correct.id,
+	};
+}
+
+/**
+ * Ordena sin repetir plantilla en dos ejercicios seguidos, repartiendo por paridad: los grupos
+ * más numerosos ocupan primero las posiciones pares (0, 2, 4…) y el resto llena las impares. Es
+ * el método clásico para este problema: a diferencia de "tomar el primero que sirva", no deja
+ * varado el sobrante de una plantilla mayoritaria al final cuando sí existe una disposición
+ * válida (y una existe siempre que ninguna plantilla supere la mitad de la lista).
+ *
+ * `forbiddenLast`, cuando se indica, reserva el último puesto para otra plantilla, porque quien
+ * cierre la sesión (la evaluación más fácil) se añade después y no debe quedar pegado a su misma
+ * plantilla. El reparto por paridad ya tiende a evitarlo, porque aleja a la plantilla mayoritaria
+ * del final; si aun así coincidiera, se intercambia con la primera posición anterior donde el
+ * cambio no rompa la regla en ninguno de los dos lados.
+ */
+function arrangeNoAdjacent(
+	list: PlannedExercise[],
+	rng: Rng,
+	forbiddenLast?: TemplateId,
+): PlannedExercise[] {
+	const total = list.length;
+	if (total === 0) return [];
+
+	const groups = new Map<TemplateId, PlannedExercise[]>();
+	for (const exercise of list) {
+		const group = groups.get(exercise.templateId);
+		if (group === undefined) groups.set(exercise.templateId, [exercise]);
+		else group.push(exercise);
+	}
+	const order = rng
+		.shuffle([...groups.values()])
+		.sort((a, b) => b.length - a.length);
+
+	const slots: (PlannedExercise | undefined)[] = new Array(total).fill(
+		undefined,
+	);
+	let index = 0;
+	for (const group of order) {
+		for (const exercise of rng.shuffle(group)) {
+			slots[index] = exercise;
+			index += 2;
+			if (index >= total) index = 1;
+		}
+	}
+	const arranged = slots.filter(
+		(exercise): exercise is PlannedExercise => exercise !== undefined,
+	);
+
+	const last = arranged.length - 1;
+	const displaced = arranged[last];
+	if (
+		forbiddenLast !== undefined &&
+		displaced !== undefined &&
+		displaced.templateId === forbiddenLast
+	) {
+		const swapIndex = arranged.findIndex((exercise, i) => {
+			if (i >= last || exercise.templateId === forbiddenLast) return false;
+			const leftOk =
+				i === 0 || arranged[i - 1]?.templateId !== displaced.templateId;
+			const rightOk = arranged[i + 1]?.templateId !== displaced.templateId;
+			const tailOk =
+				last === 0 || arranged[last - 1]?.templateId !== exercise.templateId;
+			return leftOk && rightOk && tailOk;
+		});
+		const target = arranged[swapIndex];
+		if (swapIndex >= 0 && target !== undefined) {
+			arranged[swapIndex] = displaced;
+			arranged[last] = target;
+		}
+	}
+
+	return arranged;
+}
+
+export function planSession(input: {
+	content: CurriculumIndex;
+	state: ProgressState;
+	activeUnitId: string;
+	sessionLength: 5 | 6;
+	seed: number;
+}): PlannedExercise[] {
+	const { content, state, activeUnitId, sessionLength, seed } = input;
+	const rng = createRng(seed);
+	const unit = content.units.get(activeUnitId);
+	if (unit === undefined)
+		throw new Error(`Unidad desconocida: ${activeUnitId}`);
+	const sessionIndex = state.sessionCounter;
+	const owners = owningUnits(content);
+
+	// Cuenta cuántas evaluaciones ya usaron cada plantilla, para no dejar que una domine la
+	// sesión hasta el punto de que ninguna disposición pueda evitar dos seguidas.
+	const templateCounts = new Map<TemplateId, number>();
+	let templateCap = Number.POSITIVE_INFINITY;
+
+	let counter = 0;
+	const makeExercise = (
+		itemId: string,
+		kind: PlannedExercise["kind"],
+		source: PlannedExercise["source"],
+	): PlannedExercise => {
+		const item = content.items.get(itemId);
+		if (item === undefined) throw new Error(`Ítem desconocido: ${itemId}`);
+		const ownerId = owners.get(itemId) ?? activeUnitId;
+		const owner = content.units.get(ownerId) ?? unit;
+		const templateId =
+			kind === "evaluation"
+				? pickTemplate(owner, item, rng, templateCounts, templateCap)
+				: pickTemplate(owner, item, rng);
+		if (kind === "evaluation")
+			templateCounts.set(templateId, (templateCounts.get(templateId) ?? 0) + 1);
+		const level: DistractorLevel =
+			itemProgressOf(state, itemId).firstTryCorrect >= 1 ? "hard" : "easy";
+		const { optionIds, correctOptionId } = buildOptions({
+			content,
+			item,
+			templateId,
+			level,
+			rng,
+		});
+		counter += 1;
+		return {
+			id: `ex-${counter}`,
+			kind,
+			templateId,
+			itemId,
+			optionIds,
+			correctOptionId,
+			source,
+		};
+	};
+
+	// 1. Presentar lo nuevo, como máximo dos ítems.
+	const unpresented = unit.introduces.filter(
+		(id) => !itemProgressOf(state, id).presented,
+	);
+	const toPresent = unpresented.slice(0, MAX_PRESENTATIONS);
+	const presentations = toPresent.map((id) =>
+		makeExercise(id, "presentation", "active-unit"),
+	);
+
+	const budget = sessionLength - presentations.length;
+	if (budget <= 0) return presentations;
+
+	// 2. Repaso de otras unidades, de la caja más baja a la más alta.
+	// Entra un ítem si está vencido según su caja, o si se presentó y nunca llegó a
+	// acertarse (caja 0). Sin esa segunda condición, un ítem de una unidad que se completó
+	// con el 80 % y que el niño nunca acertó quedaría abandonado para siempre: isDue
+	// devuelve false para la caja 0, y su unidad ya no es la activa. Sería justo la letra
+	// que más le cuesta la que dejaría de aparecer.
+	const reviewPool = [...content.items.keys()]
+		.filter((id) => owners.get(id) !== activeUnitId)
+		.filter((id) => {
+			const progress = itemProgressOf(state, id);
+			return (
+				isDue(progress, sessionIndex) ||
+				(progress.presented && progress.box === 0)
+			);
+		})
+		.sort((a, b) => {
+			const pa = itemProgressOf(state, a);
+			const pb = itemProgressOf(state, b);
+			return (
+				pa.box - pb.box ||
+				pa.lastSessionIndex - pb.lastSessionIndex ||
+				a.localeCompare(b)
+			);
+		});
+
+	const reviewCount = Math.min(
+		Math.round(REVIEW_SHARE * budget),
+		reviewPool.length,
+	);
+	const activeCount = budget - reviewCount;
+
+	// 3. Unidad activa: los menos dominados primero, ciclando si hay más huecos que ítems.
+	const availableActive = unit.introduces.filter(
+		(id) => itemProgressOf(state, id).presented || toPresent.includes(id),
+	);
+	const activeSorted = rng
+		.shuffle(availableActive)
+		.sort(
+			(a, b) =>
+				itemProgressOf(state, a).firstTryCorrect -
+				itemProgressOf(state, b).firstTryCorrect,
+		);
+
+	const activeIds: string[] = [];
+	const source = activeSorted.length > 0 ? activeSorted : reviewPool;
+	for (let i = 0; i < activeCount && source.length > 0; i += 1) {
+		const id = source[i % source.length];
+		if (id !== undefined) activeIds.push(id);
+	}
+
+	// El tope evita que una sola plantilla acapare tantas evaluaciones que ninguna disposición
+	// pueda ya evitar dos seguidas: con n evaluaciones, ninguna plantilla puede pasar de la mitad.
+	const evaluationTotal = activeIds.length + reviewCount;
+	templateCap = Math.max(1, Math.floor(evaluationTotal / 2));
+
+	const evaluations = [
+		...activeIds.map((id) => makeExercise(id, "evaluation", "active-unit")),
+		...reviewPool
+			.slice(0, reviewCount)
+			.map((id) => makeExercise(id, "evaluation", "review")),
+	];
+
+	if (evaluations.length === 0) return presentations;
+
+	// 4. Cerrar con el más fácil y evitar dos plantillas iguales seguidas.
+	const easiest = evaluations.reduce((best, current) =>
+		templates[current.templateId].difficulty <
+		templates[best.templateId].difficulty
+			? current
+			: best,
+	);
+	const rest = evaluations.filter((e) => e.id !== easiest.id);
+	const arranged = arrangeNoAdjacent(rest, rng, easiest.templateId);
+
+	return [...presentations, ...arranged, easiest];
+}
