@@ -74,4 +74,25 @@ describe("catálogo de imágenes", () => {
 			expect((picture.syllables ?? []).length).toBeGreaterThan(0);
 		}
 	});
+
+	it("cada imagen declara tantas sílabas como grupos vocálicos tiene su palabra", () => {
+		/** En español cada sílaba tiene un solo núcleo vocálico, así que hay una sílaba por grupo de vocales seguidas. */
+		function vowelGroups(word: string): number {
+			let count = 0;
+			let previousWasVowel = false;
+			for (const character of word) {
+				const isVowel = "aeiou".includes(stripDiacritics(character));
+				if (isVowel && !previousWasVowel) count += 1;
+				previousWasVowel = isVowel;
+			}
+			return count;
+		}
+
+		for (const picture of pictures) {
+			expect([picture.text, picture.syllables?.length]).toEqual([
+				picture.text,
+				vowelGroups(picture.text),
+			]);
+		}
+	});
 });
