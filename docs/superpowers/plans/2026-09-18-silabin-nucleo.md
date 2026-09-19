@@ -293,6 +293,14 @@ describe('unitSchema', () => {
     expect(unitSchema.safeParse(unidad).success).toBe(false);
   });
 
+  it('rechaza una unidad jugable sin plantillas declaradas', () => {
+    const unidad = {
+      id: 'phase1:sin-ejercicios', phase: 1, title: 'Sin ejercicios', audioKey: 'unit:x',
+      requires: [], introduces: ['phoneme:a'], exercises: [],
+    };
+    expect(unitSchema.safeParse(unidad).success).toBe(false);
+  });
+
   it('acepta una unidad de fase 3 vacía, que solo marca el camino futuro', () => {
     const unidad = { id: 'phase3:t', phase: 3, title: 'La t', audioKey: 'unit:phase3:t', requires: [], introduces: [], exercises: [] };
     expect(unitSchema.parse(unidad).phase).toBe(3);
@@ -407,7 +415,7 @@ export type Curriculum = { items: Item[]; units: Unit[] };
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/content/types.test.ts && pnpm typecheck`
-Expected: los 10 tests PASS. No hay nada pendiente de la Task 3: `types.ts` solo depende de `kinds.ts`.
+Expected: los 11 tests PASS. No hay nada pendiente de la Task 3: `types.ts` solo depende de `kinds.ts`.
 
 - [ ] **Step 6: Commit**
 
