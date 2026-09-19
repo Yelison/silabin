@@ -1431,6 +1431,7 @@ Crea `src/content/phase1.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
+import { phase0Units } from '@/content/phase0';
 import { picturesByInitialPhoneme } from '@/content/pictures';
 import { VOWEL_ORDER, phase1Items, phase1Units } from '@/content/phase1';
 import { itemSchema, unitSchema } from '@/content/types';
@@ -1448,12 +1449,31 @@ describe('Fase 1', () => {
     for (const item of phase1Items) expect(itemSchema.safeParse(item).success).toBe(true);
   });
 
-  it('cada unidad introduce un fonema y una letra', () => {
-    for (const unit of phase1Units) {
-      expect(unit.introduces).toHaveLength(2);
-      expect(unit.introduces[0]?.startsWith('phoneme:')).toBe(true);
-      expect(unit.introduces[1]?.startsWith('letter:')).toBe(true);
-    }
+  it('cada unidad introduce el fonema y la letra de su propia vocal', () => {
+    // Comprobar solo los prefijos dejaba pasar una permutación: la unidad de la a
+    // enseñando el sonido de la a y la forma de la e. Y el test de huérfanos no la
+    // detecta, porque compara conjuntos ordenados y el conjunto total no cambia.
+    VOWEL_ORDER.forEach((vowel, index) => {
+      expect([vowel, phase1Units[index]?.introduces]).toEqual([
+        vowel,
+        [`phoneme:${vowel}`, `letter:${vowel}`],
+      ]);
+    });
+  });
+
+  it('el prerrequisito de la primera vocal apunta a una unidad que existe de verdad', () => {
+    // Comparar contra el texto literal 'phase0:hear-it' no detectaría que esa unidad
+    // se renombrara en la Fase 0.
+    const requerida = phase1Units[0]?.requires[0];
+    expect(phase0Units.some((unit) => unit.id === requerida)).toBe(true);
+  });
+
+  it('cada unidad tiene su propio audio de introducción', () => {
+    const claves = phase1Units.map((unit) => unit.audioKey);
+    expect(new Set(claves).size).toBe(claves.length);
+    VOWEL_ORDER.forEach((vowel, index) => {
+      expect([vowel, phase1Units[index]?.audioKey]).toEqual([vowel, `unit:phase1:vowel-${vowel}`]);
+    });
   });
 
   it('cada letra trae su par mayúscula y minúscula', () => {
@@ -1482,11 +1502,19 @@ describe('Fase 1', () => {
     expect(phase1Items).toHaveLength(10);
   });
 
-  it('cada unidad usa las cuatro plantillas de la fase', () => {
+  it('cada unidad declara las cuatro plantillas con sus pesos', () => {
+    // Los pesos deciden qué practica más el niño: comprobar solo el conjunto de
+    // plantillas dejaba pasar una inversión que cambiaba la pedagogía en silencio.
     for (const unit of phase1Units) {
-      expect(unit.exercises.map((e) => e.templateId).sort()).toEqual(
-        ['initial-sound', 'listen-tap', 'say-it', 'trace'],
-      );
+      expect([unit.id, unit.exercises]).toEqual([
+        unit.id,
+        [
+          { templateId: 'initial-sound', weight: 1 },
+          { templateId: 'listen-tap', weight: 3 },
+          { templateId: 'trace', weight: 2 },
+          { templateId: 'say-it', weight: 2 },
+        ],
+      ]);
     }
   });
 
@@ -1585,7 +1613,7 @@ export const phase1Units: Unit[] = VOWEL_ORDER.map((vowel, index) => {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/content/phase1.test.ts src/content/pictures.test.ts`
-Expected: PASS ambos archivos, 10 tests en phase1.
+Expected: PASS ambos archivos, 12 tests en phase1.
 
 - [ ] **Step 6: Commit**
 
@@ -1619,6 +1647,7 @@ import { describe, expect, it } from 'vitest';
 import {
   accentIsFinalOnly, hasAdjacentVowels, hasOnlyOpenSyllables, stripDiacritics, syllabify,
 } from '@/content/invariants';
+import { phase1Units } from '@/content/phase1';
 import { CONSONANT_ORDER, lettersIntroducedBefore, phase2Items, phase2Units } from '@/content/phase2';
 import { itemSchema, unitSchema } from '@/content/types';
 
@@ -1637,19 +1666,66 @@ describe('Fase 2, estructura', () => {
     for (const item of phase2Items) expect(itemSchema.safeParse(item).success).toBe(true);
   });
 
-  it('cada unidad introduce fonema, letra, 5 sílabas y al menos 5 palabras', () => {
+  it('cada unidad introduce el fonema, la letra y las 5 sílabas de su propia consonante', () => {
+    // Contar por prefijo dejaría pasar una permutación: la unidad de la m introduciendo
+    // el sonido de la m y la forma de la l. Es el hueco que sobrevivió en la Fase 1.
+    CONSONANT_ORDER.forEach((consonant, index) => {
+      const introduced = phase2Units[index]?.introduces ?? [];
+      expect([consonant, introduced.slice(0, 7)]).toEqual([
+        consonant,
+        [
+          `phoneme:${consonant}`,
+          `letter:${consonant}`,
+          `syllable:${consonant}a`,
+          `syllable:${consonant}e`,
+          `syllable:${consonant}i`,
+          `syllable:${consonant}o`,
+          `syllable:${consonant}u`,
+        ],
+      ]);
+      expect([consonant, introduced.slice(7).every((id) => id.startsWith('word:'))]).toEqual([consonant, true]);
+      expect([consonant, introduced.slice(7).length >= 5]).toEqual([consonant, true]);
+    });
+  });
+
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase2Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase2Items.map((i) => i.id)].sort());
+  });
+
+  it('las cuatro unidades son de fase 2 y encadenan una tras otra', () => {
+    expect(phase2Units.map((u) => u.phase)).toEqual([2, 2, 2, 2]);
+    expect(phase2Units.map((u) => u.requires)).toEqual([
+      ['phase1:vowel-u'], ['phase2:m'], ['phase2:l'], ['phase2:s'],
+    ]);
+  });
+
+  it('el prerrequisito de la primera consonante apunta a una unidad que existe de verdad', () => {
+    const requerida = phase2Units[0]?.requires[0];
+    expect(phase1Units.some((unit) => unit.id === requerida)).toBe(true);
+  });
+
+  it('cada unidad declara sus cinco plantillas con sus pesos', () => {
     for (const unit of phase2Units) {
-      const introduced = unit.introduces;
-      expect(introduced.filter((id) => id.startsWith('phoneme:'))).toHaveLength(1);
-      expect(introduced.filter((id) => id.startsWith('letter:'))).toHaveLength(1);
-      expect(introduced.filter((id) => id.startsWith('syllable:'))).toHaveLength(5);
-      expect(introduced.filter((id) => id.startsWith('word:')).length).toBeGreaterThanOrEqual(5);
+      expect([unit.id, unit.exercises]).toEqual([
+        unit.id,
+        [
+          { templateId: 'listen-tap', weight: 3 },
+          { templateId: 'build', weight: 2 },
+          { templateId: 'trace', weight: 1 },
+          { templateId: 'say-it', weight: 3 },
+          { templateId: 'read-word', weight: 2 },
+        ],
+      ]);
     }
   });
 
-  it('la primera consonante depende de la última vocal', () => {
-    expect(phase2Units[0]?.requires).toEqual(['phase1:vowel-u']);
-    expect(phase2Units[3]?.requires).toEqual(['phase2:s']);
+  it('cada unidad tiene su propio audio de introducción', () => {
+    const claves = phase2Units.map((u) => u.audioKey);
+    expect(new Set(claves).size).toBe(claves.length);
+    CONSONANT_ORDER.forEach((consonant, index) => {
+      expect([consonant, phase2Units[index]?.audioKey]).toEqual([consonant, `unit:phase2:${consonant}`]);
+    });
   });
 });
 
@@ -1713,14 +1789,31 @@ describe('Fase 2, invariante 4: tildes', () => {
 });
 
 describe('Fase 2, sílabas', () => {
-  it('cada consonante genera sus 5 sílabas con las vocales en orden a, e, i, o, u', () => {
-    const deM = phase2Items.filter((i) => i.kind === 'syllable' && i.text.startsWith('m'));
-    expect(deM.map((i) => i.text)).toEqual(['ma', 'me', 'mi', 'mo', 'mu']);
+  it('las cuatro consonantes generan sus 5 sílabas con las vocales en orden a, e, i, o, u', () => {
+    // Comprobar solo la m dejaría pasar un error en las otras tres.
+    for (const consonant of CONSONANT_ORDER) {
+      const silabas = phase2Items.filter((i) => i.kind === 'syllable' && i.text.startsWith(consonant));
+      expect([consonant, silabas.map((i) => i.text)]).toEqual([
+        consonant,
+        ['a', 'e', 'i', 'o', 'u'].map((v) => `${consonant}${v}`),
+      ]);
+    }
   });
 
-  it('cada sílaba declara sus dos fonemas', () => {
-    const ma = phase2Items.find((i) => i.id === 'syllable:ma');
-    expect(ma?.phonemes).toEqual(['m', 'a']);
+  it('cada sílaba declara sus dos fonemas y su audio propio', () => {
+    for (const item of phase2Items.filter((i) => i.kind === 'syllable')) {
+      expect([item.id, item.phonemes]).toEqual([item.id, [item.text[0], item.text[1]]]);
+      expect([item.id, item.audioKey]).toEqual([item.id, `syllable:${item.text}`]);
+    }
+  });
+
+  it('cada letra de consonante trae su par mayúscula y minúscula y suena, no se nombra', () => {
+    for (const consonant of CONSONANT_ORDER) {
+      const letra = phase2Items.find((i) => i.id === `letter:${consonant}`);
+      expect([consonant, letra?.display?.upper, letra?.display?.lower])
+        .toEqual([consonant, consonant.toUpperCase(), consonant]);
+      expect([consonant, letra?.audioKey]).toEqual([consonant, `phoneme:${consonant}`]);
+    }
   });
 });
 ```
@@ -1835,7 +1928,7 @@ export function lettersIntroducedBefore(unitId: string): Set<string> {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase2.test.ts`
-Expected: los 15 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
+Expected: los 22 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
 
 - [ ] **Step 5: Commit**
 
