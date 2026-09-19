@@ -149,7 +149,11 @@ Cada unidad introduce `phoneme:C`, `letter:C` y `syllable:Ca..Cu` (5). Plantilla
 
 Las palabras con vocal aislada como sílaba (ala, oso) se permiten porque las 5 vocales ya están dominadas.
 
-**Restricción de estructura**: toda palabra de Fase 2 debe descomponerse únicamente en sílabas **CV o V**. Quedan excluidas las palabras con hiato (mío = mí-o), diptongo, CVC o tilde, aunque todas sus letras estén introducidas. Es un invariante distinto del de pertenencia de letras y se verifica con su propio test (§10).
+**Restricciones de estructura** para las palabras de Fase 2 (invariantes distintos del de pertenencia de letras, cada uno con su test en §10):
+
+1. La palabra se descompone únicamente en sílabas **CV o V**. Excluye CVC (pan), CCV (pla) y cualquier coda.
+2. **No hay dos letras vocales adyacentes**. Excluye hiatos (mío = mí-o) y diptongos (tiene), que el niño intentará leer como una sola sílaba aunque cada sílaba sea CV o V.
+3. Se permite **tilde solo en la vocal de la última sílaba** y solo si el ítem lleva `accented: true`. Es la excepción deliberada que habilita mamá y papá, las dos palabras más motivadoras para empezar. La unidad de m incluye una presentación única: "la á es la a con sombrerito". Ninguna otra palabra de Fase 2 lleva tilde.
 
 **Fases 3+**: definidas como unidades vacías en `content/` para que el mapa muestre el camino futuro bloqueado; sin ítems en v1.
 
@@ -342,7 +346,9 @@ Service worker precachea la app, imágenes y los audios del acento activo (los o
 - **`speech/`**: fonemización por reglas (tabla de casos), comparación con prefijo, cadena de fallback con evaluadores simulados.
 - **`content/`**: esquema Zod, unicidad de ids, prerrequisitos acíclicos, distractores válidos (nunca b/d/p/q juntos), las 8 plantillas con sus 3 rungs de pista definidos, y dos invariantes **separados** para las palabras de Fase 2:
   1. **Pertenencia de letras**: cada letra de la palabra pertenece a una unidad ya introducida.
-  2. **Estructura silábica**: la palabra se descompone solo en sílabas CV o V, sin hiatos, diptongos, CVC ni tildes. Casos de test explícitos: `mapa` pasa; `mío`, `pan` y `mamá` con tilde fallan.
+  2. **Estructura silábica**: sílabas solo CV o V. Casos de test: `mapa` y `ala` pasan; `pan` (CVC) y `plato` (CCV) fallan.
+  3. **Vocales adyacentes**: ninguna palabra tiene dos letras vocales seguidas. Casos de test: `mapa` pasa; `mío` y `tiene` fallan.
+  4. **Tilde**: solo en la vocal de la última sílaba y solo con `accented: true`. Casos de test: `mamá` con `accented: true` pasa; `mamá` sin la marca y `árbol` fallan.
   Más consistencia interna del manifiesto de audio; la existencia de los ficheros en disco se comprueba solo con `SILABIN_CHECK_AUDIO_FILES=1`.
 - **`store/`**: migraciones y recuperación de documento corrupto.
 - **UI**: Testing Library para `listen-tap`, `say-it` con evaluador simulado, PIN de padres. Playwright con viewport iPhone: recorrido completo de una sesión de Fase 1 con eventos táctiles en `trace`.
