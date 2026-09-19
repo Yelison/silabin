@@ -54,6 +54,11 @@ describe("longitud y presentaciones", () => {
 		);
 		expect(presentaciones.length).toBeLessThanOrEqual(MAX_PRESENTATIONS);
 		expect(presentaciones.length).toBeGreaterThan(0);
+		// Se comprueba también contra el literal: contrastar solo con la constante importada
+		// es tautológico y no detectaría que alguien la suba. El máximo de 2 viene de que a
+		// los 3 años la atención no da para más ítems nuevos en una misma sesión.
+		expect(MAX_PRESENTATIONS).toBe(2);
+		expect(presentaciones.length).toBeLessThanOrEqual(2);
 	});
 
 	it("solo presenta ítems que no se han presentado antes", () => {
@@ -159,47 +164,63 @@ describe("orden de los ejercicios", () => {
 		}
 	});
 
-	it("la sesión SIEMPRE cierra con el ejercicio más fácil, en 40 semillas", () => {
-		// Esta sí es una garantía dura: el niño termina con una sensación de logro y no con
-		// su peor momento. Se comprueba en muchas semillas, no en una.
-		for (const unitId of ["phase1:vowel-a", "phase2:m", "phase2:p"]) {
-			for (let seed = 1; seed <= 40; seed += 1) {
-				const evaluaciones = plan(presented(unitId), unitId, 6, seed).filter(
-					(e) => e.kind === "evaluation",
-				);
-				const minima = Math.min(
-					...evaluaciones.map((e) => templates[e.templateId].difficulty),
-				);
-				const ultima = evaluaciones.at(-1);
-				if (ultima === undefined) throw new Error("sin evaluaciones");
-				expect([unitId, seed, templates[ultima.templateId].difficulty]).toEqual(
-					[unitId, seed, minima],
-				);
-			}
-		}
-	});
-
-	it("evita repetir plantilla seguida, y cuando no puede es como mucho un par", () => {
-		// No es una garantía absoluta y el test lo dice. Con una plantilla que ocupa más de la
-		// mitad de los huecos no existe ninguna alternancia válida: ocurre en la unidad de la
-		// primera vocal, donde el fonema solo admite una plantilla y al ciclar dos ítems en
-		// cinco huecos aparece tres veces. Medido sobre 400 combinaciones: 326 sin adyacencia,
-		// 46 forzadas y 28 en las que existía una disposición válida y el algoritmo no la
-		// encontró. Se acota a un solo par para que una regresión mayor sí se vea.
-		for (const unitId of [
-			"phase1:vowel-a",
-			"phase2:m",
-			"phase2:s",
-			"phase2:p",
-		]) {
+	it("la sesión SIEMPRE cierra con el ejercicio más fácil, en todas las unidades jugables", () => {
+		// Barrido amplio a propósito: la garantía se conserva por construcción, porque la
+		// pasada de mejora nunca escribe en la última posición. Si alguien rompiera ese
+		// límite, un test sobre tres unidades y cinco semillas no lo detectaría de forma
+		// fiable; este sí.
+		const jugables = [...curriculum.units.values()]
+			.filter((u) => u.phase !== 3 && u.introduces.length > 0)
+			.map((u) => u.id);
+		expect(jugables.length).toBeGreaterThanOrEqual(13);
+		for (const unitId of jugables) {
 			for (const length of [5, 6] as const) {
-				for (let seed = 1; seed <= 40; seed += 1) {
+				for (let seed = 1; seed <= 20; seed += 1) {
 					const evaluaciones = plan(
 						presented(unitId),
 						unitId,
 						length,
 						seed,
 					).filter((e) => e.kind === "evaluation");
+					if (evaluaciones.length === 0) continue;
+					const minima = Math.min(
+						...evaluaciones.map((e) => templates[e.templateId].difficulty),
+					);
+					const ultima = evaluaciones.at(-1);
+					if (ultima === undefined) throw new Error("sin evaluaciones");
+					expect([
+						unitId,
+						length,
+						seed,
+						templates[ultima.templateId].difficulty,
+					]).toEqual([unitId, length, seed, minima]);
+				}
+			}
+		}
+	});
+
+	it("evita repetir plantilla seguida donde es posible, y lo documenta donde no", () => {
+		// Las cuatro unidades jugables de la Fase 0 declaran una sola plantilla cada una, así
+		// que el 100 % de sus evaluaciones son del mismo tipo y la regla es inalcanzable por
+		// diseño del contenido: la variedad de esas sesiones viene de las palabras, no del
+		// tipo de ejercicio. Donde hay más de una plantilla aplicable, se exige como mucho un
+		// par repetido.
+		const jugables = [...curriculum.units.values()]
+			.filter((u) => u.phase !== 3 && u.introduces.length > 0)
+			.map((u) => u.id);
+		let conVariasPlantillas = 0;
+		for (const unitId of jugables) {
+			for (const length of [5, 6] as const) {
+				for (let seed = 1; seed <= 20; seed += 1) {
+					const evaluaciones = plan(
+						presented(unitId),
+						unitId,
+						length,
+						seed,
+					).filter((e) => e.kind === "evaluation");
+					const distintas = new Set(evaluaciones.map((e) => e.templateId)).size;
+					if (distintas <= 1) continue;
+					conVariasPlantillas += 1;
 					let pares = 0;
 					for (let i = 1; i < evaluaciones.length; i += 1) {
 						if (evaluaciones[i]?.templateId === evaluaciones[i - 1]?.templateId)
@@ -214,6 +235,7 @@ describe("orden de los ejercicios", () => {
 				}
 			}
 		}
+		expect(conVariasPlantillas).toBeGreaterThan(100);
 	});
 
 	it("cierra con la evaluación más fácil de la sesión", () => {
