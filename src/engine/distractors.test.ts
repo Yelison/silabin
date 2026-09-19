@@ -190,15 +190,17 @@ describe("pickDistractors", () => {
 		}
 	});
 
-	it("sobre un banco con empates, muchas semillas producen combinaciones distintas", () => {
-		// Protege el barajado previo: sin él, el resultado es fijo y el niño acaba
-		// reconociendo la terna en vez de leyendo la letra.
-		const pool = ["ma", "me", "mi", "mo", "mu"].map(syllable);
+	it("sobre un banco SIN empates, la ventana da variedad real", () => {
+		// Las sílabas no sirven para este test: su banco tiene cinco candidatos empatados y
+		// el barajado previo ya daba variedad sin la ventana. El caso que motivó el arreglo
+		// es el de las vocales, donde el orden por parecido es fijo: sin ventana, el nivel
+		// difícil devolvía SIEMPRE la misma pareja en las 30 semillas.
+		const vocales = ["a", "e", "i", "o", "u"].map(letter);
 		const vistas = new Set<string>();
-		for (let seed = 1; seed <= 20; seed += 1) {
+		for (let seed = 1; seed <= 30; seed += 1) {
 			const salida = pickDistractors({
-				target: syllable("ma"),
-				pool,
+				target: letter("a"),
+				pool: vocales,
 				count: 2,
 				rng: createRng(seed),
 				level: "hard",
