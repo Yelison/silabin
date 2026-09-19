@@ -46,6 +46,7 @@ Cada archivo tiene una responsabilidad. Los de `content/` son datos y esquema; l
 
 | Archivo | Responsabilidad |
 |---|---|
+| `src/content/kinds.ts` | Las dos enumeraciones base, `ItemKind` y `TemplateId`. No importa nada: existe para que `types.ts` y `templates.ts` no se importen entre sí. |
 | `src/content/types.ts` | Esquemas Zod y tipos de `Item`, `Unit`, `Curriculum`. Única fuente de verdad de la forma de los datos. |
 | `src/content/templates.ts` | Las 8 plantillas de ejercicio con sus 3 rungs de pista y su dificultad. |
 | `src/content/pictures.ts` | Las 35 imágenes con su palabra hablada, compartidas por las fases 0 y 1. El niño nunca las lee. |
@@ -203,17 +204,20 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 2: Esquema y tipos del contenido
+## Task 2: Enumeraciones base y esquema del contenido
 
 Define la forma de todo el currículo y las reglas que un ítem debe cumplir según su clase. Todo lo demás en `content/` depende de esta tarea.
 
+Las dos enumeraciones base viven en su propio archivo, `kinds.ts`. Es deliberado: `types.ts` necesita saber qué plantillas existen para validar una unidad, y `templates.ts` necesita saber qué clases de ítem existen para declarar qué acepta cada plantilla. Si se importan entre sí queda un ciclo que puede sobrevivir en los tests y romperse en la compilación de Next.js, o dejar un valor sin definir según cuál de los dos módulos cargue primero. Con `kinds.ts` en medio, ninguno importa al otro.
+
 **Files:**
-- Create: `src/content/types.ts`
+- Create: `src/content/kinds.ts`, `src/content/types.ts`
 - Test: `src/content/types.test.ts`
 
 **Interfaces:**
 - Consumes: nada.
 - Produces:
+  - En `kinds.ts`: `ItemKind`, `itemKindSchema`, `TemplateId`, `templateIds`, `templateIdSchema`
   - `type ItemKind = 'phoneme' | 'letter' | 'syllable' | 'word' | 'picture' | 'oral-skill'`
   - `type Item = { id: string; kind: ItemKind; text: string; phonemes: string[]; audioKey: string; display?: { upper: string; lower: string }; imageKey?: string; syllables?: string[]; accented?: boolean; task?: ItemTask }`
   - `type ItemTask = { answer: string; optionIds?: string[] }`
@@ -301,16 +305,33 @@ describe('unitSchema', () => {
 Run: `pnpm test src/content/types.test.ts`
 Expected: FAIL, no se puede resolver `@/content/types`.
 
-- [ ] **Step 3: Implementar el esquema**
+- [ ] **Step 3: Crear las enumeraciones base**
+
+Crea `src/content/kinds.ts`. Este archivo no importa nada del proyecto, y ningún otro archivo de `content/` debe crear una dependencia hacia él en sentido contrario.
+
+```ts
+import { z } from 'zod';
+
+export const itemKindSchema = z.enum(['phoneme', 'letter', 'syllable', 'word', 'picture', 'oral-skill']);
+export type ItemKind = z.infer<typeof itemKindSchema>;
+
+export const templateIds = [
+  'listen-tap', 'hear-it', 'count-syllables', 'rhyme', 'initial-sound',
+  'build', 'trace', 'say-it', 'read-word',
+] as const;
+export type TemplateId = (typeof templateIds)[number];
+export const templateIdSchema = z.enum(templateIds);
+```
+
+- [ ] **Step 4: Implementar el esquema**
 
 Crea `src/content/types.ts`:
 
 ```ts
 import { z } from 'zod';
-import { templateIdSchema, type TemplateId } from '@/content/templates';
+import { itemKindSchema, templateIdSchema, type ItemKind, type TemplateId } from '@/content/kinds';
 
-export const itemKindSchema = z.enum(['phoneme', 'letter', 'syllable', 'word', 'picture', 'oral-skill']);
-export type ItemKind = z.infer<typeof itemKindSchema>;
+export type { ItemKind, TemplateId };
 
 export const itemTaskSchema = z.object({
   answer: z.string().min(1),
@@ -383,34 +404,36 @@ export const curriculumSchema = z.object({
 export type Curriculum = { items: Item[]; units: Unit[] };
 ```
 
-- [ ] **Step 4: Verificar que pasa**
+- [ ] **Step 5: Verificar que pasa**
 
-Run: `pnpm test src/content/types.test.ts`
-Expected: los 10 tests PASS. Fallará la importación de `@/content/templates`, que se crea en la Task 3; si el orden de ejecución lo impide, crea primero un `src/content/templates.ts` con solo `export const templateIdSchema = z.enum(['listen-tap']);` y complétalo en la Task 3.
+Run: `pnpm test src/content/types.test.ts && pnpm typecheck`
+Expected: los 10 tests PASS. No hay nada pendiente de la Task 3: `types.ts` solo depende de `kinds.ts`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/content/types.ts src/content/types.test.ts
-git commit -m "feat(content): esquema Zod de ítems y unidades del currículo
+git add src/content/kinds.ts src/content/types.ts src/content/types.test.ts
+git commit -m "feat(content): enumeraciones base y esquema Zod del currículo
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ```
 
 ---
 
-## Task 3: Las 8 plantillas de ejercicio con sus pistas
+## Task 3: Las 9 plantillas de ejercicio con sus pistas
 
 Codifica la tabla de pistas del spec §5. Es la tarea que desbloquea el motor de pistas y evita que la interfaz invente ayudas.
+
+Son 9 y no las 8 del spec. La unidad `phase0:hear-it` plantea preguntas de sí o no ("¿oyes el sonido aaa en pato?"), que no encajan en ninguna de las 8: no hay opciones que elegir entre ítems, solo dos botones fijos. Meterla a la fuerza en `initial-sound` haría que el planificador buscara una imagen cuyo sonido inicial coincida con un ítem oral que no tiene fonemas, y reventaría al no encontrar candidatos. `hear-it` se declara sin `options`, así que la respuesta correcta sale de `task.answer` del propio ítem y la interfaz dibuja los dos botones.
 
 **Files:**
 - Create: `src/content/templates.ts`
 - Test: `src/content/templates.test.ts`
 
 **Interfaces:**
-- Consumes: nada.
+- Consumes: `ItemKind`, `TemplateId`, `templateIds` de `@/content/kinds`.
 - Produces:
-  - `type TemplateId = 'listen-tap' | 'count-syllables' | 'rhyme' | 'initial-sound' | 'trace' | 'say-it' | 'build' | 'read-word'`
+  - Reexporta `TemplateId`, `templateIds` y `templateIdSchema` desde `kinds.ts`, para que el resto del proyecto importe todo lo de plantillas desde un solo sitio
   - `type HintRung = 'reduce' | 'sound' | 'model'`
   - `type HintStep = { rung: HintRung; action: string; note: string }`
   - `type ExerciseTemplate = { id: TemplateId; itemKinds: ItemKind[]; evaluation: 'tap' | 'taps' | 'trace' | 'voice' | 'drag'; options?: { min: number; max: number }; difficulty: number; hints: [HintStep, HintStep, HintStep] }`
@@ -425,8 +448,8 @@ import { describe, expect, it } from 'vitest';
 import { templateIds, templates } from '@/content/templates';
 
 describe('plantillas de ejercicio', () => {
-  it('define las 8 plantillas de la v1', () => {
-    expect(templateIds).toHaveLength(8);
+  it('define las 9 plantillas de la v1', () => {
+    expect(templateIds).toHaveLength(9);
   });
 
   it('cada plantilla tiene exactamente 3 rungs en el orden reduce, sound, model', () => {
@@ -462,6 +485,16 @@ describe('plantillas de ejercicio', () => {
     expect(ordenadas.at(-1)).toBe('read-word');
   });
 
+  it('cada plantilla tiene una dificultad distinta, para que el cierre de sesión sea inequívoco', () => {
+    const dificultades = templateIds.map((id) => templates[id].difficulty);
+    expect(new Set(dificultades).size).toBe(templateIds.length);
+  });
+
+  it('hear-it no tiene opciones: sus dos botones son fijos y la respuesta está en el dato', () => {
+    expect(templates['hear-it'].options).toBeUndefined();
+    expect(templates['hear-it'].itemKinds).toEqual(['oral-skill']);
+  });
+
   it('cada id de plantilla coincide con su clave en el registro', () => {
     for (const id of templateIds) expect(templates[id].id).toBe(id);
   });
@@ -478,15 +511,10 @@ Expected: FAIL, no se puede resolver `@/content/templates`.
 Crea `src/content/templates.ts`. Los textos de `action` son las claves que interpretará la interfaz en el Plan 2; los de `note` son para quien lea el código, nunca se muestran al niño.
 
 ```ts
-import { z } from 'zod';
-import type { ItemKind } from '@/content/types';
+import { templateIds, type ItemKind, type TemplateId } from '@/content/kinds';
 
-export const templateIds = [
-  'listen-tap', 'count-syllables', 'rhyme', 'initial-sound',
-  'build', 'trace', 'say-it', 'read-word',
-] as const;
-export type TemplateId = (typeof templateIds)[number];
-export const templateIdSchema = z.enum(templateIds);
+export { templateIdSchema, templateIds } from '@/content/kinds';
+export type { TemplateId } from '@/content/kinds';
 
 export type HintRung = 'reduce' | 'sound' | 'model';
 export type HintStep = { rung: HintRung; action: string; note: string };
@@ -513,11 +541,22 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
       { rung: 'model', action: 'mark-correct+await-tap', note: 'Se marca la correcta; el niño la toca para continuar.' },
     ],
   },
+  'hear-it': {
+    id: 'hear-it',
+    itemKinds: ['oral-skill'],
+    evaluation: 'tap',
+    difficulty: 2,
+    hints: [
+      { rung: 'reduce', action: 'replay-word-slowly', note: 'Se repite la palabra despacio, separando sus partes.' },
+      { rung: 'sound', action: 'lengthen-target-phoneme-in-word', note: 'Se repite la palabra alargando el sonido buscado si está.' },
+      { rung: 'model', action: 'mark-correct-button+await-tap', note: 'Se marca el botón correcto, sí o no; el niño lo toca.' },
+    ],
+  },
   'count-syllables': {
     id: 'count-syllables',
     itemKinds: ['oral-skill'],
     evaluation: 'taps',
-    difficulty: 2,
+    difficulty: 3,
     hints: [
       { rung: 'reduce', action: 'replay-by-syllable+light-per-syllable', note: 'Se repite la palabra sílaba a sílaba con una luz por sílaba.' },
       { rung: 'sound', action: 'replay-with-audible-beats', note: 'Se oye la palabra con un golpe audible por sílaba.' },
@@ -529,7 +568,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     itemKinds: ['oral-skill'],
     evaluation: 'tap',
     options: { min: 2, max: 2 },
-    difficulty: 3,
+    difficulty: 4,
     hints: [
       { rung: 'reduce', action: 'replay-target-ending', note: 'Se repite el final de la palabra objetivo, por ejemplo "-ato".' },
       { rung: 'sound', action: 'replay-each-option-ending', note: 'Se oye el final de cada opción, una tras otra.' },
@@ -541,7 +580,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     itemKinds: ['phoneme'],
     evaluation: 'tap',
     options: { min: 2, max: 3 },
-    difficulty: 3,
+    difficulty: 5,
     hints: [
       { rung: 'reduce', action: 'dim-one-distractor+replay-phoneme', note: 'Se atenúa un distractor y se repite el fonema aislado.' },
       { rung: 'sound', action: 'replay-each-option-onset', note: 'Se oye el inicio de cada imagen, por ejemplo "a… vión".' },
@@ -552,7 +591,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     id: 'build',
     itemKinds: ['syllable'],
     evaluation: 'drag',
-    difficulty: 4,
+    difficulty: 6,
     hints: [
       { rung: 'reduce', action: 'dim-nonmatching-pieces', note: 'Se atenúan las piezas que no entran; quedan la consonante y las 5 vocales.' },
       { rung: 'sound', action: 'pulse-vowel-piece+play-vowel', note: 'La pieza de la vocal pulsa y se oye su sonido.' },
@@ -563,7 +602,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     id: 'trace',
     itemKinds: ['letter'],
     evaluation: 'trace',
-    difficulty: 5,
+    difficulty: 7,
     hints: [
       { rung: 'reduce', action: 'restore-previous-guide-level', note: 'Reaparece la guía completa del nivel anterior, desvanecimiento inverso.' },
       { rung: 'sound', action: 'animate-dot-along-stroke+play-phoneme', note: 'Un punto recorre el trazo mientras se oye el sonido de la letra.' },
@@ -574,7 +613,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     id: 'say-it',
     itemKinds: ['letter', 'syllable'],
     evaluation: 'voice',
-    difficulty: 6,
+    difficulty: 8,
     hints: [
       { rung: 'reduce', action: 'show-mouth+replay-instruction', note: 'Se muestra la boca articulando y se repite la instrucción, sin dar el sonido.' },
       { rung: 'sound', action: 'lengthen-first-phoneme', note: 'Se oye el primer sonido alargado, "mmm…", y el niño completa.' },
@@ -585,7 +624,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
     id: 'read-word',
     itemKinds: ['word'],
     evaluation: 'voice',
-    difficulty: 7,
+    difficulty: 9,
     hints: [
       { rung: 'reduce', action: 'split-syllables+replay-instruction', note: 'Se separan visualmente las sílabas, ma·pa, y se repite la instrucción.' },
       { rung: 'sound', action: 'play-first-syllable', note: 'Se oye la primera sílaba; el niño completa.' },
@@ -598,13 +637,13 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/templates.test.ts`
-Expected: los 7 tests PASS.
+Expected: los 9 tests PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/content/templates.ts src/content/templates.test.ts
-git commit -m "feat(content): 8 plantillas de ejercicio con sus 3 rungs de pista
+git commit -m "feat(content): 9 plantillas de ejercicio con sus 3 rungs de pista
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ```
@@ -1019,6 +1058,11 @@ describe('Fase 0', () => {
     }
   });
 
+  it('la unidad de sí o no usa la plantilla hear-it, no la de sonido inicial', () => {
+    const unidad = phase0Units.find((u) => u.id === 'phase0:hear-it');
+    expect(unidad?.exercises.map((e) => e.templateId)).toEqual(['hear-it']);
+  });
+
   it('las tareas de sí o no responden solo si o no', () => {
     for (const item of phase0Items.filter((i) => i.id.startsWith('oral:hear:'))) {
       expect(['si', 'no']).toContain(item.task?.answer);
@@ -1162,7 +1206,7 @@ export const phase0Units: Unit[] = [
     audioKey: 'unit:phase0:hear-it',
     requires: ['phase0:initial'],
     introduces: hearItems.map((i) => i.id),
-    exercises: [{ templateId: 'initial-sound', weight: 1 }],
+    exercises: [{ templateId: 'hear-it', weight: 1 }],
   },
 ];
 ```
@@ -1170,7 +1214,7 @@ export const phase0Units: Unit[] = [
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase0.test.ts`
-Expected: los 8 tests PASS.
+Expected: los 9 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -3513,6 +3557,18 @@ describe('determinismo', () => {
 });
 
 describe('orden de los ejercicios', () => {
+  it('planifica la unidad de sí o no sin quedarse sin opciones', () => {
+    const sesion = plan(presented('phase0:hear-it'), 'phase0:hear-it', 5);
+    expect(sesion).toHaveLength(5);
+    for (const ejercicio of sesion) {
+      expect(ejercicio.templateId).toBe('hear-it');
+      expect(ejercicio.optionIds).toEqual([]);
+      expect(ejercicio.correctOptionId).toBeNull();
+    }
+  });
+
+  // La regla de no repetir plantilla se aplica solo entre evaluaciones: el salto de la última
+  // presentación a la primera evaluación no se comprueba, porque una presentación no es un ejercicio.
   it('no coloca dos veces la misma plantilla seguidas', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const sesion = plan(presented('phase2:m'), 'phase2:m', 6, seed);
@@ -3539,7 +3595,7 @@ describe('orden de los ejercicios', () => {
 
 describe('plantillas y opciones', () => {
   it('cada ejercicio usa una plantilla que acepta la clase del ítem', () => {
-    for (const unitId of ['phase0:clap', 'phase1:vowel-a', 'phase2:m']) {
+    for (const unitId of ['phase0:clap', 'phase0:rhyme', 'phase0:initial', 'phase0:hear-it', 'phase1:vowel-a', 'phase2:m']) {
       for (const ejercicio of plan(presented(unitId), unitId, 6)) {
         const item = curriculum.items.get(ejercicio.itemId);
         expect(templates[ejercicio.templateId].itemKinds).toContain(item?.kind);
@@ -3796,9 +3852,9 @@ export function planSession(input: {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/planner.test.ts && pnpm typecheck`
-Expected: los 17 tests PASS.
+Expected: los 19 tests PASS.
 
-Si el test de "no coloca dos veces la misma plantilla seguidas" falla para alguna semilla, comprueba primero cuántas plantillas distintas admite la unidad: con una sola plantilla aplicable la adyacencia es inevitable y el test debe excluir ese caso, no el algoritmo.
+Si el test de "no coloca dos veces la misma plantilla seguidas" falla para alguna semilla, comprueba primero cuántas plantillas distintas admite la unidad: con una sola plantilla aplicable la adyacencia es inevitable y el test debe excluir ese caso, no el algoritmo. Por eso ese test usa `phase2:m`, que admite cinco plantillas, y la unidad de sí o no tiene su propio test sin exigir variedad.
 
 - [ ] **Step 6: Commit**
 
@@ -4635,6 +4691,8 @@ export function emptyPersistedState(): PersistedState {
       childName: null,
       pinHash: null,
     },
+    // El spread va después de settings a propósito: si algún día ProgressState gana una clave
+    // llamada settings, este orden la dejaría ganar. No reordenar sin revisar el esquema.
     ...emptyProgressState(),
     sessions: [],
     rewards: { unlockedAt: {}, equipped: { background: null, companion: null, trail: null } },
