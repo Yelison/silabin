@@ -159,8 +159,18 @@ describe("migrate", () => {
 		expect(result.state.version).toBe(CURRENT_VERSION);
 	});
 
-	it("recupera con estado vacío si el documento es basura", () => {
-		for (const basura of [null, undefined, 42, "hola", {}, { version: 1 }]) {
+	it("recupera con estado vacío si el documento es basura sin remedio", () => {
+		// Ni null, ni un número, ni una cadena, ni un objeto sin nada dentro tienen claves de
+		// las que rescatar nada: ahí no hay progreso que salvar, solo que avisar.
+		for (const basura of [
+			null,
+			undefined,
+			42,
+			"hola",
+			[],
+			{},
+			{ version: 1 },
+		]) {
 			const result = migrate(basura);
 			expect(result.recovered).toBe(true);
 			expect(result.state).toEqual(emptyPersistedState());
@@ -178,15 +188,14 @@ describe("migrate", () => {
 		expect(migrate(state).state.units["phase1:vowel-a"]?.bestStars).toBe(3);
 	});
 
-	// Ruling del controlador: en v1 migrate() no hace rescate por clave. Una sola
-	// clave corrupta y ajena al progreso (aquí, settings.pinHash) tira todo el
-	// documento, aunque items, units y sessions fueran válidos. Es deliberado:
-	// recovered=true existe para que la interfaz ofrezca restaurar desde una
-	// exportación (Tarea 22), no para que aquí se intente salvar nada por clave.
-	// El día que exista rescate por clave en v2, este test debe FALLAR a
-	// propósito: eso es lo que fuerza a decidir en voz alta, no en silencio,
-	// qué comportamiento nuevo se quiere.
-	it("v1 descarta todo el progreso a propósito si una sola clave ajena está corrupta", () => {
+	// Este test decía lo contrario a propósito: en v1 una sola clave corrupta y ajena al
+	// progreso tiraba el documento entero, y el comentario dejaba dicho que el día que
+	// hubiera rescate por clave este test tenía que fallar para obligar a decidir en voz
+	// alta. Ese día llegó. El motivo del cambio: la exportación, que era la mitigación
+	// prevista, vive en el panel de padres (Plan 6), mientras que los datos empiezan a
+	// acumularse en el Plan 2; y tirar el progreso por una clave ajena contradice "sin
+	// castigos: nada resta estrellas, dominio ni progreso".
+	it("una clave ajena corrupta no cuesta ni una estrella", () => {
 		const state = emptyPersistedState();
 		state.items["letter:a"] = {
 			box: 3,
@@ -204,6 +213,9 @@ describe("migrate", () => {
 			stars: 3,
 			endedAt: "2026-09-18T12:00:00.000Z",
 		});
+		state.counters.sessions = 7;
+		state.rewards.unlockedAt["first-session"] = "2026-09-18T12:00:00.000Z";
+		state.sessionCounter = 7;
 
 		// Clave ajena al progreso, corrupta: pinHash debería ser string | null.
 		const roto = {
@@ -213,9 +225,66 @@ describe("migrate", () => {
 
 		const resultado = migrate(roto);
 
+		// Avisa, para que la interfaz pueda ofrecer restaurar o reiniciar...
 		expect(resultado.recovered).toBe(true);
-		expect(resultado.state.items).toEqual({});
-		expect(resultado.state.units).toEqual({});
+		// ...pero no se pierde nada de lo que el niño ganó.
+		expect(resultado.state.items).toEqual(state.items);
+		expect(resultado.state.units).toEqual(state.units);
+		expect(resultado.state.sessions).toEqual(state.sessions);
+		expect(resultado.state.counters).toEqual(state.counters);
+		expect(resultado.state.rewards).toEqual(state.rewards);
+		expect(resultado.state.sessionCounter).toBe(7);
+		// Solo la clave que no valida vuelve a sus valores por omisión.
+		expect(resultado.state.settings).toEqual(emptyPersistedState().settings);
+	});
+
+	it("dentro de items y units se descarta la entrada corrupta, no el bloque", () => {
+		const state = emptyPersistedState();
+		state.items["letter:a"] = {
+			box: 3,
+			presented: true,
+			firstTryCorrect: 3,
+			assisted: 0,
+			lastSessionIndex: 2,
+			lastCreditSession: 2,
+			masteredAt: "2026-09-18T12:00:00.000Z",
+		};
+		state.units["phase1:vowel-a"] = { status: "done", bestStars: 3 };
+
+		const roto = {
+			...state,
+			items: { ...state.items, "letter:e": { box: "tres" } },
+			units: { ...state.units, "phase1:vowel-e": { status: "terminada" } },
+		};
+
+		const resultado = migrate(roto);
+
+		expect(resultado.recovered).toBe(true);
+		expect(Object.keys(resultado.state.items)).toEqual(["letter:a"]);
+		expect(resultado.state.items["letter:a"]?.firstTryCorrect).toBe(3);
+		expect(Object.keys(resultado.state.units)).toEqual(["phase1:vowel-a"]);
+		expect(resultado.state.units["phase1:vowel-a"]?.bestStars).toBe(3);
+	});
+
+	it("un historial de sesiones corrupto no se lleva por delante el dominio", () => {
+		const state = emptyPersistedState();
+		state.units["phase2:m"] = { status: "done", bestStars: 2 };
+		const roto = { ...state, sessions: "esto no es una lista" };
+
+		const resultado = migrate(roto);
+
+		expect(resultado.recovered).toBe(true);
 		expect(resultado.state.sessions).toEqual([]);
+		expect(resultado.state.units["phase2:m"]?.bestStars).toBe(2);
+	});
+
+	it("una versión más nueva tampoco tira el progreso que sí se entiende", () => {
+		const state = emptyPersistedState();
+		state.units["phase0:clap"] = { status: "done", bestStars: 3 };
+		const resultado = migrate({ ...state, version: 99 });
+
+		expect(resultado.recovered).toBe(true);
+		expect(resultado.state.version).toBe(CURRENT_VERSION);
+		expect(resultado.state.units["phase0:clap"]?.bestStars).toBe(3);
 	});
 });

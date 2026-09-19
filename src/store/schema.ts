@@ -106,10 +106,53 @@ export function emptyPersistedState(): PersistedState {
 	};
 }
 
+/** Cualquier objeto leído del disco, con sus claves todavía sin validar. */
+const documentoSinValidar = z.record(z.string(), z.unknown());
+
+/** Lo que valide, y si no, lo que se pasa por omisión. */
+function rescatar<T>(schema: z.ZodType<T>, valor: unknown, porOmision: T): T {
+	const parsed = schema.safeParse(valor);
+	return parsed.success ? parsed.data : porOmision;
+}
+
+/**
+ * Rescata un diccionario entrada a entrada: una entrada corrupta se descarta sola, sin
+ * arrastrar a las demás. Es la diferencia entre perder el progreso de una letra y perder
+ * el de todas. Se usa Object.fromEntries y no la asignación por índice porque define las
+ * claves en vez de asignarlas, y así una clave "__proto__" guardada en el disco es un dato
+ * más y no toca el prototipo del objeto que se devuelve.
+ */
+function rescatarEntradas<T>(
+	schema: z.ZodType<T>,
+	valor: unknown,
+): Record<string, T> {
+	const entradas = documentoSinValidar.safeParse(valor);
+	if (!entradas.success) return {};
+	return Object.fromEntries(
+		Object.entries(entradas.data).flatMap(([clave, dato]) => {
+			const parsed = schema.safeParse(dato);
+			return parsed.success ? [[clave, parsed.data] as const] : [];
+		}),
+	);
+}
+
 /**
  * Lleva cualquier documento leído del disco a la versión actual.
- * Si no se puede, devuelve un estado vacío y avisa con recovered en true,
- * para que la interfaz pueda ofrecer restaurar desde una exportación.
+ *
+ * Si el documento no valida entero, se rescata clave por clave: se conserva lo que valida y
+ * solo se repone por omisión lo que no. Una sola clave corrupta y ajena al progreso —por
+ * ejemplo settings.pinHash— ya no cuesta ni una estrella, ni un ítem dominado, ni un premio.
+ * Dentro de items y de units el descarte es entrada a entrada, no por bloque.
+ *
+ * Antes se descartaba el documento entero, con el argumento de que la interfaz ofrecería
+ * restaurar desde una exportación. Pero la exportación vive en el panel de padres, que llega
+ * en el Plan 6, mientras que los datos empiezan a acumularse en el Plan 2: serían tres planes
+ * enteros en los que un niño acumula meses de progreso sin ninguna forma de exportarlo. Y la
+ * spec:328 pide "restaurar desde exportación o reiniciar", de lo que solo existe reiniciar.
+ * Tirarlo todo por una clave ajena contradice además la promesa de "sin castigos: nada resta
+ * estrellas, dominio ni progreso".
+ *
+ * recovered sigue siendo true en cuanto hubo que reponer algo, para que la interfaz avise.
  */
 export function migrate(raw: unknown): {
 	state: PersistedState;
@@ -118,7 +161,34 @@ export function migrate(raw: unknown): {
 	const parsed = persistedStateSchema.safeParse(raw);
 	if (parsed.success) return { state: parsed.data, recovered: false };
 
-	// Punto de extensión: cuando exista la versión 2, aquí se transformará una v1 en v2
-	// antes de volver a validar. Mientras solo hay una versión, cualquier fallo se recupera.
-	return { state: emptyPersistedState(), recovered: true };
+	const porOmision = emptyPersistedState();
+	// Basura sin remedio: null, un número, una cadena o un array no tienen claves que mirar.
+	const documento = documentoSinValidar.safeParse(raw);
+	if (!documento.success) return { state: porOmision, recovered: true };
+	const doc = documento.data;
+
+	// Punto de extensión: cuando exista la versión 2, aquí se transformará una v1 en v2 antes
+	// de rescatar. Mientras solo hay una versión, el documento se rescata tal cual y la versión
+	// se escribe a la actual: llegar aquí ya significa que algo hubo que reponer.
+	return {
+		state: {
+			version: CURRENT_VERSION,
+			settings: rescatar(settingsSchema, doc.settings, porOmision.settings),
+			items: rescatarEntradas(itemProgressSchema, doc.items),
+			units: rescatarEntradas(unitProgressSchema, doc.units),
+			sessionCounter: rescatar(
+				z.number().int().min(0),
+				doc.sessionCounter,
+				porOmision.sessionCounter,
+			),
+			counters: rescatar(countersSchema, doc.counters, porOmision.counters),
+			sessions: rescatar(
+				z.array(sessionRecordSchema),
+				doc.sessions,
+				porOmision.sessions,
+			),
+			rewards: rescatar(rewardStateSchema, doc.rewards, porOmision.rewards),
+		},
+		recovered: true,
+	};
 }
