@@ -1091,6 +1091,7 @@ Crea `src/content/phase0.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { pictureId, pictures } from '@/content/pictures';
 import { phase0Items, phase0Units } from '@/content/phase0';
+import { templates } from '@/content/templates';
 import { itemSchema, unitSchema } from '@/content/types';
 
 describe('Fase 0', () => {
@@ -1161,6 +1162,93 @@ describe('Fase 0', () => {
   it('las tareas de sí o no responden solo si o no', () => {
     for (const item of phase0Items.filter((i) => i.id.startsWith('oral:hear:'))) {
       expect(['si', 'no']).toContain(item.task?.answer);
+    }
+  });
+
+  // Los ocho tests siguientes comprueban el SIGNIFICADO de los datos, no su forma.
+  // Una revisión rompió los datos de seis maneras distintas (invertir una respuesta de sí
+  // a no, apuntar la respuesta de una rima al distractor, poner un distractor con el mismo
+  // sonido inicial, borrar un trío, dejar ítems huérfanos, romper la cadena) y la suite
+  // seguía en verde. Cada test de abajo mata una de esas mutaciones.
+
+  it('cada bloque de datos tiene la cantidad de ítems que debe', () => {
+    const contar = (prefijo: string) => phase0Items.filter((i) => i.id.startsWith(prefijo)).length;
+    expect(contar('oral:clap:')).toBe(9);
+    expect(contar('oral:rhyme:')).toBe(6);
+    expect(contar('oral:initial:')).toBe(10);
+    expect(contar('oral:hear:')).toBe(8);
+    expect(phase0Items).toHaveLength(33);
+  });
+
+  it('todas las unidades son de fase 0 y encadenan una tras otra', () => {
+    expect(phase0Units.map((u) => u.phase)).toEqual([0, 0, 0, 0]);
+    expect(phase0Units.map((u) => u.requires)).toEqual([
+      [], ['phase0:clap'], ['phase0:rhyme'], ['phase0:initial'],
+    ]);
+  });
+
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase0Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase0Items.map((i) => i.id)].sort());
+  });
+
+  it('en rimas, la respuesta rima de verdad y los distractores no', () => {
+    const final = (palabra: string) => palabra.slice(-2);
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:rhyme:'))) {
+      const respuesta = pictures.find((p) => p.id === item.task?.answer);
+      expect([item.text, final(respuesta?.text ?? '')]).toEqual([item.text, final(item.text)]);
+      for (const id of (item.task?.optionIds ?? []).filter((x) => x !== item.task?.answer)) {
+        const distractor = pictures.find((p) => p.id === id);
+        expect([item.text, distractor?.text, final(distractor?.text ?? '') === final(item.text)])
+          .toEqual([item.text, distractor?.text, false]);
+      }
+    }
+  });
+
+  it('en sonido inicial, ningún distractor comparte el sonido del objetivo', () => {
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:initial:'))) {
+      const respuesta = pictures.find((p) => p.id === item.task?.answer);
+      expect([item.text, item.task?.answer]).toEqual([item.text, pictureId(item.text)]);
+      for (const id of (item.task?.optionIds ?? []).filter((x) => x !== item.task?.answer)) {
+        const distractor = pictures.find((p) => p.id === id);
+        expect([item.text, distractor?.text, distractor?.phonemes[0] === respuesta?.phonemes[0]])
+          .toEqual([item.text, distractor?.text, false]);
+      }
+    }
+  });
+
+  it('en sí o no, la respuesta coincide con si el sonido está en la palabra', () => {
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:hear:'))) {
+      const fonema = item.id.split(':')[2]?.split('-')[0] ?? '';
+      const esperado = item.text.includes(fonema) ? 'si' : 'no';
+      expect([item.id, item.task?.answer]).toEqual([item.id, esperado]);
+    }
+  });
+
+  it('la cantidad de opciones respeta el rango de la plantilla de su unidad', () => {
+    for (const unidad of phase0Units) {
+      const plantilla = unidad.exercises[0]?.templateId;
+      const rango = plantilla === undefined ? undefined : templates[plantilla].options;
+      for (const id of unidad.introduces) {
+        const item = phase0Items.find((i) => i.id === id);
+        const opciones = item?.task?.optionIds;
+        if (rango === undefined) {
+          expect([id, opciones]).toEqual([id, undefined]);
+        } else {
+          expect([id, (opciones ?? []).length >= rango.min]).toEqual([id, true]);
+          expect([id, (opciones ?? []).length <= rango.max]).toEqual([id, true]);
+        }
+      }
+    }
+  });
+
+  it('las imágenes que menciona cada ítem existen en el catálogo', () => {
+    const ids = new Set(pictures.map((p) => p.id));
+    for (const item of phase0Items) {
+      for (const id of item.task?.optionIds ?? []) expect([item.id, ids.has(id)]).toEqual([item.id, true]);
+      if (item.imageKey !== undefined) {
+        expect([item.id, pictures.some((p) => p.imageKey === item.imageKey)]).toEqual([item.id, true]);
+      }
     }
   });
 });
@@ -1309,7 +1397,7 @@ export const phase0Units: Unit[] = [
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase0.test.ts`
-Expected: los 10 tests PASS.
+Expected: los 18 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1376,9 +1464,22 @@ describe('Fase 1', () => {
   });
 
   it('la primera vocal depende de haber terminado la Fase 0 y las demás encadenan', () => {
-    expect(phase1Units[0]?.requires).toEqual(['phase0:hear-it']);
-    expect(phase1Units[1]?.requires).toEqual(['phase1:vowel-a']);
-    expect(phase1Units[4]?.requires).toEqual(['phase1:vowel-i']);
+    // Se comprueba la cadena COMPLETA, no tres eslabones sueltos: en la Fase 0 una
+    // comprobación parcial dejó pasar una unidad con los prerrequisitos rotos.
+    expect(phase1Units.map((u) => u.requires)).toEqual([
+      ['phase0:hear-it'],
+      ['phase1:vowel-a'],
+      ['phase1:vowel-e'],
+      ['phase1:vowel-o'],
+      ['phase1:vowel-i'],
+    ]);
+    expect(phase1Units.map((u) => u.phase)).toEqual([1, 1, 1, 1, 1]);
+  });
+
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase1Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase1Items.map((i) => i.id)].sort());
+    expect(phase1Items).toHaveLength(10);
   });
 
   it('cada unidad usa las cuatro plantillas de la fase', () => {
@@ -1392,6 +1493,25 @@ describe('Fase 1', () => {
   it('cada vocal tiene al menos 3 imágenes de ejemplo derivadas del catálogo', () => {
     for (const vowel of VOWEL_ORDER) {
       expect(picturesByInitialPhoneme(vowel).length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('picturesByInitialPhoneme solo devuelve imágenes que empiezan por ese sonido', () => {
+    // Comprobar solo la cantidad dejaría pasar un filtro que devuelve las imágenes
+    // equivocadas, y entonces el ejercicio de sonido inicial enseñaría lo contrario.
+    for (const vowel of VOWEL_ORDER) {
+      for (const picture of picturesByInitialPhoneme(vowel)) {
+        expect([vowel, picture.text, picture.phonemes[0]]).toEqual([vowel, picture.text, vowel]);
+      }
+    }
+  });
+
+  it('el sonido de cada vocal es la propia vocal y su letra usa ese mismo audio', () => {
+    for (const vowel of VOWEL_ORDER) {
+      const phoneme = phase1Items.find((i) => i.id === `phoneme:${vowel}`);
+      const letter = phase1Items.find((i) => i.id === `letter:${vowel}`);
+      expect([vowel, phoneme?.phonemes]).toEqual([vowel, [vowel]]);
+      expect([vowel, letter?.audioKey]).toEqual([vowel, `phoneme:${vowel}`]);
     }
   });
 });
@@ -1465,7 +1585,7 @@ export const phase1Units: Unit[] = VOWEL_ORDER.map((vowel, index) => {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/content/phase1.test.ts src/content/pictures.test.ts`
-Expected: PASS ambos archivos.
+Expected: PASS ambos archivos, 10 tests en phase1.
 
 - [ ] **Step 6: Commit**
 
