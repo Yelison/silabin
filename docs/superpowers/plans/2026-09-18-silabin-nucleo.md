@@ -3389,7 +3389,7 @@ Esta tarea amplía `PlannedExercise` con `correctOptionId`, porque en el ejercic
 - Test: `src/engine/planner.test.ts`
 
 **Interfaces:**
-- Consumes: `CurriculumIndex`; `templates`; `createRng`; `isDue`, `sessionsUntilDue`; `itemProgressOf`; `pickDistractors`.
+- Consumes: `CurriculumIndex`; `templates`; `pictures`; `createRng`; `isDue`; `itemProgressOf`; `pickDistractors`.
 - Produces:
   - `MAX_PRESENTATIONS = 2`, `REVIEW_SHARE = 0.3`
   - `owningUnits(content): Map<string, string>`
@@ -4896,6 +4896,8 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Persistencia local con recuperación ante corrupción y traspaso entre dispositivos por JSON.
 - Una suite de pruebas que simula 40 sesiones seguidas de tres perfiles de niño distintos.
 - Ninguna interfaz. Nada que un niño pueda tocar todavía.
+
+Un hueco deliberado: `applySessionEnd` actualiza contadores y mejores marcas, pero no añade nada al historial `sessions` del documento persistido, porque ese campo vive en `PersistedState` y no en el `ProgressState` del motor. Añadir el registro de cada sesión terminada es trabajo del Plan 2, que es donde se une el motor con el almacenamiento.
 
 ## Hoja de ruta de los planes siguientes
 
