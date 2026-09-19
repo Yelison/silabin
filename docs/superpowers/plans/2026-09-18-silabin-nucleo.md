@@ -4118,6 +4118,7 @@ import { templates } from '@/content/templates';
 import { MAX_PRESENTATIONS, planSession } from '@/engine/planner';
 import { emptyItemProgress, emptyProgressState, type ProgressState } from '@/engine/types';
 
+
 function plan(state: ProgressState, unitId: string, length: 5 | 6 = 5, seed = 1) {
   return planSession({ content: curriculum, state, activeUnitId: unitId, sessionLength: length, seed });
 }
@@ -4170,6 +4171,21 @@ describe('mezcla de unidad activa y repaso', () => {
     const repaso = sesion.filter((e) => e.source === 'review');
     expect(repaso.length).toBeGreaterThanOrEqual(1);
     expect(repaso.length).toBeLessThanOrEqual(2);
+  });
+
+  it('un ítem presentado y nunca acertado no queda abandonado al completarse su unidad', () => {
+    // Una unidad se completa con el 80 %, así que un ítem puede quedarse sin dominar.
+    // Si además nunca se acertó, su caja es 0 e isDue lo excluye del repaso. Este test
+    // fija que el planificador lo recupera igualmente.
+    let state = presented('phase1:vowel-a');
+    const huerfano = curriculum.units.get('phase1:vowel-a')?.introduces[0] ?? '';
+    state = {
+      ...state,
+      items: { ...state.items, [huerfano]: { ...emptyItemProgress(), presented: true, box: 0, lastSessionIndex: 0 } },
+      sessionCounter: 10,
+    };
+    const sesion = plan(state, 'phase1:vowel-e', 6);
+    expect(sesion.some((e) => e.itemId === huerfano)).toBe(true);
   });
 
   it('el repaso nunca trae ítems de la unidad activa', () => {
@@ -4431,10 +4447,18 @@ export function planSession(input: {
   const budget = sessionLength - presentations.length;
   if (budget <= 0) return presentations;
 
-  // 2. Repaso vencido de otras unidades, de la caja más baja a la más alta.
+  // 2. Repaso de otras unidades, de la caja más baja a la más alta.
+  // Entra un ítem si está vencido según su caja, o si se presentó y nunca llegó a
+  // acertarse (caja 0). Sin esa segunda condición, un ítem de una unidad que se completó
+  // con el 80 % y que el niño nunca acertó quedaría abandonado para siempre: isDue
+  // devuelve false para la caja 0, y su unidad ya no es la activa. Sería justo la letra
+  // que más le cuesta la que dejaría de aparecer.
   const reviewPool = [...content.items.keys()]
     .filter((id) => owners.get(id) !== activeUnitId)
-    .filter((id) => isDue(itemProgressOf(state, id), sessionIndex))
+    .filter((id) => {
+      const progress = itemProgressOf(state, id);
+      return isDue(progress, sessionIndex) || (progress.presented && progress.box === 0);
+    })
     .sort((a, b) => {
       const pa = itemProgressOf(state, a);
       const pb = itemProgressOf(state, b);
