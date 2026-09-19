@@ -467,6 +467,15 @@ describe('plantillas de ejercicio', () => {
     }
   });
 
+  it('initial-sound acepta fonemas y habilidades orales', () => {
+    expect(templates['initial-sound'].itemKinds).toEqual(['phoneme', 'oral-skill']);
+  });
+
+  it('cada unidad de la Fase 0 encuentra una plantilla que acepta sus ítems orales', () => {
+    const orales = templateIds.filter((id) => templates[id].itemKinds.includes('oral-skill'));
+    expect(orales).toEqual(['hear-it', 'count-syllables', 'rhyme', 'initial-sound']);
+  });
+
   it('las plantillas de opciones declaran cuántas opciones admiten', () => {
     for (const id of ['listen-tap', 'rhyme', 'initial-sound'] as const) {
       expect(templates[id].options).toBeDefined();
@@ -577,7 +586,9 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
   },
   'initial-sound': {
     id: 'initial-sound',
-    itemKinds: ['phoneme'],
+    // Acepta oral-skill porque la unidad phase0:initial plantea el mismo ejercicio
+    // con ítems orales que ya traen sus opciones en el dato.
+    itemKinds: ['phoneme', 'oral-skill'],
     evaluation: 'tap',
     options: { min: 2, max: 3 },
     difficulty: 5,
@@ -637,7 +648,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/templates.test.ts`
-Expected: los 9 tests PASS.
+Expected: los 11 tests PASS.
 
 - [ ] **Step 5: Commit**
 
