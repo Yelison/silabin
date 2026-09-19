@@ -897,8 +897,30 @@ Crea `src/content/pictures.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
+import { stripDiacritics } from '@/content/invariants';
 import { itemSchema } from '@/content/types';
 import { pictureId, pictures } from '@/content/pictures';
+
+/** Sonido inicial que corresponde a la ortografía de la palabra, según las reglas del español. */
+function expectedOnset(word: string): string {
+  const first = stripDiacritics(word[0] ?? '');
+  const second = stripDiacritics(word[1] ?? '');
+  if (first === 'c' && ['a', 'o', 'u'].includes(second)) return 'k';
+  if (first === 'v') return 'b';
+  return first;
+}
+
+/** En español cada sílaba tiene un solo núcleo vocálico: hay una sílaba por grupo de vocales seguidas. */
+function vowelGroups(word: string): number {
+  let count = 0;
+  let previousWasVowel = false;
+  for (const character of word) {
+    const isVowel = 'aeiou'.includes(stripDiacritics(character));
+    if (isVowel && !previousWasVowel) count += 1;
+    previousWasVowel = isVowel;
+  }
+  return count;
+}
 
 describe('catálogo de imágenes', () => {
   it('tiene las 35 imágenes de las fases 0 y 1', () => {
@@ -920,9 +942,37 @@ describe('catálogo de imágenes', () => {
     expect(new Set(pictures.map((p) => p.id)).size).toBe(pictures.length);
   });
 
-  it('el primer fonema coincide con la primera letra del texto salvo en dígrafos', () => {
-    const gato = pictures.find((p) => p.id === pictureId('gato'));
-    expect(gato?.phonemes[0]).toBe('g');
+  it('el primer fonema de cada imagen corresponde a la ortografía de su palabra', () => {
+    // Una revisión demostró que comprobar solo una palabra dejaba pasar un fonema mal
+    // puesto en las otras 34, y la Tarea 6 usa este campo para el ejercicio de sonido
+    // inicial: un fonema equivocado hace que el niño acierte y la app le diga que falló.
+    for (const picture of pictures) {
+      expect([picture.text, picture.phonemes[0]]).toEqual([picture.text, expectedOnset(picture.text)]);
+    }
+  });
+
+  it('audioKey e imageKey siguen su convención y no están intercambiados', () => {
+    for (const picture of pictures) {
+      expect([picture.text, picture.audioKey]).toEqual([picture.text, `word:${picture.text}`]);
+      expect([picture.text, picture.imageKey]).toEqual([picture.text, `img:${picture.text}`]);
+    }
+  });
+
+  it('las sílabas de cada imagen reconstruyen su palabra', () => {
+    for (const picture of pictures) {
+      expect([picture.text, picture.syllables?.join('')]).toEqual([picture.text, picture.text]);
+    }
+  });
+
+  it('cada imagen declara tantas sílabas como grupos vocálicos tiene su palabra', () => {
+    // Este test y el anterior cubren cosas distintas: aquel detecta letras perdidas,
+    // este detecta una frontera mal puesta. Con sílabas 'pelo-ta' el anterior pasa,
+    // porque unidas dan "pelota", y solo este falla. La Tarea 6 cuenta este campo para
+    // el juego de palmas, así que una frontera mal puesta le daría al niño un recuento
+    // equivocado.
+    for (const picture of pictures) {
+      expect([picture.text, picture.syllables?.length]).toEqual([picture.text, vowelGroups(picture.text)]);
+    }
   });
 
   it('pictureId construye el id esperado', () => {
@@ -1008,7 +1058,7 @@ export const pictures: Item[] = RAW.map(([word, phonemes, syllables]) => ({
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/pictures.test.ts`
-Expected: los 7 tests PASS.
+Expected: los 10 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1072,11 +1122,24 @@ describe('Fase 0', () => {
     }
   });
 
-  it('las respuestas de contar sílabas coinciden con las sílabas de la imagen', () => {
+  it('las respuestas de contar sílabas son las correctas', () => {
+    // Comparar task.answer contra picture.syllables.length sería tautológico, porque el
+    // dato calcula answer a partir de eso mismo: ese test no podría fallar nunca. Se
+    // contrasta contra una tabla explícita de recuentos verificados a mano.
+    const ESPERADO: Record<string, string> = {
+      sol: '1', pan: '1', mesa: '2', casa: '2', gato: '2',
+      mano: '2', pelota: '3', banana: '3', tomate: '3',
+    };
+    const items = phase0Items.filter((i) => i.id.startsWith('oral:clap:'));
+    expect(items).toHaveLength(9);
+    for (const item of items) {
+      expect([item.text, item.task?.answer]).toEqual([item.text, ESPERADO[item.text]]);
+    }
+  });
+
+  it('cada palabra del juego de palmas existe en el catálogo de imágenes', () => {
     for (const item of phase0Items.filter((i) => i.id.startsWith('oral:clap:'))) {
-      const word = item.text;
-      const picture = pictures.find((p) => p.id === pictureId(word));
-      expect(item.task?.answer).toBe(String(picture?.syllables?.length));
+      expect(pictures.some((p) => p.id === pictureId(item.text))).toBe(true);
     }
   });
 
@@ -1246,7 +1309,7 @@ export const phase0Units: Unit[] = [
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase0.test.ts`
-Expected: los 9 tests PASS.
+Expected: los 10 tests PASS.
 
 - [ ] **Step 5: Commit**
 
