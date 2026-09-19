@@ -146,6 +146,33 @@ describe("mezcla de unidad activa y repaso", () => {
 		expect(sesion.some((e) => e.itemId === huerfano)).toBe(true);
 	});
 
+	it("de la unidad activa entran primero los ítems menos dominados", () => {
+		// Paso 2 del algoritmo de la spec §5: "~70 % de los ejercicios evalúan ítems de la
+		// unidad activa, priorizando los menos dominados". phase2:m introduce 12 ítems y en una
+		// sesión de 5 solo caben 5: sin ese orden entrarían ítems ya sabidos en lugar de los
+		// que al niño le cuestan, que es justo para lo que va a la sesión.
+		const unitId = "phase2:m";
+		const introduce = curriculum.units.get(unitId)?.introduces ?? [];
+		expect(introduce.length).toBeGreaterThan(5);
+		const flojos = introduce.slice(-5);
+		const state = emptyProgressState();
+		for (const id of introduce) {
+			state.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				box: 1,
+				firstTryCorrect: flojos.includes(id) ? 0 : 5,
+				lastSessionIndex: 0,
+			};
+		}
+		for (let seed = 1; seed <= 20; seed += 1) {
+			const evaluados = plan(state, unitId, 5, seed)
+				.map((e) => e.itemId)
+				.sort();
+			expect([seed, evaluados]).toEqual([seed, [...flojos].sort()]);
+		}
+	});
+
 	it("el repaso nunca trae ítems de la unidad activa", () => {
 		let state = presented("phase1:vowel-a");
 		state = presented("phase1:vowel-e", state);
@@ -255,6 +282,43 @@ describe("orden de los ejercicios", () => {
 			}
 		}
 		expect(conVariasPlantillas).toBeGreaterThan(100);
+	});
+
+	it("la mejora del orden se nota en el total, no solo dentro de cada sesión", () => {
+		// El test de arriba acota los pares por sesión (como mucho uno), y esa cota la cumple ya
+		// la pasada de mejora ella sola: quitar arrangeNoAdjacent no sube el máximo por sesión,
+		// que sigue siendo 1. Lo que empeora es el total. Medido sobre este mismo barrido —las
+		// 13 unidades jugables por 2 longitudes por 100 semillas, 1800 sesiones con más de una
+		// plantilla—: 201 pares repetidos con arrangeNoAdjacent y 477 sin él, más del doble. El
+		// techo de 300 deja la mitad de margen por encima de lo medido y rechaza de sobra esa
+		// regresión. Es una cota agregada a propósito: la de por sesión no puede verla.
+		const TECHO = 300;
+		let pares = 0;
+		let multiplantilla = 0;
+		for (const unitId of jugables) {
+			for (const length of [5, 6] as const) {
+				for (let seed = 1; seed <= 100; seed += 1) {
+					const evaluaciones = plan(
+						presented(unitId),
+						unitId,
+						length,
+						seed,
+					).filter((e) => e.kind === "evaluation");
+					// Las unidades de la Fase 0 declaran una sola plantilla: ahí repetir es inevitable
+					// por diseño del contenido y contarlas ahogaría la señal.
+					if (new Set(evaluaciones.map((e) => e.templateId)).size <= 1)
+						continue;
+					multiplantilla += 1;
+					for (let i = 1; i < evaluaciones.length; i += 1) {
+						if (evaluaciones[i]?.templateId === evaluaciones[i - 1]?.templateId)
+							pares += 1;
+					}
+				}
+			}
+		}
+		// Un barrido que mirara cuatro sesiones cumpliría cualquier techo.
+		expect(multiplantilla).toBeGreaterThan(1500);
+		expect(pares).toBeLessThanOrEqual(TECHO);
 	});
 
 	it("cierra con la evaluación más fácil de la sesión", () => {
@@ -547,6 +611,46 @@ describe("plantillas y opciones", () => {
 				ejercicio.optionIds.length,
 			);
 		}
+	});
+
+	it("los distractores empiezan fáciles y se ponen difíciles cuando el ítem ya se acertó", () => {
+		// Spec §4: "primero formas muy distintas, luego parecidas". El nivel se decide por los
+		// aciertos al primer intento del ítem, y se nota en el número de opciones: el fácil usa
+		// el mínimo de la plantilla y el difícil el máximo. Si el ternario se invirtiera, el
+		// niño estrenaría cada ítem por lo más difícil y lo repasaría por lo más fácil.
+		let faciles = 0;
+		let dificiles = 0;
+		for (let seed = 1; seed <= 10; seed += 1) {
+			// Sin un solo acierto: nivel fácil.
+			for (const ejercicio of plan(emptyProgressState(), "phase2:m", 6, seed)) {
+				const rango = templates[ejercicio.templateId].options;
+				if (rango === undefined || ejercicio.kind !== "evaluation") continue;
+				faciles += 1;
+				expect([seed, ejercicio.itemId, ejercicio.optionIds.length]).toEqual([
+					seed,
+					ejercicio.itemId,
+					rango.min,
+				]);
+			}
+			// Con un acierto al primer intento, que es justo el umbral: nivel difícil.
+			for (const ejercicio of plan(
+				presented("phase2:m"),
+				"phase2:m",
+				6,
+				seed,
+			)) {
+				const rango = templates[ejercicio.templateId].options;
+				if (rango === undefined || ejercicio.kind !== "evaluation") continue;
+				dificiles += 1;
+				expect([seed, ejercicio.itemId, ejercicio.optionIds.length]).toEqual([
+					seed,
+					ejercicio.itemId,
+					rango.max,
+				]);
+			}
+		}
+		expect(faciles).toBeGreaterThan(0);
+		expect(dificiles).toBeGreaterThan(0);
 	});
 
 	it("las plantillas sin opciones no traen ninguna", () => {
