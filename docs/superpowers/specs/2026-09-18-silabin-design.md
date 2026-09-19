@@ -344,7 +344,7 @@ Service worker precachea la app, imágenes y los audios del acento activo (los o
 
 - **`engine/`**: Vitest con TDD. Casos: planificador (proporciones 70/30, máximo 2 presentaciones, sin plantillas repetidas seguidas, determinismo por semilla), Leitner (subir/bajar caja, vencimiento), dominio (3 aciertos en sesiones distintas), pistas (transición por intento), estrellas (umbrales y mejor marca), desbloqueo de unidades y logros.
 - **`speech/`**: fonemización por reglas (tabla de casos), comparación con prefijo, cadena de fallback con evaluadores simulados.
-- **`content/`**: esquema Zod, unicidad de ids, prerrequisitos acíclicos, distractores válidos (nunca b/d/p/q juntos), las 8 plantillas con sus 3 rungs de pista definidos, y dos invariantes **separados** para las palabras de Fase 2:
+- **`content/`**: esquema Zod, unicidad de ids, prerrequisitos acíclicos, distractores válidos (nunca b/d/p/q juntos), las 9 plantillas con sus 3 rungs de pista definidos, que el `text` de todo ítem esté en minúsculas (los invariantes asumen minúsculas y con mayúsculas devuelven respuestas vacuamente coherentes sin avisar), y dos invariantes **separados** para las palabras de Fase 2:
   1. **Pertenencia de letras**: cada letra de la palabra pertenece a una unidad ya introducida.
   2. **Estructura silábica**: sílabas solo CV o V. Casos de test: `mapa` y `ala` pasan; `pan` (CVC) y `plato` (CCV) fallan.
   3. **Vocales adyacentes**: ninguna palabra tiene dos letras vocales seguidas. Casos de test: `mapa` pasa; `mío` y `tiene` fallan.

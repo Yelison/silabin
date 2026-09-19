@@ -293,6 +293,14 @@ describe('unitSchema', () => {
     expect(unitSchema.safeParse(unidad).success).toBe(false);
   });
 
+  it('rechaza una unidad jugable sin plantillas declaradas', () => {
+    const unidad = {
+      id: 'phase1:sin-ejercicios', phase: 1, title: 'Sin ejercicios', audioKey: 'unit:x',
+      requires: [], introduces: ['phoneme:a'], exercises: [],
+    };
+    expect(unitSchema.safeParse(unidad).success).toBe(false);
+  });
+
   it('acepta una unidad de fase 3 vacía, que solo marca el camino futuro', () => {
     const unidad = { id: 'phase3:t', phase: 3, title: 'La t', audioKey: 'unit:phase3:t', requires: [], introduces: [], exercises: [] };
     expect(unitSchema.parse(unidad).phase).toBe(3);
@@ -407,7 +415,7 @@ export type Curriculum = { items: Item[]; units: Unit[] };
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/content/types.test.ts && pnpm typecheck`
-Expected: los 10 tests PASS. No hay nada pendiente de la Task 3: `types.ts` solo depende de `kinds.ts`.
+Expected: los 11 tests PASS. No hay nada pendiente de la Task 3: `types.ts` solo depende de `kinds.ts`.
 
 - [ ] **Step 6: Commit**
 
@@ -465,6 +473,15 @@ describe('plantillas de ejercicio', () => {
         expect(hint.note.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('initial-sound acepta fonemas y habilidades orales', () => {
+    expect(templates['initial-sound'].itemKinds).toEqual(['phoneme', 'oral-skill']);
+  });
+
+  it('cada unidad de la Fase 0 encuentra una plantilla que acepta sus ítems orales', () => {
+    const orales = templateIds.filter((id) => templates[id].itemKinds.includes('oral-skill'));
+    expect(orales).toEqual(['hear-it', 'count-syllables', 'rhyme', 'initial-sound']);
   });
 
   it('las plantillas de opciones declaran cuántas opciones admiten', () => {
@@ -577,7 +594,9 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
   },
   'initial-sound': {
     id: 'initial-sound',
-    itemKinds: ['phoneme'],
+    // Acepta oral-skill porque la unidad phase0:initial plantea el mismo ejercicio
+    // con ítems orales que ya traen sus opciones en el dato.
+    itemKinds: ['phoneme', 'oral-skill'],
     evaluation: 'tap',
     options: { min: 2, max: 3 },
     difficulty: 5,
@@ -637,7 +656,7 @@ export const templates: Record<TemplateId, ExerciseTemplate> = {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/templates.test.ts`
-Expected: los 9 tests PASS.
+Expected: los 11 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -702,6 +721,11 @@ describe('syllabify', () => {
     expect(syllabify('pan')).toEqual([]);
     expect(syllabify('plato')).toEqual([]);
   });
+
+  it('reconoce la u, que ninguna otra palabra de prueba ejercita', () => {
+    expect(syllabify('luna')).toEqual(['lu', 'na']);
+    expect(syllabify('uso')).toEqual(['u', 'so']);
+  });
 });
 
 describe('hasOnlyOpenSyllables', () => {
@@ -735,13 +759,21 @@ describe('accentIsFinalOnly', () => {
   it('acepta una palabra sin tilde', () => {
     expect(accentIsFinalOnly('mapa')).toBe(true);
   });
+
+  it('acepta la tilde cuando la última sílaba es solo la vocal acentuada', () => {
+    expect(accentIsFinalOnly('leí')).toBe(true);
+    expect(accentIsFinalOnly('oí')).toBe(true);
+  });
 });
 
 describe('areMirrorConfusable', () => {
-  it('agrupa b, d, p y q', () => {
-    expect(areMirrorConfusable('b', 'd')).toBe(true);
-    expect(areMirrorConfusable('p', 'q')).toBe(true);
-    expect(areMirrorConfusable('b', 'q')).toBe(true);
+  it('agrupa las seis parejas de b, d, p y q en los dos sentidos', () => {
+    const grupo = ['b', 'd', 'p', 'q'];
+    for (const a of grupo) {
+      for (const b of grupo) {
+        expect([a, b, areMirrorConfusable(a, b)]).toEqual([a, b, a !== b]);
+      }
+    }
   });
 
   it('no agrupa letras de formas distintas', () => {
@@ -832,7 +864,7 @@ export function areMirrorConfusable(a: string, b: string): boolean {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/invariants.test.ts`
-Expected: los 13 tests PASS.
+Expected: los 13 tests PASS. Los tres últimos existen porque una revisión demostró por mutación que sin ellos se podía romper la frontera de la última sílaba, quitar la vocal `u` del conjunto, o hacer que una letra se considerase espejo de sí misma, sin que ningún test fallara.
 
 - [ ] **Step 5: Commit**
 
@@ -865,8 +897,30 @@ Crea `src/content/pictures.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
+import { stripDiacritics } from '@/content/invariants';
 import { itemSchema } from '@/content/types';
 import { pictureId, pictures } from '@/content/pictures';
+
+/** Sonido inicial que corresponde a la ortografía de la palabra, según las reglas del español. */
+function expectedOnset(word: string): string {
+  const first = stripDiacritics(word[0] ?? '');
+  const second = stripDiacritics(word[1] ?? '');
+  if (first === 'c' && ['a', 'o', 'u'].includes(second)) return 'k';
+  if (first === 'v') return 'b';
+  return first;
+}
+
+/** En español cada sílaba tiene un solo núcleo vocálico: hay una sílaba por grupo de vocales seguidas. */
+function vowelGroups(word: string): number {
+  let count = 0;
+  let previousWasVowel = false;
+  for (const character of word) {
+    const isVowel = 'aeiou'.includes(stripDiacritics(character));
+    if (isVowel && !previousWasVowel) count += 1;
+    previousWasVowel = isVowel;
+  }
+  return count;
+}
 
 describe('catálogo de imágenes', () => {
   it('tiene las 35 imágenes de las fases 0 y 1', () => {
@@ -888,9 +942,37 @@ describe('catálogo de imágenes', () => {
     expect(new Set(pictures.map((p) => p.id)).size).toBe(pictures.length);
   });
 
-  it('el primer fonema coincide con la primera letra del texto salvo en dígrafos', () => {
-    const gato = pictures.find((p) => p.id === pictureId('gato'));
-    expect(gato?.phonemes[0]).toBe('g');
+  it('el primer fonema de cada imagen corresponde a la ortografía de su palabra', () => {
+    // Una revisión demostró que comprobar solo una palabra dejaba pasar un fonema mal
+    // puesto en las otras 34, y la Tarea 6 usa este campo para el ejercicio de sonido
+    // inicial: un fonema equivocado hace que el niño acierte y la app le diga que falló.
+    for (const picture of pictures) {
+      expect([picture.text, picture.phonemes[0]]).toEqual([picture.text, expectedOnset(picture.text)]);
+    }
+  });
+
+  it('audioKey e imageKey siguen su convención y no están intercambiados', () => {
+    for (const picture of pictures) {
+      expect([picture.text, picture.audioKey]).toEqual([picture.text, `word:${picture.text}`]);
+      expect([picture.text, picture.imageKey]).toEqual([picture.text, `img:${picture.text}`]);
+    }
+  });
+
+  it('las sílabas de cada imagen reconstruyen su palabra', () => {
+    for (const picture of pictures) {
+      expect([picture.text, picture.syllables?.join('')]).toEqual([picture.text, picture.text]);
+    }
+  });
+
+  it('cada imagen declara tantas sílabas como grupos vocálicos tiene su palabra', () => {
+    // Este test y el anterior cubren cosas distintas: aquel detecta letras perdidas,
+    // este detecta una frontera mal puesta. Con sílabas 'pelo-ta' el anterior pasa,
+    // porque unidas dan "pelota", y solo este falla. La Tarea 6 cuenta este campo para
+    // el juego de palmas, así que una frontera mal puesta le daría al niño un recuento
+    // equivocado.
+    for (const picture of pictures) {
+      expect([picture.text, picture.syllables?.length]).toEqual([picture.text, vowelGroups(picture.text)]);
+    }
   });
 
   it('pictureId construye el id esperado', () => {
@@ -976,7 +1058,7 @@ export const pictures: Item[] = RAW.map(([word, phonemes, syllables]) => ({
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/pictures.test.ts`
-Expected: los 7 tests PASS.
+Expected: los 10 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1009,6 +1091,7 @@ Crea `src/content/phase0.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { pictureId, pictures } from '@/content/pictures';
 import { phase0Items, phase0Units } from '@/content/phase0';
+import { templates } from '@/content/templates';
 import { itemSchema, unitSchema } from '@/content/types';
 
 describe('Fase 0', () => {
@@ -1040,11 +1123,24 @@ describe('Fase 0', () => {
     }
   });
 
-  it('las respuestas de contar sílabas coinciden con las sílabas de la imagen', () => {
+  it('las respuestas de contar sílabas son las correctas', () => {
+    // Comparar task.answer contra picture.syllables.length sería tautológico, porque el
+    // dato calcula answer a partir de eso mismo: ese test no podría fallar nunca. Se
+    // contrasta contra una tabla explícita de recuentos verificados a mano.
+    const ESPERADO: Record<string, string> = {
+      sol: '1', pan: '1', mesa: '2', casa: '2', gato: '2',
+      mano: '2', pelota: '3', banana: '3', tomate: '3',
+    };
+    const items = phase0Items.filter((i) => i.id.startsWith('oral:clap:'));
+    expect(items).toHaveLength(9);
+    for (const item of items) {
+      expect([item.text, item.task?.answer]).toEqual([item.text, ESPERADO[item.text]]);
+    }
+  });
+
+  it('cada palabra del juego de palmas existe en el catálogo de imágenes', () => {
     for (const item of phase0Items.filter((i) => i.id.startsWith('oral:clap:'))) {
-      const word = item.text;
-      const picture = pictures.find((p) => p.id === pictureId(word));
-      expect(item.task?.answer).toBe(String(picture?.syllables?.length));
+      expect(pictures.some((p) => p.id === pictureId(item.text))).toBe(true);
     }
   });
 
@@ -1066,6 +1162,93 @@ describe('Fase 0', () => {
   it('las tareas de sí o no responden solo si o no', () => {
     for (const item of phase0Items.filter((i) => i.id.startsWith('oral:hear:'))) {
       expect(['si', 'no']).toContain(item.task?.answer);
+    }
+  });
+
+  // Los ocho tests siguientes comprueban el SIGNIFICADO de los datos, no su forma.
+  // Una revisión rompió los datos de seis maneras distintas (invertir una respuesta de sí
+  // a no, apuntar la respuesta de una rima al distractor, poner un distractor con el mismo
+  // sonido inicial, borrar un trío, dejar ítems huérfanos, romper la cadena) y la suite
+  // seguía en verde. Cada test de abajo mata una de esas mutaciones.
+
+  it('cada bloque de datos tiene la cantidad de ítems que debe', () => {
+    const contar = (prefijo: string) => phase0Items.filter((i) => i.id.startsWith(prefijo)).length;
+    expect(contar('oral:clap:')).toBe(9);
+    expect(contar('oral:rhyme:')).toBe(6);
+    expect(contar('oral:initial:')).toBe(10);
+    expect(contar('oral:hear:')).toBe(8);
+    expect(phase0Items).toHaveLength(33);
+  });
+
+  it('todas las unidades son de fase 0 y encadenan una tras otra', () => {
+    expect(phase0Units.map((u) => u.phase)).toEqual([0, 0, 0, 0]);
+    expect(phase0Units.map((u) => u.requires)).toEqual([
+      [], ['phase0:clap'], ['phase0:rhyme'], ['phase0:initial'],
+    ]);
+  });
+
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase0Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase0Items.map((i) => i.id)].sort());
+  });
+
+  it('en rimas, la respuesta rima de verdad y los distractores no', () => {
+    const final = (palabra: string) => palabra.slice(-2);
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:rhyme:'))) {
+      const respuesta = pictures.find((p) => p.id === item.task?.answer);
+      expect([item.text, final(respuesta?.text ?? '')]).toEqual([item.text, final(item.text)]);
+      for (const id of (item.task?.optionIds ?? []).filter((x) => x !== item.task?.answer)) {
+        const distractor = pictures.find((p) => p.id === id);
+        expect([item.text, distractor?.text, final(distractor?.text ?? '') === final(item.text)])
+          .toEqual([item.text, distractor?.text, false]);
+      }
+    }
+  });
+
+  it('en sonido inicial, ningún distractor comparte el sonido del objetivo', () => {
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:initial:'))) {
+      const respuesta = pictures.find((p) => p.id === item.task?.answer);
+      expect([item.text, item.task?.answer]).toEqual([item.text, pictureId(item.text)]);
+      for (const id of (item.task?.optionIds ?? []).filter((x) => x !== item.task?.answer)) {
+        const distractor = pictures.find((p) => p.id === id);
+        expect([item.text, distractor?.text, distractor?.phonemes[0] === respuesta?.phonemes[0]])
+          .toEqual([item.text, distractor?.text, false]);
+      }
+    }
+  });
+
+  it('en sí o no, la respuesta coincide con si el sonido está en la palabra', () => {
+    for (const item of phase0Items.filter((i) => i.id.startsWith('oral:hear:'))) {
+      const fonema = item.id.split(':')[2]?.split('-')[0] ?? '';
+      const esperado = item.text.includes(fonema) ? 'si' : 'no';
+      expect([item.id, item.task?.answer]).toEqual([item.id, esperado]);
+    }
+  });
+
+  it('la cantidad de opciones respeta el rango de la plantilla de su unidad', () => {
+    for (const unidad of phase0Units) {
+      const plantilla = unidad.exercises[0]?.templateId;
+      const rango = plantilla === undefined ? undefined : templates[plantilla].options;
+      for (const id of unidad.introduces) {
+        const item = phase0Items.find((i) => i.id === id);
+        const opciones = item?.task?.optionIds;
+        if (rango === undefined) {
+          expect([id, opciones]).toEqual([id, undefined]);
+        } else {
+          expect([id, (opciones ?? []).length >= rango.min]).toEqual([id, true]);
+          expect([id, (opciones ?? []).length <= rango.max]).toEqual([id, true]);
+        }
+      }
+    }
+  });
+
+  it('las imágenes que menciona cada ítem existen en el catálogo', () => {
+    const ids = new Set(pictures.map((p) => p.id));
+    for (const item of phase0Items) {
+      for (const id of item.task?.optionIds ?? []) expect([item.id, ids.has(id)]).toEqual([item.id, true]);
+      if (item.imageKey !== undefined) {
+        expect([item.id, pictures.some((p) => p.imageKey === item.imageKey)]).toEqual([item.id, true]);
+      }
     }
   });
 });
@@ -1214,7 +1397,7 @@ export const phase0Units: Unit[] = [
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase0.test.ts`
-Expected: los 9 tests PASS.
+Expected: los 18 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -1248,6 +1431,7 @@ Crea `src/content/phase1.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
+import { phase0Units } from '@/content/phase0';
 import { picturesByInitialPhoneme } from '@/content/pictures';
 import { VOWEL_ORDER, phase1Items, phase1Units } from '@/content/phase1';
 import { itemSchema, unitSchema } from '@/content/types';
@@ -1265,12 +1449,31 @@ describe('Fase 1', () => {
     for (const item of phase1Items) expect(itemSchema.safeParse(item).success).toBe(true);
   });
 
-  it('cada unidad introduce un fonema y una letra', () => {
-    for (const unit of phase1Units) {
-      expect(unit.introduces).toHaveLength(2);
-      expect(unit.introduces[0]?.startsWith('phoneme:')).toBe(true);
-      expect(unit.introduces[1]?.startsWith('letter:')).toBe(true);
-    }
+  it('cada unidad introduce el fonema y la letra de su propia vocal', () => {
+    // Comprobar solo los prefijos dejaba pasar una permutación: la unidad de la a
+    // enseñando el sonido de la a y la forma de la e. Y el test de huérfanos no la
+    // detecta, porque compara conjuntos ordenados y el conjunto total no cambia.
+    VOWEL_ORDER.forEach((vowel, index) => {
+      expect([vowel, phase1Units[index]?.introduces]).toEqual([
+        vowel,
+        [`phoneme:${vowel}`, `letter:${vowel}`],
+      ]);
+    });
+  });
+
+  it('el prerrequisito de la primera vocal apunta a una unidad que existe de verdad', () => {
+    // Comparar contra el texto literal 'phase0:hear-it' no detectaría que esa unidad
+    // se renombrara en la Fase 0.
+    const requerida = phase1Units[0]?.requires[0];
+    expect(phase0Units.some((unit) => unit.id === requerida)).toBe(true);
+  });
+
+  it('cada unidad tiene su propio audio de introducción', () => {
+    const claves = phase1Units.map((unit) => unit.audioKey);
+    expect(new Set(claves).size).toBe(claves.length);
+    VOWEL_ORDER.forEach((vowel, index) => {
+      expect([vowel, phase1Units[index]?.audioKey]).toEqual([vowel, `unit:phase1:vowel-${vowel}`]);
+    });
   });
 
   it('cada letra trae su par mayúscula y minúscula', () => {
@@ -1281,22 +1484,62 @@ describe('Fase 1', () => {
   });
 
   it('la primera vocal depende de haber terminado la Fase 0 y las demás encadenan', () => {
-    expect(phase1Units[0]?.requires).toEqual(['phase0:hear-it']);
-    expect(phase1Units[1]?.requires).toEqual(['phase1:vowel-a']);
-    expect(phase1Units[4]?.requires).toEqual(['phase1:vowel-i']);
+    // Se comprueba la cadena COMPLETA, no tres eslabones sueltos: en la Fase 0 una
+    // comprobación parcial dejó pasar una unidad con los prerrequisitos rotos.
+    expect(phase1Units.map((u) => u.requires)).toEqual([
+      ['phase0:hear-it'],
+      ['phase1:vowel-a'],
+      ['phase1:vowel-e'],
+      ['phase1:vowel-o'],
+      ['phase1:vowel-i'],
+    ]);
+    expect(phase1Units.map((u) => u.phase)).toEqual([1, 1, 1, 1, 1]);
   });
 
-  it('cada unidad usa las cuatro plantillas de la fase', () => {
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase1Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase1Items.map((i) => i.id)].sort());
+    expect(phase1Items).toHaveLength(10);
+  });
+
+  it('cada unidad declara las cuatro plantillas con sus pesos', () => {
+    // Los pesos deciden qué practica más el niño: comprobar solo el conjunto de
+    // plantillas dejaba pasar una inversión que cambiaba la pedagogía en silencio.
     for (const unit of phase1Units) {
-      expect(unit.exercises.map((e) => e.templateId).sort()).toEqual(
-        ['initial-sound', 'listen-tap', 'say-it', 'trace'],
-      );
+      expect([unit.id, unit.exercises]).toEqual([
+        unit.id,
+        [
+          { templateId: 'initial-sound', weight: 1 },
+          { templateId: 'listen-tap', weight: 3 },
+          { templateId: 'trace', weight: 2 },
+          { templateId: 'say-it', weight: 2 },
+        ],
+      ]);
     }
   });
 
   it('cada vocal tiene al menos 3 imágenes de ejemplo derivadas del catálogo', () => {
     for (const vowel of VOWEL_ORDER) {
       expect(picturesByInitialPhoneme(vowel).length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('picturesByInitialPhoneme solo devuelve imágenes que empiezan por ese sonido', () => {
+    // Comprobar solo la cantidad dejaría pasar un filtro que devuelve las imágenes
+    // equivocadas, y entonces el ejercicio de sonido inicial enseñaría lo contrario.
+    for (const vowel of VOWEL_ORDER) {
+      for (const picture of picturesByInitialPhoneme(vowel)) {
+        expect([vowel, picture.text, picture.phonemes[0]]).toEqual([vowel, picture.text, vowel]);
+      }
+    }
+  });
+
+  it('el sonido de cada vocal es la propia vocal y su letra usa ese mismo audio', () => {
+    for (const vowel of VOWEL_ORDER) {
+      const phoneme = phase1Items.find((i) => i.id === `phoneme:${vowel}`);
+      const letter = phase1Items.find((i) => i.id === `letter:${vowel}`);
+      expect([vowel, phoneme?.phonemes]).toEqual([vowel, [vowel]]);
+      expect([vowel, letter?.audioKey]).toEqual([vowel, `phoneme:${vowel}`]);
     }
   });
 });
@@ -1370,7 +1613,7 @@ export const phase1Units: Unit[] = VOWEL_ORDER.map((vowel, index) => {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/content/phase1.test.ts src/content/pictures.test.ts`
-Expected: PASS ambos archivos.
+Expected: PASS ambos archivos, 12 tests en phase1.
 
 - [ ] **Step 6: Commit**
 
@@ -1404,6 +1647,7 @@ import { describe, expect, it } from 'vitest';
 import {
   accentIsFinalOnly, hasAdjacentVowels, hasOnlyOpenSyllables, stripDiacritics, syllabify,
 } from '@/content/invariants';
+import { phase1Units } from '@/content/phase1';
 import { CONSONANT_ORDER, lettersIntroducedBefore, phase2Items, phase2Units } from '@/content/phase2';
 import { itemSchema, unitSchema } from '@/content/types';
 
@@ -1422,23 +1666,118 @@ describe('Fase 2, estructura', () => {
     for (const item of phase2Items) expect(itemSchema.safeParse(item).success).toBe(true);
   });
 
-  it('cada unidad introduce fonema, letra, 5 sílabas y al menos 5 palabras', () => {
+  it('cada unidad introduce el fonema, la letra y las 5 sílabas de su propia consonante', () => {
+    // Contar por prefijo dejaría pasar una permutación: la unidad de la m introduciendo
+    // el sonido de la m y la forma de la l. Es el hueco que sobrevivió en la Fase 1.
+    CONSONANT_ORDER.forEach((consonant, index) => {
+      const introduced = phase2Units[index]?.introduces ?? [];
+      expect([consonant, introduced.slice(0, 7)]).toEqual([
+        consonant,
+        [
+          `phoneme:${consonant}`,
+          `letter:${consonant}`,
+          `syllable:${consonant}a`,
+          `syllable:${consonant}e`,
+          `syllable:${consonant}i`,
+          `syllable:${consonant}o`,
+          `syllable:${consonant}u`,
+        ],
+      ]);
+      expect([consonant, introduced.slice(7).every((id) => id.startsWith('word:'))]).toEqual([consonant, true]);
+      expect([consonant, introduced.slice(7).length >= 5]).toEqual([consonant, true]);
+    });
+  });
+
+  it('cada ítem lo introduce exactamente una unidad, sin huérfanos', () => {
+    const introducidos = phase2Units.flatMap((u) => u.introduces);
+    expect([...introducidos].sort()).toEqual([...phase2Items.map((i) => i.id)].sort());
+  });
+
+  it('las cuatro unidades son de fase 2 y encadenan una tras otra', () => {
+    expect(phase2Units.map((u) => u.phase)).toEqual([2, 2, 2, 2]);
+    expect(phase2Units.map((u) => u.requires)).toEqual([
+      ['phase1:vowel-u'], ['phase2:m'], ['phase2:l'], ['phase2:s'],
+    ]);
+  });
+
+  it('el prerrequisito de la primera consonante apunta a una unidad que existe de verdad', () => {
+    const requerida = phase2Units[0]?.requires[0];
+    expect(phase1Units.some((unit) => unit.id === requerida)).toBe(true);
+  });
+
+  it('cada unidad declara sus cinco plantillas con sus pesos', () => {
     for (const unit of phase2Units) {
-      const introduced = unit.introduces;
-      expect(introduced.filter((id) => id.startsWith('phoneme:'))).toHaveLength(1);
-      expect(introduced.filter((id) => id.startsWith('letter:'))).toHaveLength(1);
-      expect(introduced.filter((id) => id.startsWith('syllable:'))).toHaveLength(5);
-      expect(introduced.filter((id) => id.startsWith('word:')).length).toBeGreaterThanOrEqual(5);
+      expect([unit.id, unit.exercises]).toEqual([
+        unit.id,
+        [
+          { templateId: 'listen-tap', weight: 3 },
+          { templateId: 'build', weight: 2 },
+          { templateId: 'trace', weight: 1 },
+          { templateId: 'say-it', weight: 3 },
+          { templateId: 'read-word', weight: 2 },
+        ],
+      ]);
     }
   });
 
-  it('la primera consonante depende de la última vocal', () => {
-    expect(phase2Units[0]?.requires).toEqual(['phase1:vowel-u']);
-    expect(phase2Units[3]?.requires).toEqual(['phase2:s']);
+  it('cada unidad tiene su propio audio de introducción', () => {
+    const claves = phase2Units.map((u) => u.audioKey);
+    expect(new Set(claves).size).toBe(claves.length);
+    CONSONANT_ORDER.forEach((consonant, index) => {
+      expect([consonant, phase2Units[index]?.audioKey]).toEqual([consonant, `unit:phase2:${consonant}`]);
+    });
   });
 });
 
 describe('Fase 2, invariante 1: pertenencia de letras', () => {
+  it('lettersIntroducedBefore declara exactamente las letras disponibles en cada unidad', () => {
+    // El test de abajo usa esta función como oráculo, así que si la función estuviera mal,
+    // ese test se volvería vacuo. Una revisión lo demostró: haciéndola devolver siempre las
+    // cuatro consonantes, los 20 tests seguían en verde, y entonces una palabra colocada en
+    // una unidad donde su letra aún no se enseña pasaba sin que nada fallara. Aquí se fija
+    // su contrato contra conjuntos escritos a mano, sin consultar el módulo.
+    const vocales = ['a', 'e', 'i', 'o', 'u'];
+    expect([...lettersIntroducedBefore('phase2:m')].sort()).toEqual([...vocales, 'm'].sort());
+    expect([...lettersIntroducedBefore('phase2:l')].sort()).toEqual([...vocales, 'l', 'm'].sort());
+    expect([...lettersIntroducedBefore('phase2:s')].sort()).toEqual([...vocales, 'l', 'm', 's'].sort());
+    expect([...lettersIntroducedBefore('phase2:p')].sort()).toEqual([...vocales, 'l', 'm', 'p', 's'].sort());
+  });
+
+  it('el inventario de palabras de cada unidad está fijado', () => {
+    // Sin esto, borrar una palabra pasaba el control de "al menos 5 por unidad" y el
+    // contenido podía encoger en silencio.
+    const palabrasDe = (unitId: string) =>
+      (phase2Units.find((u) => u.id === unitId)?.introduces ?? [])
+        .filter((id) => id.startsWith('word:'))
+        .map((id) => id.slice('word:'.length));
+    expect(palabrasDe('phase2:m')).toEqual(['mama', 'mimo', 'mima', 'ama', 'amo']);
+    expect(palabrasDe('phase2:l')).toEqual(['lima', 'loma', 'mula', 'mala', 'malo', 'lelo', 'ala', 'ola']);
+    expect(palabrasDe('phase2:s')).toEqual(['mesa', 'masa', 'misa', 'suma', 'sumo', 'sola', 'sala', 'oso', 'uso', 'eso', 'asa']);
+    expect(palabrasDe('phase2:p')).toEqual(['papa', 'pipa', 'mapa', 'sapo', 'sopa', 'pesa', 'puma', 'pala', 'pelo', 'polo', 'lupa', 'paso', 'piso']);
+    expect(words).toHaveLength(37);
+  });
+
+  it('las 37 palabras son distintas y ninguna se repite entre unidades', () => {
+    const textos = words.map((w) => w.text);
+    expect(new Set(textos).size).toBe(textos.length);
+    const ids = phase2Units.flatMap((u) => u.introduces).filter((id) => id.startsWith('word:'));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('los fonemas de cada palabra son sus letras sin tilde', () => {
+    for (const word of words) {
+      expect([word.text, word.phonemes]).toEqual([word.text, [...stripDiacritics(word.text)]]);
+    }
+  });
+
+  it('cada palabra apunta a la imagen y al audio de su propio id', () => {
+    for (const word of words) {
+      const base = stripDiacritics(word.text);
+      expect([word.text, word.audioKey]).toEqual([word.text, `word:${base}`]);
+      expect([word.text, word.imageKey]).toEqual([word.text, `img:${base}`]);
+    }
+  });
+
   it('cada palabra usa solo letras ya introducidas en su unidad o antes', () => {
     for (const unit of phase2Units) {
       const allowed = lettersIntroducedBefore(unit.id);
@@ -1498,14 +1837,31 @@ describe('Fase 2, invariante 4: tildes', () => {
 });
 
 describe('Fase 2, sílabas', () => {
-  it('cada consonante genera sus 5 sílabas con las vocales en orden a, e, i, o, u', () => {
-    const deM = phase2Items.filter((i) => i.kind === 'syllable' && i.text.startsWith('m'));
-    expect(deM.map((i) => i.text)).toEqual(['ma', 'me', 'mi', 'mo', 'mu']);
+  it('las cuatro consonantes generan sus 5 sílabas con las vocales en orden a, e, i, o, u', () => {
+    // Comprobar solo la m dejaría pasar un error en las otras tres.
+    for (const consonant of CONSONANT_ORDER) {
+      const silabas = phase2Items.filter((i) => i.kind === 'syllable' && i.text.startsWith(consonant));
+      expect([consonant, silabas.map((i) => i.text)]).toEqual([
+        consonant,
+        ['a', 'e', 'i', 'o', 'u'].map((v) => `${consonant}${v}`),
+      ]);
+    }
   });
 
-  it('cada sílaba declara sus dos fonemas', () => {
-    const ma = phase2Items.find((i) => i.id === 'syllable:ma');
-    expect(ma?.phonemes).toEqual(['m', 'a']);
+  it('cada sílaba declara sus dos fonemas y su audio propio', () => {
+    for (const item of phase2Items.filter((i) => i.kind === 'syllable')) {
+      expect([item.id, item.phonemes]).toEqual([item.id, [item.text[0], item.text[1]]]);
+      expect([item.id, item.audioKey]).toEqual([item.id, `syllable:${item.text}`]);
+    }
+  });
+
+  it('cada letra de consonante trae su par mayúscula y minúscula y suena, no se nombra', () => {
+    for (const consonant of CONSONANT_ORDER) {
+      const letra = phase2Items.find((i) => i.id === `letter:${consonant}`);
+      expect([consonant, letra?.display?.upper, letra?.display?.lower])
+        .toEqual([consonant, consonant.toUpperCase(), consonant]);
+      expect([consonant, letra?.audioKey]).toEqual([consonant, `phoneme:${consonant}`]);
+    }
   });
 });
 ```
@@ -1620,7 +1976,7 @@ export function lettersIntroducedBefore(unitId: string): Set<string> {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase2.test.ts`
-Expected: los 15 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
+Expected: los 25 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
 
 - [ ] **Step 5: Commit**
 
@@ -1659,6 +2015,10 @@ Crea `src/content/audio-manifest.test.ts`:
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ACCENTS, audioManifest, audioPath, contentAudio, referencedAudioKeys, uiAudio } from '@/content/audio-manifest';
+import { phase0Items, phase0Units } from '@/content/phase0';
+import { phase1Items, phase1Units } from '@/content/phase1';
+import { phase2Items, phase2Units } from '@/content/phase2';
+import { pictures } from '@/content/pictures';
 import { templateIds, templates } from '@/content/templates';
 
 describe('manifiesto de audio', () => {
@@ -1666,13 +2026,56 @@ describe('manifiesto de audio', () => {
     expect(ACCENTS).toEqual(['do', 'mx', 'neutro']);
   });
 
-  it('cubre todas las claves que el contenido referencia', () => {
-    for (const key of referencedAudioKeys()) expect(contentAudio[key]).toBeDefined();
+  it('cubre exactamente las claves que el contenido referencia, calculadas por separado', () => {
+    // No se compara contra referencedAudioKeys(), porque contentAudio se construye a
+    // partir de esa misma función y el test sería tautológico: no podría fallar nunca.
+    // El conjunto esperado se recalcula aquí desde los datos crudos, así que este test
+    // detectaría que referencedAudioKeys() olvidara, por ejemplo, los audios de unidad.
+    const esperado = new Set([
+      ...[...pictures, ...phase0Items, ...phase1Items, ...phase2Items].map((i) => i.audioKey),
+      ...[...phase0Units, ...phase1Units, ...phase2Units].map((u) => u.audioKey),
+    ]);
+    expect([...Object.keys(contentAudio)].sort()).toEqual([...esperado].sort());
+    expect([...referencedAudioKeys()].sort()).toEqual([...esperado].sort());
   });
 
-  it('no tiene claves de contenido huérfanas', () => {
-    const referenced = referencedAudioKeys();
-    for (const key of Object.keys(contentAudio)) expect(referenced.has(key)).toBe(true);
+  it('los audios de unidad están en el manifiesto y dicen el título de su unidad', () => {
+    for (const unit of [...phase0Units, ...phase1Units, ...phase2Units]) {
+      expect([unit.id, contentAudio[unit.audioKey]]).toEqual([unit.id, unit.title]);
+    }
+  });
+
+  it('cada sílaba y cada palabra se locuta con su propio texto', () => {
+    for (const item of [...phase2Items].filter((i) => i.kind === 'syllable' || i.kind === 'word')) {
+      expect([item.id, contentAudio[item.audioKey]]).toEqual([item.id, item.text]);
+    }
+  });
+
+  it('ningún fonema se locuta con el nombre de la letra', () => {
+    const NOMBRES = ['eme', 'ele', 'ese', 'pe', 'a', 'e', 'i', 'o', 'u'];
+    for (const [key, text] of Object.entries(contentAudio)) {
+      if (!key.startsWith('phoneme:')) continue;
+      const letra = key.slice('phoneme:'.length);
+      expect([key, text.length >= 1]).toEqual([key, true]);
+      if (letra !== 'p') {
+        // Las continuas se alargan; solo la oclusiva p se dice una vez.
+        expect([key, text]).toEqual([key, letra.repeat(3)]);
+      }
+      expect([key, NOMBRES.slice(0, 4).includes(text)]).toEqual([key, false]);
+    }
+  });
+
+  it('dos claves distintas nunca acaban en el mismo fichero', () => {
+    for (const accent of ACCENTS) {
+      const rutas = Object.keys(audioManifest).map((k) => audioPath(k, accent));
+      expect(new Set(rutas).size).toBe(rutas.length);
+    }
+  });
+
+  it('ninguna ruta conserva los dos puntos de la clave', () => {
+    for (const key of Object.keys(audioManifest)) {
+      expect([key, audioPath(key, 'do').includes(':')]).toEqual([key, false]);
+    }
   });
 
   it('ningún texto queda vacío', () => {
@@ -1709,6 +2112,43 @@ describe('manifiesto de audio', () => {
 
   it('audioPath construye la ruta esperada', () => {
     expect(audioPath('phoneme:a', 'do')).toBe('/audio/do/phoneme_a.m4a');
+  });
+
+  it('toda ruta termina en .m4a en los tres acentos', () => {
+    for (const key of Object.keys(audioManifest)) {
+      for (const accent of ACCENTS) {
+        expect([key, accent, audioPath(key, accent).endsWith('.m4a')]).toEqual([key, accent, true]);
+      }
+    }
+  });
+
+  it('las preguntas de "¿lo oyes?" usan el sonido del fonema, no su nombre', () => {
+    // Con vocales el fonema crudo y su sonido se parecen, así que el defecto sería casi
+    // invisible. Con consonantes diría "¿Oyes m en..." en vez de "¿Oyes mmm en...", que es
+    // justo lo que prohíbe la restricción central, y acabaría siendo una locución grabada.
+    const SONIDOS: Record<string, string> = {
+      a: 'aaa', e: 'eee', i: 'iii', o: 'ooo', u: 'uuu', m: 'mmm', l: 'lll', s: 'sss', p: 'p',
+    };
+    const claves = Object.keys(contentAudio).filter((k) => k.startsWith('instruction:hear:'));
+    expect(claves).toHaveLength(8);
+    for (const key of claves) {
+      const partes = key.slice('instruction:hear:'.length).split('-');
+      const sonido = SONIDOS[partes[0] ?? ''];
+      expect([key, sonido === undefined]).toEqual([key, false]);
+      expect([key, contentAudio[key]]).toEqual([key, `¿Oyes ${sonido} en ${partes[1]}?`]);
+    }
+  });
+
+  it('las claves de contenido y de interfaz no colisionan', () => {
+    // audioManifest es un spread: una clave de interfaz que pisara una de contenido
+    // ganaría en silencio, y los tests que solo miran contentAudio seguirían en verde
+    // mientras el manifiesto real, el que genera las rutas, quedaría corrompido.
+    const contenido = Object.keys(contentAudio);
+    const interfaz = Object.keys(uiAudio);
+    expect(contenido.length + interfaz.length).toBe(Object.keys(audioManifest).length);
+    for (const key of interfaz) {
+      expect([key, contenido.includes(key)]).toEqual([key, false]);
+    }
   });
 
   it.runIf(process.env.SILABIN_CHECK_AUDIO_FILES === '1')(
@@ -1814,7 +2254,7 @@ export function audioPath(key: string, accent: Accent): string {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/audio-manifest.test.ts`
-Expected: los 9 tests PASS y el décimo se salta por falta de la variable de entorno.
+Expected: los 16 tests PASS y el decimoséptimo se salta por falta de la variable de entorno.
 
 - [ ] **Step 5: Comprobar que el test de ficheros se salta de verdad**
 
@@ -1855,7 +2295,7 @@ Crea `src/content/index.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum, curriculum } from '@/content/index';
-import type { Curriculum } from '@/content/types';
+import type { Curriculum, Item, Unit } from '@/content/types';
 
 describe('currículo ensamblado', () => {
   it('carga sin lanzar y contiene las unidades de las fases 0 a 3', () => {
@@ -1874,7 +2314,24 @@ describe('currículo ensamblado', () => {
     const position = new Map(curriculum.unitOrder.map((id, index) => [id, index]));
     for (const unit of curriculum.units.values()) {
       for (const required of unit.requires) {
-        expect(position.get(required)!).toBeLessThan(position.get(unit.id)!);
+        const antes = position.get(required);
+        const despues = position.get(unit.id);
+        expect([unit.id, required, antes !== undefined && despues !== undefined && antes < despues])
+          .toEqual([unit.id, required, true]);
+      }
+    }
+  });
+
+  it('las ocho unidades de Fase 3 están vacías y encadenan desde phase2:p', () => {
+    const futuras = curriculum.unitOrder
+      .map((id) => curriculum.units.get(id))
+      .filter((unidad) => unidad?.phase === 3);
+    expect(futuras).toHaveLength(8);
+    expect(futuras[0]?.requires).toEqual(['phase2:p']);
+    for (const [index, unidad] of futuras.entries()) {
+      expect([unidad?.id, unidad?.introduces]).toEqual([unidad?.id, []]);
+      if (index > 0) {
+        expect([unidad?.id, unidad?.requires]).toEqual([unidad?.id, [futuras[index - 1]?.id]]);
       }
     }
   });
@@ -1892,6 +2349,39 @@ describe('currículo ensamblado', () => {
   it('todo prerrequisito apunta a una unidad existente', () => {
     for (const unit of curriculum.units.values()) {
       for (const required of unit.requires) expect(curriculum.units.has(required)).toBe(true);
+    }
+  });
+
+  it('el texto de todo ítem está en minúsculas', () => {
+    // Los invariantes de content/invariants.ts asumen minúsculas: con mayúsculas no lanzan,
+    // devuelven respuestas vacuamente coherentes sin avisar de que la entrada estaba mal.
+    for (const item of curriculum.items.values()) {
+      expect([item.id, item.text]).toEqual([item.id, item.text.toLowerCase()]);
+    }
+  });
+
+  it('el orden topológico contiene todas las unidades, una sola vez', () => {
+    expect(curriculum.unitOrder).toHaveLength(curriculum.units.size);
+    expect(new Set(curriculum.unitOrder).size).toBe(curriculum.unitOrder.length);
+    for (const id of curriculum.units.keys()) expect(curriculum.unitOrder).toContain(id);
+  });
+
+  it('todo ítem que no sea una imagen lo enseña alguna unidad', () => {
+    // Las imágenes existen para ilustrar y no las introduce ninguna unidad, a propósito.
+    // Cualquier otro ítem que ninguna unidad enseñe es contenido muerto.
+    const introducidos = new Set([...curriculum.units.values()].flatMap((u) => u.introduces));
+    for (const item of curriculum.items.values()) {
+      if (item.kind === 'picture') continue;
+      expect([item.id, introducidos.has(item.id)]).toEqual([item.id, true]);
+    }
+  });
+
+  it('ninguna unidad depende de otra de una fase posterior', () => {
+    for (const unit of curriculum.units.values()) {
+      for (const required of unit.requires) {
+        const previa = curriculum.units.get(required);
+        expect([unit.id, required, (previa?.phase ?? 0) <= unit.phase]).toEqual([unit.id, required, true]);
+      }
     }
   });
 
@@ -1916,8 +2406,40 @@ describe('buildCurriculum, validaciones', () => {
   });
 
   it('rechaza un prerrequisito inexistente', () => {
+    // La expresión es específica a propósito: con solo /prerrequisito/i el test pasaba
+    // aunque se borrara esta comprobación, porque el flujo caía en la detección de ciclos
+    // y su mensaje ("Hay un ciclo de prerrequisitos entre...") satisfacía la misma regla.
     const raw: Curriculum = { items: [item], units: [{ ...unit, requires: ['no-existe'] }] };
-    expect(() => buildCurriculum(raw)).toThrow(/prerrequisito/i);
+    expect(() => buildCurriculum(raw)).toThrow(/prerrequisito inexistente/i);
+  });
+
+  it('rechaza un dato que solo el esquema Zod puede detectar', () => {
+    // Los tipos Item y Unit se infieren de los esquemas SIN refinar, así que TypeScript no
+    // fuerza las cuatro reglas de negocio: letra con display, palabra con sílabas, oral con
+    // task, unidad jugable con contenido. La llamada a curriculumSchema.parse es la única
+    // barrera, y sin este test se podía borrar y toda la suite seguía en verde.
+    const letraSinDisplay: Item = {
+      id: 'letter:a', kind: 'letter', text: 'a', phonemes: ['a'], audioKey: 'phoneme:a',
+    };
+    expect(() => buildCurriculum({ items: [letraSinDisplay], units: [unit] })).toThrow();
+
+    const palabraSinSilabas: Item = {
+      id: 'word:mapa', kind: 'word', text: 'mapa', phonemes: ['m', 'a', 'p', 'a'], audioKey: 'word:mapa',
+    };
+    expect(() =>
+      buildCurriculum({ items: [palabraSinSilabas], units: [{ ...unit, introduces: ['word:mapa'] }] }),
+    ).toThrow();
+  });
+
+  it('el orden topológico desempata alfabéticamente y no depende del orden de entrada', () => {
+    const suelta = (id: string): Unit => ({
+      id, phase: 3, title: id, audioKey: `unit:${id}`, requires: [], introduces: [], exercises: [],
+    });
+    const esperado = ['alfa', 'media', 'zeta'];
+    expect(buildCurriculum({ items: [], units: [suelta('zeta'), suelta('alfa'), suelta('media')] }).unitOrder)
+      .toEqual(esperado);
+    expect(buildCurriculum({ items: [], units: [suelta('media'), suelta('zeta'), suelta('alfa')] }).unitOrder)
+      .toEqual(esperado);
   });
 
   it('rechaza un ítem introducido que no existe', () => {
@@ -2052,8 +2574,8 @@ export const curriculum: CurriculumIndex = buildCurriculum({
 
 - [ ] **Step 5: Verificar que pasa toda la capa de contenido**
 
-Run: `pnpm test src/content && pnpm typecheck`
-Expected: todos los archivos de `content/` en verde y `tsc` sin errores.
+Run: `pnpm test src/content && pnpm typecheck && pnpm lint`
+Expected: todos los archivos de `content/` en verde, con 18 tests en index.test.ts, `tsc` sin errores y el linter **sin ningún aviso**.
 
 - [ ] **Step 6: Commit**
 
@@ -2091,6 +2613,7 @@ Crea `src/engine/random.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/engine/random';
+import { emptyItemProgress, emptyProgressState } from '@/engine/types';
 
 describe('createRng', () => {
   it('produce la misma secuencia con la misma semilla', () => {
@@ -2128,6 +2651,16 @@ describe('createRng', () => {
     for (let i = 0; i < 50; i += 1) expect(items).toContain(rng.pick(items));
   });
 
+  it('pick no devuelve siempre el mismo elemento', () => {
+    // Que el resultado pertenezca al arreglo es necesario pero no suficiente: una
+    // implementación que devolviera siempre el primero lo cumpliría igual, y once tareas
+    // usan pick para elegir distractores y ordenar ejercicios.
+    const rng = createRng(5);
+    const items = ['a', 'b', 'c', 'd'];
+    const vistos = new Set(Array.from({ length: 200 }, () => rng.pick(items)));
+    expect([...vistos].sort()).toEqual(items);
+  });
+
   it('pick lanza con un arreglo vacío', () => {
     expect(() => createRng(1).pick([])).toThrow(/vacío/i);
   });
@@ -2135,8 +2668,61 @@ describe('createRng', () => {
   it('shuffle conserva todos los elementos y no muta el original', () => {
     const original = [1, 2, 3, 4, 5];
     const shuffled = createRng(11).shuffle(original);
-    expect([...shuffled].sort()).toEqual(original);
+    // El comparador es explícito a propósito: sort() por omisión ordena como texto, y con
+    // números de dos cifras este test fallaría aunque shuffle fuera correcto.
+    expect([...shuffled].sort((a, b) => a - b)).toEqual(original);
     expect(original).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('shuffle realmente reordena, no devuelve la entrada tal cual', () => {
+    // Conservar los elementos y ser determinista son condiciones necesarias pero no
+    // suficientes: una función que devolviera la entrada sin tocarla las cumpliría las dos.
+    const original = Array.from({ length: 20 }, (_, index) => index);
+    const reordenado = [1, 2, 3, 4, 5].some(
+      (seed) => createRng(seed).shuffle(original).join(',') !== original.join(','),
+    );
+    expect(reordenado).toBe(true);
+  });
+
+  it('int lanza si el máximo no es positivo', () => {
+    expect(() => createRng(1).int(0)).toThrow(/mayor que cero/i);
+    expect(() => createRng(1).int(-3)).toThrow(/mayor que cero/i);
+  });
+});
+
+describe('estados iniciales', () => {
+  it('emptyItemProgress arranca sin progreso y sin haberse presentado', () => {
+    expect(emptyItemProgress()).toEqual({
+      box: 0,
+      presented: false,
+      firstTryCorrect: 0,
+      assisted: 0,
+      lastSessionIndex: -1,
+      lastCreditSession: null,
+      masteredAt: null,
+    });
+  });
+
+  it('emptyProgressState arranca vacío y con los contadores a cero', () => {
+    expect(emptyProgressState()).toEqual({
+      items: {},
+      units: {},
+      sessionCounter: 0,
+      counters: { traces: 0, sessions: 0, voiceOk: 0, wordsRead: 0 },
+    });
+  });
+
+  it('cada llamada devuelve un objeto nuevo, no una referencia compartida', () => {
+    // Si devolvieran un singleton, el progreso de un ítem se filtraría a todos los demás.
+    const a = emptyItemProgress();
+    const b = emptyItemProgress();
+    a.box = 3;
+    expect(b.box).toBe(0);
+
+    const uno = emptyProgressState();
+    const dos = emptyProgressState();
+    uno.counters.traces = 7;
+    expect(dos.counters.traces).toBe(0);
   });
 
   it('shuffle es determinista con la misma semilla', () => {
@@ -2286,7 +2872,7 @@ export function createRng(seed: number): Rng {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/random.test.ts && pnpm typecheck`
-Expected: los 8 tests PASS.
+Expected: los 14 tests PASS.
 
 - [ ] **Step 6: Commit**
 
@@ -2383,6 +2969,26 @@ describe('sessionsUntilDue', () => {
     expect(sessionsUntilDue(progress({ box: 2, lastSessionIndex: 5 }), 6)).toBe(2);
     expect(sessionsUntilDue(progress({ box: 2, lastSessionIndex: 5 }), 20)).toBe(0);
   });
+
+  it('un ítem sin acertar no tiene espera pendiente', () => {
+    expect(sessionsUntilDue(progress({ box: 0, lastSessionIndex: 3 }), 4)).toBe(0);
+  });
+
+  it('coincide con el intervalo de su caja cuando acaba de verse', () => {
+    // Fija la relación entre las dos funciones: si isDue usara un intervalo distinto del
+    // que declara BOX_INTERVALS, este test lo detectaría.
+    for (const box of [1, 2, 3] as const) {
+      const p = progress({ box, lastSessionIndex: 10 });
+      expect([box, sessionsUntilDue(p, 10)]).toEqual([box, BOX_INTERVALS[box]]);
+      expect([box, isDue(p, 10 + BOX_INTERVALS[box])]).toEqual([box, true]);
+      expect([box, isDue(p, 10 + BOX_INTERVALS[box] - 1)]).toEqual([box, false]);
+    }
+  });
+
+  it('los tres intervalos son crecientes, que es lo que hace que el repaso espacie', () => {
+    expect(BOX_INTERVALS[1]).toBeLessThan(BOX_INTERVALS[2]);
+    expect(BOX_INTERVALS[2]).toBeLessThan(BOX_INTERVALS[3]);
+  });
 });
 ```
 
@@ -2424,7 +3030,7 @@ export function sessionsUntilDue(progress: ItemProgress, sessionIndex: number): 
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/leitner.test.ts`
-Expected: los 10 tests PASS.
+Expected: los 13 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -2459,7 +3065,10 @@ Crea `src/engine/mastery.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum } from '@/content/index';
-import { MASTERY_TARGET, UNIT_COMPLETION_THRESHOLD, isMastered, isUnitComplete, unitMasteryRatio } from '@/engine/mastery';
+import {
+  MASTERY_TARGET, UNIT_COMPLETION_THRESHOLD,
+  isMastered, isUnitComplete, itemProgressOf, unitMasteryRatio,
+} from '@/engine/mastery';
 import { emptyItemProgress, emptyProgressState, type ProgressState } from '@/engine/types';
 
 const content = buildCurriculum({
@@ -2515,6 +3124,26 @@ describe('isUnitComplete', () => {
     expect(UNIT_COMPLETION_THRESHOLD).toBe(0.8);
     expect(isUnitComplete(content, stateWithMastered(3), 'u')).toBe(false);
     expect(isUnitComplete(content, stateWithMastered(4), 'u')).toBe(true);
+  });
+});
+
+describe('robustez ante datos que no existen', () => {
+  it('unitMasteryRatio lanza con una unidad desconocida en vez de inventarse un valor', () => {
+    expect(() => unitMasteryRatio(content, emptyProgressState(), 'no-existe')).toThrow(/desconocida/i);
+  });
+
+  it('itemProgressOf devuelve el progreso vacío para un ítem que nunca se ha visto', () => {
+    const state = emptyProgressState();
+    expect(itemProgressOf(state, 'syllable:jamas')).toEqual(emptyItemProgress());
+  });
+
+  it('itemProgressOf no escribe en el estado al consultarlo', () => {
+    // Si el acceso creara la entrada, el estado crecería solo por leerlo y la
+    // persistencia guardaría progreso de ítems que el niño nunca vio.
+    const state = emptyProgressState();
+    itemProgressOf(state, 'syllable:jamas');
+    itemProgressOf(state, 'letter:z');
+    expect(Object.keys(state.items)).toEqual([]);
   });
 });
 ```
@@ -2582,6 +3211,21 @@ describe('activeUnitId', () => {
   it('devuelve la primera unidad activa en orden topológico', () => {
     expect(activeUnitId(content, emptyProgressState())).toBe('u1');
     expect(activeUnitId(content, withMastered(['letter:a']))).toBe('u2');
+  });
+
+  it('nunca hay más de una unidad activa a la vez', () => {
+    // Con dos unidades activas el niño podría estar a medias en dos sitios, y el
+    // planificador tendría que elegir por su cuenta cuál es "la de ahora".
+    for (const dominados of [[], ['letter:a'], ['letter:a', 'letter:b']]) {
+      const statuses = recomputeUnitStatuses(content, withMastered(dominados));
+      const activas = Object.values(statuses).filter((u) => u.status === 'active');
+      expect([dominados.length, activas.length]).toEqual([dominados.length, 1]);
+    }
+  });
+
+  it('una unidad bloqueada nunca se salta: entre done y locked no hay huecos', () => {
+    const statuses = recomputeUnitStatuses(content, withMastered(['letter:a']));
+    expect(['u1', 'u2', 'u3'].map((id) => statuses[id]?.status)).toEqual(['done', 'active', 'locked']);
   });
 
   it('con todo completo devuelve la última unidad, para poder seguir repasando', () => {
@@ -2680,7 +3324,7 @@ export function activeUnitId(content: CurriculumIndex, state: ProgressState): st
 - [ ] **Step 6: Verificar que pasan**
 
 Run: `pnpm test src/engine && pnpm typecheck`
-Expected: los 10 tests de las dos suites PASS.
+Expected: los 16 tests de las dos suites PASS.
 
 - [ ] **Step 7: Commit**
 
@@ -2900,7 +3544,8 @@ Crea `src/engine/apply.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum } from '@/content/index';
 import { applyPresentation, applyResolution, applySessionEnd } from '@/engine/apply';
-import { emptyProgressState, type ProgressState } from '@/engine/types';
+import { createRng } from '@/engine/random';
+import { emptyProgressState, type ExerciseResolution, type ProgressState } from '@/engine/types';
 
 const content = buildCurriculum({
   items: [
@@ -2937,6 +3582,20 @@ describe('applyPresentation', () => {
     applyPresentation(original, 'syllable:ma', 0);
     expect(original.items['syllable:ma']).toBeUndefined();
   });
+
+  it('no muta el estado recibido, ni siquiera cuando el ítem ya tenía progreso', () => {
+    // Partir del estado vacío no basta: sin un progreso preexistente no hay nada que se
+    // pueda mutar en su sitio, y una asignación directa del objeto pasaría inadvertida.
+    let state = credit(emptyProgressState(), 0);
+    state = credit(state, 1);
+    const anterior = state;
+    const copia = JSON.parse(JSON.stringify(anterior));
+    const siguiente = applyPresentation(anterior, 'syllable:ma', 5);
+    expect(anterior).toEqual(copia);
+    expect(anterior.items['syllable:ma']?.lastSessionIndex).toBe(1);
+    expect(siguiente.items['syllable:ma']?.lastSessionIndex).toBe(5);
+    expect(siguiente.items['syllable:ma']).not.toBe(anterior.items['syllable:ma']);
+  });
 });
 
 describe('applyResolution con crédito de dominio', () => {
@@ -2964,10 +3623,29 @@ describe('applyResolution con crédito de dominio', () => {
   });
 
   it('no reescribe la fecha de dominio ya puesta', () => {
+    // Con la misma fecha en todas las llamadas la comprobación sería NOW === NOW, y el
+    // test no podría fallar aunque la fecha se reescribiera en cada acierto.
+    const DESPUES = '2027-01-01T00:00:00.000Z';
     let state = emptyProgressState();
     for (const session of [0, 1, 2]) state = credit(state, session);
-    state = credit(state, 3);
     expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+    state = applyResolution({
+      content, state, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'mastery-credit' }, sessionIndex: 3, now: DESPUES,
+    });
+    expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+  });
+
+  it('un resultado asistido no quita nada a un ítem ya dominado', () => {
+    let state = emptyProgressState();
+    for (const session of [0, 1, 2]) state = credit(state, session);
+    state = applyResolution({
+      content, state, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'assisted' }, sessionIndex: 3, now: NOW,
+    });
+    expect(state.items['syllable:ma']?.firstTryCorrect).toBe(3);
+    expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+    expect(state.items['syllable:ma']?.assisted).toBe(1);
   });
 });
 
@@ -3027,6 +3705,76 @@ describe('contadores para los logros', () => {
     });
     expect(state.counters.wordsRead).toBe(1);
     expect(state.counters.voiceOk).toBe(1);
+  });
+});
+
+describe('invariantes que ninguna secuencia puede romper', () => {
+  // Una revisión anterior listó estados que los tipos permiten expresar pero que no deben
+  // ocurrir nunca. Este bloque los somete a una secuencia larga y variada de resultados.
+  it('tras 200 resoluciones variadas, el progreso nunca queda en un estado imposible', () => {
+    const resoluciones: ExerciseResolution[] = [
+      { status: 'mastery-credit' },
+      { status: 'correct-with-hint', hintsUsed: 1 },
+      { status: 'correct-with-hint', hintsUsed: 2 },
+      { status: 'assisted' },
+    ];
+    const plantillas = ['listen-tap', 'trace', 'say-it', 'read-word'] as const;
+    const items = ['syllable:ma', 'word:mapa', 'letter:m'];
+    // Se elige con el generador con semilla del proyecto y no con índices por módulo:
+    // esos ciclos quedan en fase entre sí, ciertas combinaciones nunca ocurren, y los
+    // invariantes se acaban cumpliendo de forma vacía sin cubrir nada.
+    const rng = createRng(20260919);
+    let state = emptyProgressState();
+    for (let paso = 0; paso < 200; paso += 1) {
+      const sessionIndex = Math.floor(paso / 5);
+      state = applyResolution({
+        content,
+        state,
+        itemId: rng.pick(items),
+        templateId: rng.pick(plantillas),
+        resolution: rng.pick(resoluciones),
+        sessionIndex,
+        now: NOW,
+      });
+      for (const [id, progress] of Object.entries(state.items)) {
+        // No puede haber progreso en un ítem que nunca se presentó.
+        if (!progress.presented) {
+          expect([id, progress.box, progress.firstTryCorrect, progress.lastSessionIndex])
+            .toEqual([id, 0, 0, -1]);
+        }
+        // No puede estar marcado como dominado sin tener los tres aciertos.
+        if (progress.masteredAt !== null) {
+          expect([id, progress.firstTryCorrect >= 3]).toEqual([id, true]);
+        }
+        // El crédito no puede venir de una sesión posterior a la última vista.
+        if (progress.lastCreditSession !== null) {
+          expect([id, progress.lastCreditSession <= progress.lastSessionIndex])
+            .toEqual([id, true]);
+        }
+        // Los contadores nunca son negativos: nada resta progreso.
+        expect([id, progress.firstTryCorrect >= 0 && progress.assisted >= 0])
+          .toEqual([id, true]);
+      }
+    }
+  });
+
+  it('applyResolution no muta el estado que recibe', () => {
+    const antes = emptyProgressState();
+    const copia = JSON.parse(JSON.stringify(antes));
+    applyResolution({
+      content, state: antes, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'mastery-credit' }, sessionIndex: 0, now: NOW,
+    });
+    expect(antes).toEqual(copia);
+  });
+
+  it('lanza con un ítem que no existe en el currículo', () => {
+    expect(() =>
+      applyResolution({
+        content, state: emptyProgressState(), itemId: 'syllable:jamas', templateId: 'listen-tap',
+        resolution: { status: 'mastery-credit' }, sessionIndex: 0, now: NOW,
+      }),
+    ).toThrow(/desconocido/i);
   });
 });
 
@@ -3161,7 +3909,7 @@ export function applySessionEnd(input: {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/apply.test.ts && pnpm typecheck`
-Expected: los 13 tests PASS.
+Expected: los 19 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -3273,16 +4021,53 @@ describe('pickDistractors', () => {
     expect(new Set(out.map((i) => i.id)).size).toBe(4);
   });
 
-  it('en nivel fácil prefiere formas distintas', () => {
-    const pool = [letter('o'), letter('e'), letter('m'), letter('i')];
-    const out = pickDistractors({ target: letter('a'), pool, count: 2, rng: createRng(4), level: 'easy' });
-    expect(out.map((i) => i.text).sort()).toEqual(['i', 'm']);
+  it('el nivel fácil elige, en promedio, opciones menos parecidas que el difícil', () => {
+    // Fijar la salida exacta de una semilla concreta es frágil: cualquier cambio en el
+    // barajado rompería el test sin que el criterio estuviera mal. Se comprueba la
+    // propiedad sobre muchas semillas en vez de un resultado puntual.
+    const pool = ['o', 'e', 'c', 's', 'm', 'i', 'l', 'u'].map(letter);
+    const media = (level: 'easy' | 'hard') => {
+      let total = 0;
+      let cuenta = 0;
+      for (let seed = 1; seed <= 40; seed += 1) {
+        for (const elegido of pickDistractors({
+          target: letter('a'), pool, count: 2, rng: createRng(seed), level,
+        })) {
+          total += similarity(letter('a'), elegido);
+          cuenta += 1;
+        }
+      }
+      return total / cuenta;
+    };
+    expect(media('easy')).toBeLessThan(media('hard'));
   });
 
-  it('en nivel difícil prefiere las más parecidas', () => {
-    const pool = [letter('o'), letter('e'), letter('m'), letter('i')];
-    const out = pickDistractors({ target: letter('a'), pool, count: 2, rng: createRng(4), level: 'hard' });
-    expect(out.map((i) => i.text).sort()).toEqual(['e', 'o']);
+  it('sobre un banco SIN empates, la ventana da variedad real', () => {
+    // Las vocales no empatan entre sí, así que el orden por parecido es estricto: sin la
+    // ventana, el nivel difícil devolvía SIEMPRE la misma pareja en las 30 semillas.
+    const vocales = ['a', 'e', 'i', 'o', 'u'].map(letter);
+    const vistas = new Set<string>();
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const salida = pickDistractors({
+        target: letter('a'), pool: vocales, count: 2, rng: createRng(seed), level: 'hard',
+      });
+      vistas.add([...salida.map((i) => i.text)].sort().join('+'));
+    }
+    expect(vistas.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('sobre un banco CON empates, el barajado previo da variedad', () => {
+    // Las cinco sílabas de una consonante empatan todas en parecido, así que aquí lo que
+    // da variedad es el barajado previo, no la ventana: sin él, la variedad cae de 4 a 2.
+    const banco = ['ma', 'me', 'mi', 'mo', 'mu'].map(syllable);
+    const vistas = new Set<string>();
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const salida = pickDistractors({
+        target: syllable('ma'), pool: banco, count: 1, rng: createRng(seed), level: 'hard',
+      });
+      vistas.add(salida.map((i) => i.text).join(''));
+    }
+    expect(vistas.size).toBeGreaterThanOrEqual(3);
   });
 
   it('para sílabas en nivel difícil elige las que comparten consonante', () => {
@@ -3302,6 +4087,56 @@ describe('pickDistractors', () => {
     const a = pickDistractors({ ...args, rng: createRng(9) });
     const b = pickDistractors({ ...args, rng: createRng(9) });
     expect(a.map((i) => i.id)).toEqual(b.map((i) => i.id));
+  });
+
+  it('en 50 semillas distintas nunca aparece una letra espejo del objetivo', () => {
+    // Es la restricción pedagógica más importante del módulo: a esta edad el cerebro ve
+    // b, d, p y q como la misma forma girada. Comprobarlo con una sola semilla dejaría
+    // el resultado a merced de la suerte.
+    const pool = ['b', 'd', 'p', 'q', 'm', 'a', 'i', 'l'].map(letter);
+    for (const grupo of [['b', 'd', 'p', 'q']]) {
+      for (const texto of grupo) {
+        for (let seed = 1; seed <= 50; seed += 1) {
+          const salida = pickDistractors({
+            target: letter(texto), pool, count: 2, rng: createRng(seed), level: 'hard',
+          });
+          for (const elegido of salida) {
+            expect([texto, seed, grupo.includes(elegido.text)]).toEqual([texto, seed, false]);
+          }
+        }
+      }
+    }
+  });
+
+  it('el nivel fácil elige, en promedio, opciones menos parecidas que el difícil', () => {
+    // Fijar la salida exacta para una semilla concreta es frágil: cualquier cambio en el
+    // barajado rompería el test sin que el criterio estuviera mal. Se comprueba la
+    // propiedad sobre muchas semillas en vez de un resultado puntual.
+    const pool = ['o', 'e', 'c', 's', 'm', 'i', 'l', 'u'].map(letter);
+    const media = (level: 'easy' | 'hard') => {
+      let total = 0;
+      let cuenta = 0;
+      for (let seed = 1; seed <= 40; seed += 1) {
+        for (const elegido of pickDistractors({
+          target: letter('a'), pool, count: 2, rng: createRng(seed), level,
+        })) {
+          total += similarity(letter('a'), elegido);
+          cuenta += 1;
+        }
+      }
+      return total / cuenta;
+    };
+    expect(media('easy')).toBeLessThan(media('hard'));
+  });
+
+  it('similarity también distingue palabras, no solo letras y sílabas', () => {
+    const palabra = (text: string, syllables: string[]): Item => ({
+      id: `word:${text}`, kind: 'word', text, phonemes: [...text],
+      audioKey: `word:${text}`, syllables,
+    });
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('mala', ['ma', 'la']))).toBe(2);
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('lupa', ['lu', 'pa']))).toBe(1);
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('oso', ['o', 'so']))).toBe(0);
   });
 
   it('lanza si el grupo de candidatos no alcanza', () => {
@@ -3394,21 +4229,29 @@ export function pickDistractors(input: {
     );
   }
 
-  // Se mezcla primero para que los empates de similitud se resuelvan de forma determinista pero variada.
+  // Dos mecanismos dan variedad, y cada uno cubre un caso distinto. El barajado previo
+  // resuelve los empates de parecido: con las cinco sílabas de una consonante, todas
+  // empatan y sin barajar saldrían siempre las mismas. La ventana resuelve el orden
+  // estricto: con las cinco vocales no hay empates, y quedarse con la cabeza del orden
+  // devolvía SIEMPRE la misma pareja. Medido sobre 30 semillas, quitar el barajado baja
+  // las sílabas de 4 combinaciones a 2, y quitar la ventana baja las vocales de 5 a 1.
+  // Un niño que ve veinte veces la misma terna aprende a descartar por eliminación en vez
+  // de a leer, así que la variedad es un requisito, no un adorno.
   const shuffled = rng.shuffle(allowed);
   const sorted = [...shuffled].sort((a, b) => {
     const diff = similarity(target, b) - similarity(target, a);
     return level === 'hard' ? diff : -diff;
   });
 
-  return sorted.slice(0, count);
+  const ventana = sorted.slice(0, Math.min(sorted.length, count + 1));
+  return rng.shuffle(ventana).slice(0, count);
 }
 ```
 
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/distractors.test.ts`
-Expected: los 14 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
+Expected: los 18 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
 
 - [ ] **Step 5: Commit**
 
@@ -3474,6 +4317,7 @@ import { templates } from '@/content/templates';
 import { MAX_PRESENTATIONS, planSession } from '@/engine/planner';
 import { emptyItemProgress, emptyProgressState, type ProgressState } from '@/engine/types';
 
+
 function plan(state: ProgressState, unitId: string, length: 5 | 6 = 5, seed = 1) {
   return planSession({ content: curriculum, state, activeUnitId: unitId, sessionLength: length, seed });
 }
@@ -3496,6 +4340,11 @@ describe('longitud y presentaciones', () => {
 
   it('en una unidad nueva presenta como máximo 2 ítems', () => {
     const presentaciones = plan(emptyProgressState(), 'phase2:m').filter((e) => e.kind === 'presentation');
+    // Se comprueba contra el literal además de contra la constante: contrastar solo con la
+    // constante importada es tautológico y no detectaría que alguien la suba. El máximo de
+    // 2 viene de que a los 3 años la atención no da para más ítems nuevos de golpe.
+    expect(MAX_PRESENTATIONS).toBe(2);
+    expect(presentaciones.length).toBeLessThanOrEqual(2);
     expect(presentaciones.length).toBeLessThanOrEqual(MAX_PRESENTATIONS);
     expect(presentaciones.length).toBeGreaterThan(0);
   });
@@ -3526,6 +4375,21 @@ describe('mezcla de unidad activa y repaso', () => {
     const repaso = sesion.filter((e) => e.source === 'review');
     expect(repaso.length).toBeGreaterThanOrEqual(1);
     expect(repaso.length).toBeLessThanOrEqual(2);
+  });
+
+  it('un ítem presentado y nunca acertado no queda abandonado al completarse su unidad', () => {
+    // Una unidad se completa con el 80 %, así que un ítem puede quedarse sin dominar.
+    // Si además nunca se acertó, su caja es 0 e isDue lo excluye del repaso. Este test
+    // fija que el planificador lo recupera igualmente.
+    let state = presented('phase1:vowel-a');
+    const huerfano = curriculum.units.get('phase1:vowel-a')?.introduces[0] ?? '';
+    state = {
+      ...state,
+      items: { ...state.items, [huerfano]: { ...emptyItemProgress(), presented: true, box: 0, lastSessionIndex: 0 } },
+      sessionCounter: 10,
+    };
+    const sesion = plan(state, 'phase1:vowel-e', 6);
+    expect(sesion.some((e) => e.itemId === huerfano)).toBe(true);
   });
 
   it('el repaso nunca trae ítems de la unidad activa', () => {
@@ -3567,29 +4431,126 @@ describe('orden de los ejercicios', () => {
     }
   });
 
-  // La regla de no repetir plantilla se aplica solo entre evaluaciones: el salto de la última
-  // presentación a la primera evaluación no se comprueba, porque una presentación no es un ejercicio.
-  it('no coloca dos veces la misma plantilla seguidas', () => {
-    for (const seed of [1, 2, 3, 4, 5]) {
-      const sesion = plan(presented('phase2:m'), 'phase2:m', 6, seed);
-      const evaluaciones = sesion.filter((e) => e.kind === 'evaluation');
-      for (let i = 1; i < evaluaciones.length; i += 1) {
-        expect(evaluaciones[i]?.templateId).not.toBe(evaluaciones[i - 1]?.templateId);
+  it('la sesión SIEMPRE cierra con el ejercicio más fácil, en todas las unidades jugables', () => {
+    // Barrido amplio a propósito. La garantía se conserva por construcción, porque la
+    // pasada de mejora nunca escribe en la última posición, pero un test sobre tres
+    // unidades y cinco semillas no detectaría de forma fiable que alguien rompiera ese
+    // límite: en un barrido amplio esa regresión produce decenas de violaciones.
+    const jugables = [...curriculum.units.values()]
+      .filter((u) => u.phase !== 3 && u.introduces.length > 0)
+      .map((u) => u.id);
+    expect(jugables.length).toBeGreaterThanOrEqual(13);
+    for (const unitId of jugables) {
+      for (const length of [5, 6] as const) {
+        for (let seed = 1; seed <= 20; seed += 1) {
+          const evaluaciones = plan(presented(unitId), unitId, length, seed)
+            .filter((e) => e.kind === 'evaluation');
+          if (evaluaciones.length === 0) continue;
+          const minima = Math.min(...evaluaciones.map((e) => templates[e.templateId].difficulty));
+          const ultima = evaluaciones.at(-1);
+          if (ultima === undefined) throw new Error('sesión sin evaluaciones');
+          expect([unitId, length, seed, templates[ultima.templateId].difficulty])
+            .toEqual([unitId, length, seed, minima]);
+        }
       }
     }
   });
 
-  it('cierra con la evaluación más fácil de la sesión', () => {
-    const sesion = plan(presented('phase2:m'), 'phase2:m', 6, 3);
-    const evaluaciones = sesion.filter((e) => e.kind === 'evaluation');
-    const ultima = evaluaciones.at(-1);
-    const minima = Math.min(...evaluaciones.map((e) => templates[e.templateId].difficulty));
-    expect(templates[ultima!.templateId].difficulty).toBe(minima);
+  it('evita repetir plantilla seguida donde es posible, y lo documenta donde no', () => {
+    // Las CUATRO unidades de la Fase 0 declaran una sola plantilla cada una, así que el
+    // 100 % de sus evaluaciones son del mismo tipo y la regla es inalcanzable por diseño
+    // del contenido: contar sílabas con seis palabras distintas es una actividad coherente
+    // y la variedad viene de las palabras, no del tipo de ejercicio. Donde hay más de una
+    // plantilla aplicable, se exige como mucho un par repetido. El recuento final impide
+    // que la exención se trague el test entero.
+    const jugables = [...curriculum.units.values()]
+      .filter((u) => u.phase !== 3 && u.introduces.length > 0)
+      .map((u) => u.id);
+    let conVariasPlantillas = 0;
+    for (const unitId of jugables) {
+      for (const length of [5, 6] as const) {
+        for (let seed = 1; seed <= 20; seed += 1) {
+          const evaluaciones = plan(presented(unitId), unitId, length, seed)
+            .filter((e) => e.kind === 'evaluation');
+          if (new Set(evaluaciones.map((e) => e.templateId)).size <= 1) continue;
+          conVariasPlantillas += 1;
+          let pares = 0;
+          for (let i = 1; i < evaluaciones.length; i += 1) {
+            if (evaluaciones[i]?.templateId === evaluaciones[i - 1]?.templateId) pares += 1;
+          }
+          expect([unitId, length, seed, pares <= 1]).toEqual([unitId, length, seed, true]);
+        }
+      }
+    }
+    expect(conVariasPlantillas).toBeGreaterThan(100);
   });
 
   it('cada ejercicio tiene un id único en la sesión', () => {
     const sesion = plan(presented('phase2:m'), 'phase2:m', 6);
     expect(new Set(sesion.map((e) => e.id)).size).toBe(sesion.length);
+  });
+});
+
+describe('el plan siempre es coherente, sobre muchas semillas y estados', () => {
+  it('30 semillas por 3 estados: longitud correcta y todo ejercicio utilizable', () => {
+    // El planificador es el módulo con más probabilidad de reventar en producción, porque
+    // combina currículo, progreso, plantillas y distractores. Esta propiedad comprueba que
+    // en ninguna combinación produce un plan que la interfaz no pueda dibujar.
+    const estados: [string, ProgressState][] = [
+      ['recién empezado', emptyProgressState()],
+      ['unidad presentada', presented('phase1:vowel-a')],
+      ['con repaso pendiente', { ...presented('phase1:vowel-a'), sessionCounter: 12 }],
+    ];
+    for (const [etiqueta, state] of estados) {
+      for (const unitId of ['phase0:clap', 'phase1:vowel-a', 'phase2:m']) {
+        for (let seed = 1; seed <= 30; seed += 1) {
+          for (const length of [5, 6] as const) {
+            const sesion = planSession({ content: curriculum, state, activeUnitId: unitId, sessionLength: length, seed });
+            expect([etiqueta, unitId, seed, sesion.length]).toEqual([etiqueta, unitId, seed, length]);
+            for (const ejercicio of sesion) {
+              const item = curriculum.items.get(ejercicio.itemId);
+              expect([etiqueta, ejercicio.itemId, item !== undefined]).toEqual([etiqueta, ejercicio.itemId, true]);
+              expect(templates[ejercicio.templateId].itemKinds).toContain(item?.kind);
+              const rango = templates[ejercicio.templateId].options;
+              if (rango === undefined) {
+                expect([ejercicio.id, ejercicio.optionIds]).toEqual([ejercicio.id, []]);
+              } else {
+                expect(ejercicio.optionIds).toContain(ejercicio.correctOptionId);
+                expect([ejercicio.id, new Set(ejercicio.optionIds).size]).toEqual([ejercicio.id, ejercicio.optionIds.length]);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('cierra con el ejercicio más fácil en todas las semillas, no solo en una', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const evaluaciones = plan(presented('phase2:m'), 'phase2:m', 6, seed)
+        .filter((e) => e.kind === 'evaluation');
+      const minima = Math.min(...evaluaciones.map((e) => templates[e.templateId].difficulty));
+      const ultima = evaluaciones.at(-1);
+      expect([seed, templates[ultima!.templateId].difficulty]).toEqual([seed, minima]);
+    }
+  });
+
+  it('el repaso saca primero los ítems de la caja más baja', () => {
+    // La caja baja significa "se falló hace poco": es lo que más necesita volver.
+    let state = presented('phase1:vowel-a');
+    const ids = curriculum.units.get('phase1:vowel-a')?.introduces ?? [];
+    state = {
+      ...state,
+      items: {
+        ...state.items,
+        [ids[0] ?? '']: { ...emptyItemProgress(), presented: true, box: 3, lastSessionIndex: 0 },
+        [ids[1] ?? '']: { ...emptyItemProgress(), presented: true, box: 1, lastSessionIndex: 0 },
+      },
+      sessionCounter: 20,
+    };
+    const repaso = plan(state, 'phase1:vowel-e', 6).filter((e) => e.source === 'review');
+    expect(repaso.length).toBeGreaterThan(0);
+    expect(repaso[0]?.itemId).toBe(ids[1]);
   });
 });
 
@@ -3771,6 +4732,9 @@ export function planSession(input: {
     const owner = content.units.get(ownerId) ?? unit;
     const templateId = pickTemplate(owner, item, rng);
     const level: DistractorLevel = itemProgressOf(state, itemId).firstTryCorrect >= 1 ? 'hard' : 'easy';
+    // Una presentación no ofrece opciones: el niño solo mira y escucha. Además de ser lo
+    // correcto, evita un fallo real: pickDistractors LANZA si no encuentra candidatos
+    // suficientes, así que construir opciones que nadie va a usar podía tumbar la sesión.
     const { optionIds, correctOptionId } =
       kind === 'presentation'
         ? { optionIds: [], correctOptionId: null }
@@ -3787,10 +4751,18 @@ export function planSession(input: {
   const budget = sessionLength - presentations.length;
   if (budget <= 0) return presentations;
 
-  // 2. Repaso vencido de otras unidades, de la caja más baja a la más alta.
+  // 2. Repaso de otras unidades, de la caja más baja a la más alta.
+  // Entra un ítem si está vencido según su caja, o si se presentó y nunca llegó a
+  // acertarse (caja 0). Sin esa segunda condición, un ítem de una unidad que se completó
+  // con el 80 % y que el niño nunca acertó quedaría abandonado para siempre: isDue
+  // devuelve false para la caja 0, y su unidad ya no es la activa. Sería justo la letra
+  // que más le cuesta la que dejaría de aparecer.
   const reviewPool = [...content.items.keys()]
     .filter((id) => owners.get(id) !== activeUnitId)
-    .filter((id) => isDue(itemProgressOf(state, id), sessionIndex))
+    .filter((id) => {
+      const progress = itemProgressOf(state, id);
+      return isDue(progress, sessionIndex) || (progress.presented && progress.box === 0);
+    })
     .sort((a, b) => {
       const pa = itemProgressOf(state, a);
       const pb = itemProgressOf(state, b);
@@ -3845,14 +4817,62 @@ export function planSession(input: {
     }
   }
 
-  return [...presentations, ...arranged, easiest];
+  return [...presentations, ...reduceAdjacency([...arranged, easiest])];
+}
+
+/**
+ * Reduce los pares de plantillas repetidas seguidas intercambiando posiciones, sin tocar
+ * nunca la última: cerrar con el ejercicio más fácil es una garantía dura y se conserva
+ * por construcción, igual que el determinismo, porque esta pasada no usa el generador.
+ *
+ * Hace falta porque el algoritmo voraz puede dejar la PEOR disposición, no una forzada.
+ * Con tres ejercicios de leer palabra y dos de escuchar sacaba los tres seguidos, cuando
+ * existía una disposición con una sola repetición. Tres lecturas en voz alta seguidas, el
+ * tipo más difícil, es mucho para un niño de tres años; una repetición no.
+ *
+ * Medido sobre 320 combinaciones, antes y después: sesiones con dos o más pares repetidos
+ * pasan de 21 a 0, y las que no tienen ninguno de 268 a 293. Las 27 que conservan un par
+ * son las matemáticamente forzadas, donde la plantilla mayoritaria no es la más fácil y
+ * cerrar con el más fácil y no repetir son incompatibles.
+ */
+function reduceAdjacency(list: PlannedExercise[]): PlannedExercise[] {
+  const out = [...list];
+  const pares = (arr: PlannedExercise[]) => {
+    let n = 0;
+    for (let i = 1; i < arr.length; i += 1) {
+      if (arr[i]?.templateId === arr[i - 1]?.templateId) n += 1;
+    }
+    return n;
+  };
+  const ultimo = out.length - 1;
+  for (let vuelta = 0; vuelta < out.length; vuelta += 1) {
+    let mejoro = false;
+    for (let i = 0; i < ultimo; i += 1) {
+      for (let j = i + 1; j < ultimo; j += 1) {
+        const antes = pares(out);
+        const a = out[i];
+        const b = out[j];
+        if (a === undefined || b === undefined) continue;
+        out[i] = b;
+        out[j] = a;
+        if (pares(out) < antes) {
+          mejoro = true;
+        } else {
+          out[i] = a;
+          out[j] = b;
+        }
+      }
+    }
+    if (!mejoro) break;
+  }
+  return out;
 }
 ```
 
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/planner.test.ts && pnpm typecheck`
-Expected: los 19 tests PASS.
+Expected: los 23 tests PASS.
 
 Si el test de "no coloca dos veces la misma plantilla seguidas" falla para alguna semilla, comprueba primero cuántas plantillas distintas admite la unidad: con una sola plantilla aplicable la adyacencia es inevitable y el test debe excluir ese caso, no el algoritmo. Por eso ese test usa `phase2:m`, que admite cinco plantillas, y la unidad de sí o no tiene su propio test sin exigir variedad.
 
