@@ -1730,6 +1730,54 @@ describe('Fase 2, estructura', () => {
 });
 
 describe('Fase 2, invariante 1: pertenencia de letras', () => {
+  it('lettersIntroducedBefore declara exactamente las letras disponibles en cada unidad', () => {
+    // El test de abajo usa esta función como oráculo, así que si la función estuviera mal,
+    // ese test se volvería vacuo. Una revisión lo demostró: haciéndola devolver siempre las
+    // cuatro consonantes, los 20 tests seguían en verde, y entonces una palabra colocada en
+    // una unidad donde su letra aún no se enseña pasaba sin que nada fallara. Aquí se fija
+    // su contrato contra conjuntos escritos a mano, sin consultar el módulo.
+    const vocales = ['a', 'e', 'i', 'o', 'u'];
+    expect([...lettersIntroducedBefore('phase2:m')].sort()).toEqual([...vocales, 'm'].sort());
+    expect([...lettersIntroducedBefore('phase2:l')].sort()).toEqual([...vocales, 'l', 'm'].sort());
+    expect([...lettersIntroducedBefore('phase2:s')].sort()).toEqual([...vocales, 'l', 'm', 's'].sort());
+    expect([...lettersIntroducedBefore('phase2:p')].sort()).toEqual([...vocales, 'l', 'm', 'p', 's'].sort());
+  });
+
+  it('el inventario de palabras de cada unidad está fijado', () => {
+    // Sin esto, borrar una palabra pasaba el control de "al menos 5 por unidad" y el
+    // contenido podía encoger en silencio.
+    const palabrasDe = (unitId: string) =>
+      (phase2Units.find((u) => u.id === unitId)?.introduces ?? [])
+        .filter((id) => id.startsWith('word:'))
+        .map((id) => id.slice('word:'.length));
+    expect(palabrasDe('phase2:m')).toEqual(['mama', 'mimo', 'mima', 'ama', 'amo']);
+    expect(palabrasDe('phase2:l')).toEqual(['lima', 'loma', 'mula', 'mala', 'malo', 'lelo', 'ala', 'ola']);
+    expect(palabrasDe('phase2:s')).toEqual(['mesa', 'masa', 'misa', 'suma', 'sumo', 'sola', 'sala', 'oso', 'uso', 'eso', 'asa']);
+    expect(palabrasDe('phase2:p')).toEqual(['papa', 'pipa', 'mapa', 'sapo', 'sopa', 'pesa', 'puma', 'pala', 'pelo', 'polo', 'lupa', 'paso', 'piso']);
+    expect(words).toHaveLength(37);
+  });
+
+  it('las 37 palabras son distintas y ninguna se repite entre unidades', () => {
+    const textos = words.map((w) => w.text);
+    expect(new Set(textos).size).toBe(textos.length);
+    const ids = phase2Units.flatMap((u) => u.introduces).filter((id) => id.startsWith('word:'));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('los fonemas de cada palabra son sus letras sin tilde', () => {
+    for (const word of words) {
+      expect([word.text, word.phonemes]).toEqual([word.text, [...stripDiacritics(word.text)]]);
+    }
+  });
+
+  it('cada palabra apunta a la imagen y al audio de su propio id', () => {
+    for (const word of words) {
+      const base = stripDiacritics(word.text);
+      expect([word.text, word.audioKey]).toEqual([word.text, `word:${base}`]);
+      expect([word.text, word.imageKey]).toEqual([word.text, `img:${base}`]);
+    }
+  });
+
   it('cada palabra usa solo letras ya introducidas en su unidad o antes', () => {
     for (const unit of phase2Units) {
       const allowed = lettersIntroducedBefore(unit.id);
@@ -1928,7 +1976,7 @@ export function lettersIntroducedBefore(unitId: string): Set<string> {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/phase2.test.ts`
-Expected: los 22 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
+Expected: los 25 tests PASS. Si alguno de los invariantes falla, el error señala la palabra concreta: corrige la palabra, no el invariante.
 
 - [ ] **Step 5: Commit**
 
@@ -1967,6 +2015,10 @@ Crea `src/content/audio-manifest.test.ts`:
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ACCENTS, audioManifest, audioPath, contentAudio, referencedAudioKeys, uiAudio } from '@/content/audio-manifest';
+import { phase0Items, phase0Units } from '@/content/phase0';
+import { phase1Items, phase1Units } from '@/content/phase1';
+import { phase2Items, phase2Units } from '@/content/phase2';
+import { pictures } from '@/content/pictures';
 import { templateIds, templates } from '@/content/templates';
 
 describe('manifiesto de audio', () => {
@@ -1974,13 +2026,56 @@ describe('manifiesto de audio', () => {
     expect(ACCENTS).toEqual(['do', 'mx', 'neutro']);
   });
 
-  it('cubre todas las claves que el contenido referencia', () => {
-    for (const key of referencedAudioKeys()) expect(contentAudio[key]).toBeDefined();
+  it('cubre exactamente las claves que el contenido referencia, calculadas por separado', () => {
+    // No se compara contra referencedAudioKeys(), porque contentAudio se construye a
+    // partir de esa misma función y el test sería tautológico: no podría fallar nunca.
+    // El conjunto esperado se recalcula aquí desde los datos crudos, así que este test
+    // detectaría que referencedAudioKeys() olvidara, por ejemplo, los audios de unidad.
+    const esperado = new Set([
+      ...[...pictures, ...phase0Items, ...phase1Items, ...phase2Items].map((i) => i.audioKey),
+      ...[...phase0Units, ...phase1Units, ...phase2Units].map((u) => u.audioKey),
+    ]);
+    expect([...Object.keys(contentAudio)].sort()).toEqual([...esperado].sort());
+    expect([...referencedAudioKeys()].sort()).toEqual([...esperado].sort());
   });
 
-  it('no tiene claves de contenido huérfanas', () => {
-    const referenced = referencedAudioKeys();
-    for (const key of Object.keys(contentAudio)) expect(referenced.has(key)).toBe(true);
+  it('los audios de unidad están en el manifiesto y dicen el título de su unidad', () => {
+    for (const unit of [...phase0Units, ...phase1Units, ...phase2Units]) {
+      expect([unit.id, contentAudio[unit.audioKey]]).toEqual([unit.id, unit.title]);
+    }
+  });
+
+  it('cada sílaba y cada palabra se locuta con su propio texto', () => {
+    for (const item of [...phase2Items].filter((i) => i.kind === 'syllable' || i.kind === 'word')) {
+      expect([item.id, contentAudio[item.audioKey]]).toEqual([item.id, item.text]);
+    }
+  });
+
+  it('ningún fonema se locuta con el nombre de la letra', () => {
+    const NOMBRES = ['eme', 'ele', 'ese', 'pe', 'a', 'e', 'i', 'o', 'u'];
+    for (const [key, text] of Object.entries(contentAudio)) {
+      if (!key.startsWith('phoneme:')) continue;
+      const letra = key.slice('phoneme:'.length);
+      expect([key, text.length >= 1]).toEqual([key, true]);
+      if (letra !== 'p') {
+        // Las continuas se alargan; solo la oclusiva p se dice una vez.
+        expect([key, text]).toEqual([key, letra.repeat(3)]);
+      }
+      expect([key, NOMBRES.slice(0, 4).includes(text)]).toEqual([key, false]);
+    }
+  });
+
+  it('dos claves distintas nunca acaban en el mismo fichero', () => {
+    for (const accent of ACCENTS) {
+      const rutas = Object.keys(audioManifest).map((k) => audioPath(k, accent));
+      expect(new Set(rutas).size).toBe(rutas.length);
+    }
+  });
+
+  it('ninguna ruta conserva los dos puntos de la clave', () => {
+    for (const key of Object.keys(audioManifest)) {
+      expect([key, audioPath(key, 'do').includes(':')]).toEqual([key, false]);
+    }
   });
 
   it('ningún texto queda vacío', () => {
@@ -2122,7 +2217,7 @@ export function audioPath(key: string, accent: Accent): string {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/audio-manifest.test.ts`
-Expected: los 9 tests PASS y el décimo se salta por falta de la variable de entorno.
+Expected: los 14 tests PASS y el decimoquinto se salta por falta de la variable de entorno.
 
 - [ ] **Step 5: Comprobar que el test de ficheros se salta de verdad**
 
@@ -2208,6 +2303,31 @@ describe('currículo ensamblado', () => {
     // devuelven respuestas vacuamente coherentes sin avisar de que la entrada estaba mal.
     for (const item of curriculum.items.values()) {
       expect([item.id, item.text]).toEqual([item.id, item.text.toLowerCase()]);
+    }
+  });
+
+  it('el orden topológico contiene todas las unidades, una sola vez', () => {
+    expect(curriculum.unitOrder).toHaveLength(curriculum.units.size);
+    expect(new Set(curriculum.unitOrder).size).toBe(curriculum.unitOrder.length);
+    for (const id of curriculum.units.keys()) expect(curriculum.unitOrder).toContain(id);
+  });
+
+  it('todo ítem que no sea una imagen lo enseña alguna unidad', () => {
+    // Las imágenes existen para ilustrar y no las introduce ninguna unidad, a propósito.
+    // Cualquier otro ítem que ninguna unidad enseñe es contenido muerto.
+    const introducidos = new Set([...curriculum.units.values()].flatMap((u) => u.introduces));
+    for (const item of curriculum.items.values()) {
+      if (item.kind === 'picture') continue;
+      expect([item.id, introducidos.has(item.id)]).toEqual([item.id, true]);
+    }
+  });
+
+  it('ninguna unidad depende de otra de una fase posterior', () => {
+    for (const unit of curriculum.units.values()) {
+      for (const required of unit.requires) {
+        const previa = curriculum.units.get(required);
+        expect([unit.id, required, (previa?.phase ?? 0) <= unit.phase]).toEqual([unit.id, required, true]);
+      }
     }
   });
 
@@ -2369,7 +2489,7 @@ export const curriculum: CurriculumIndex = buildCurriculum({
 - [ ] **Step 5: Verificar que pasa toda la capa de contenido**
 
 Run: `pnpm test src/content && pnpm typecheck`
-Expected: todos los archivos de `content/` en verde y `tsc` sin errores.
+Expected: todos los archivos de `content/` en verde, con 15 tests en index.test.ts, y `tsc` sin errores.
 
 - [ ] **Step 6: Commit**
 
