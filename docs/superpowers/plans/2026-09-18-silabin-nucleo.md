@@ -2114,6 +2114,43 @@ describe('manifiesto de audio', () => {
     expect(audioPath('phoneme:a', 'do')).toBe('/audio/do/phoneme_a.m4a');
   });
 
+  it('toda ruta termina en .m4a en los tres acentos', () => {
+    for (const key of Object.keys(audioManifest)) {
+      for (const accent of ACCENTS) {
+        expect([key, accent, audioPath(key, accent).endsWith('.m4a')]).toEqual([key, accent, true]);
+      }
+    }
+  });
+
+  it('las preguntas de "¿lo oyes?" usan el sonido del fonema, no su nombre', () => {
+    // Con vocales el fonema crudo y su sonido se parecen, así que el defecto sería casi
+    // invisible. Con consonantes diría "¿Oyes m en..." en vez de "¿Oyes mmm en...", que es
+    // justo lo que prohíbe la restricción central, y acabaría siendo una locución grabada.
+    const SONIDOS: Record<string, string> = {
+      a: 'aaa', e: 'eee', i: 'iii', o: 'ooo', u: 'uuu', m: 'mmm', l: 'lll', s: 'sss', p: 'p',
+    };
+    const claves = Object.keys(contentAudio).filter((k) => k.startsWith('instruction:hear:'));
+    expect(claves).toHaveLength(8);
+    for (const key of claves) {
+      const partes = key.slice('instruction:hear:'.length).split('-');
+      const sonido = SONIDOS[partes[0] ?? ''];
+      expect([key, sonido === undefined]).toEqual([key, false]);
+      expect([key, contentAudio[key]]).toEqual([key, `¿Oyes ${sonido} en ${partes[1]}?`]);
+    }
+  });
+
+  it('las claves de contenido y de interfaz no colisionan', () => {
+    // audioManifest es un spread: una clave de interfaz que pisara una de contenido
+    // ganaría en silencio, y los tests que solo miran contentAudio seguirían en verde
+    // mientras el manifiesto real, el que genera las rutas, quedaría corrompido.
+    const contenido = Object.keys(contentAudio);
+    const interfaz = Object.keys(uiAudio);
+    expect(contenido.length + interfaz.length).toBe(Object.keys(audioManifest).length);
+    for (const key of interfaz) {
+      expect([key, contenido.includes(key)]).toEqual([key, false]);
+    }
+  });
+
   it.runIf(process.env.SILABIN_CHECK_AUDIO_FILES === '1')(
     'todos los ficheros existen en los tres acentos',
     () => {
@@ -2217,7 +2254,7 @@ export function audioPath(key: string, accent: Accent): string {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/audio-manifest.test.ts`
-Expected: los 14 tests PASS y el decimoquinto se salta por falta de la variable de entorno.
+Expected: los 16 tests PASS y el decimoséptimo se salta por falta de la variable de entorno.
 
 - [ ] **Step 5: Comprobar que el test de ficheros se salta de verdad**
 
