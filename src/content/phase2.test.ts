@@ -215,3 +215,102 @@ describe("Fase 2, sílabas", () => {
 		}
 	});
 });
+
+describe("Fase 2, contratos de funciones críticas", () => {
+	it("lettersIntroducedBefore declara exactamente las letras disponibles en cada unidad", () => {
+		// El test del invariante 1 usa esta función como oráculo: si estuviera mal, ese test
+		// se volvería vacuo. Aquí se fija su contrato contra conjuntos escritos a mano.
+		const vocales = ["a", "e", "i", "o", "u"];
+		expect([...lettersIntroducedBefore("phase2:m")].sort()).toEqual(
+			[...vocales, "m"].sort(),
+		);
+		expect([...lettersIntroducedBefore("phase2:l")].sort()).toEqual(
+			[...vocales, "l", "m"].sort(),
+		);
+		expect([...lettersIntroducedBefore("phase2:s")].sort()).toEqual(
+			[...vocales, "l", "m", "s"].sort(),
+		);
+		expect([...lettersIntroducedBefore("phase2:p")].sort()).toEqual(
+			[...vocales, "l", "m", "p", "s"].sort(),
+		);
+	});
+
+	it("el inventario de palabras de cada unidad está fijado", () => {
+		const palabrasDe = (unitId: string) =>
+			(phase2Units.find((u) => u.id === unitId)?.introduces ?? [])
+				.filter((id) => id.startsWith("word:"))
+				.map((id) => id.slice("word:".length));
+		expect(palabrasDe("phase2:m")).toEqual([
+			"mama",
+			"mimo",
+			"mima",
+			"ama",
+			"amo",
+		]);
+		expect(palabrasDe("phase2:l")).toEqual([
+			"lima",
+			"loma",
+			"mula",
+			"mala",
+			"malo",
+			"lelo",
+			"ala",
+			"ola",
+		]);
+		expect(palabrasDe("phase2:s")).toEqual([
+			"mesa",
+			"masa",
+			"misa",
+			"suma",
+			"sumo",
+			"sola",
+			"sala",
+			"oso",
+			"uso",
+			"eso",
+			"asa",
+		]);
+		expect(palabrasDe("phase2:p")).toEqual([
+			"papa",
+			"pipa",
+			"mapa",
+			"sapo",
+			"sopa",
+			"pesa",
+			"puma",
+			"pala",
+			"pelo",
+			"polo",
+			"lupa",
+			"paso",
+			"piso",
+		]);
+		expect(words).toHaveLength(37);
+	});
+
+	it("las 37 palabras son distintas y ninguna se repite entre unidades", () => {
+		const textos = words.map((w) => w.text);
+		expect(new Set(textos).size).toBe(textos.length);
+		const ids = phase2Units
+			.flatMap((u) => u.introduces)
+			.filter((id) => id.startsWith("word:"));
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it("los fonemas de cada palabra son sus letras sin tilde", () => {
+		for (const word of words) {
+			expect([word.text, word.phonemes]).toEqual([
+				word.text,
+				[...stripDiacritics(word.text)],
+			]);
+		}
+	});
+
+	it("cada palabra apunta a la imagen y al audio de su propio id", () => {
+		for (const word of words) {
+			const base = stripDiacritics(word.text);
+			expect([word.text, word.audioKey]).toEqual([word.text, `word:${base}`]);
+			expect([word.text, word.imageKey]).toEqual([word.text, `img:${base}`]);
+		}
+	});
+});
