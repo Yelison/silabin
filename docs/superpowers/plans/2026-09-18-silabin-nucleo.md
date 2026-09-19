@@ -3544,7 +3544,7 @@ Crea `src/engine/apply.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum } from '@/content/index';
 import { applyPresentation, applyResolution, applySessionEnd } from '@/engine/apply';
-import { emptyProgressState, type ProgressState } from '@/engine/types';
+import { emptyProgressState, type ExerciseResolution, type ProgressState } from '@/engine/types';
 
 const content = buildCurriculum({
   items: [
@@ -3671,6 +3671,71 @@ describe('contadores para los logros', () => {
     });
     expect(state.counters.wordsRead).toBe(1);
     expect(state.counters.voiceOk).toBe(1);
+  });
+});
+
+describe('invariantes que ninguna secuencia puede romper', () => {
+  // Una revisión anterior listó estados que los tipos permiten expresar pero que no deben
+  // ocurrir nunca. Este bloque los somete a una secuencia larga y variada de resultados.
+  it('tras 200 resoluciones variadas, el progreso nunca queda en un estado imposible', () => {
+    const resoluciones: ExerciseResolution[] = [
+      { status: 'mastery-credit' },
+      { status: 'correct-with-hint', hintsUsed: 1 },
+      { status: 'correct-with-hint', hintsUsed: 2 },
+      { status: 'assisted' },
+    ];
+    const plantillas = ['listen-tap', 'trace', 'say-it', 'read-word'] as const;
+    let state = emptyProgressState();
+    for (let paso = 0; paso < 200; paso += 1) {
+      const sessionIndex = Math.floor(paso / 5);
+      state = applyResolution({
+        content,
+        state,
+        itemId: ['syllable:ma', 'word:mapa', 'letter:m'][paso % 3] ?? 'syllable:ma',
+        templateId: plantillas[paso % 4] ?? 'listen-tap',
+        resolution: resoluciones[paso % 4] ?? { status: 'assisted' },
+        sessionIndex,
+        now: NOW,
+      });
+      for (const [id, progress] of Object.entries(state.items)) {
+        // No puede haber progreso en un ítem que nunca se presentó.
+        if (!progress.presented) {
+          expect([id, progress.box, progress.firstTryCorrect, progress.lastSessionIndex])
+            .toEqual([id, 0, 0, -1]);
+        }
+        // No puede estar marcado como dominado sin tener los tres aciertos.
+        if (progress.masteredAt !== null) {
+          expect([id, progress.firstTryCorrect >= 3]).toEqual([id, true]);
+        }
+        // El crédito no puede venir de una sesión posterior a la última vista.
+        if (progress.lastCreditSession !== null) {
+          expect([id, progress.lastCreditSession <= progress.lastSessionIndex])
+            .toEqual([id, true]);
+        }
+        // Los contadores nunca son negativos: nada resta progreso.
+        expect([id, progress.firstTryCorrect >= 0 && progress.assisted >= 0])
+          .toEqual([id, true]);
+      }
+    }
+  });
+
+  it('applyResolution no muta el estado que recibe', () => {
+    const antes = emptyProgressState();
+    const copia = JSON.parse(JSON.stringify(antes));
+    applyResolution({
+      content, state: antes, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'mastery-credit' }, sessionIndex: 0, now: NOW,
+    });
+    expect(antes).toEqual(copia);
+  });
+
+  it('lanza con un ítem que no existe en el currículo', () => {
+    expect(() =>
+      applyResolution({
+        content, state: emptyProgressState(), itemId: 'syllable:jamas', templateId: 'listen-tap',
+        resolution: { status: 'mastery-credit' }, sessionIndex: 0, now: NOW,
+      }),
+    ).toThrow(/desconocido/i);
   });
 });
 
@@ -3805,7 +3870,7 @@ export function applySessionEnd(input: {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/apply.test.ts && pnpm typecheck`
-Expected: los 13 tests PASS.
+Expected: los 16 tests PASS.
 
 - [ ] **Step 5: Commit**
 
