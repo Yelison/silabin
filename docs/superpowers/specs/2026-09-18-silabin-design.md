@@ -142,10 +142,10 @@ Cada unidad introduce `phoneme:X` y `letter:X`. Plantillas: `initial-sound`, `li
 
 Cada unidad introduce `phoneme:C`, `letter:C` y `syllable:Ca..Cu` (5). Plantillas: `listen-tap`, `build`, `say-it`, `trace` de la consonante, y `read-word` con palabras formadas solo con letras ya introducidas:
 
-- m: mamá, mimo, momia? (no: usa solo CV-CV → mamá, memo, mima), ama, amo.
+- m: mamá, mimo, mima, mío, ama, amo.
 - l: lima, loma, mula, mala, malo, lelo, ala, ola.
 - s: mesa, masa, misa, suma, sumo, sola, sala, oso, uso, eso, asa.
-- p: papá, pipa, mapa, sapo, sopa, pesa, puma, pala, pelo, polo, lupa, paso, piso, pumas.
+- p: papá, pipa, mapa, sapo, sopa, pesa, puma, pala, pelo, polo, lupa, paso, piso.
 
 Las palabras con vocal aislada como sílaba (ala, oso) se permiten porque las 5 vocales ya están dominadas.
 
