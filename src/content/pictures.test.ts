@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripDiacritics } from "@/content/invariants";
 import { pictureId, pictures } from "@/content/pictures";
 import { itemSchema } from "@/content/types";
 
@@ -23,9 +24,22 @@ describe("catálogo de imágenes", () => {
 		expect(new Set(pictures.map((p) => p.id)).size).toBe(pictures.length);
 	});
 
-	it("el primer fonema coincide con la primera letra del texto salvo en dígrafos", () => {
-		const gato = pictures.find((p) => p.id === pictureId("gato"));
-		expect(gato?.phonemes[0]).toBe("g");
+	it("el primer fonema de cada imagen corresponde a la ortografía de su palabra", () => {
+		/** Sonido inicial que corresponde a la ortografía de la palabra, según las reglas del español. */
+		function expectedOnset(word: string): string {
+			const first = stripDiacritics(word[0] ?? "");
+			const second = stripDiacritics(word[1] ?? "");
+			if (first === "c" && ["a", "o", "u"].includes(second)) return "k";
+			if (first === "v") return "b";
+			return first;
+		}
+
+		for (const picture of pictures) {
+			expect([picture.text, picture.phonemes[0]]).toEqual([
+				picture.text,
+				expectedOnset(picture.text),
+			]);
+		}
 	});
 
 	it("pictureId construye el id esperado", () => {
@@ -35,6 +49,29 @@ describe("catálogo de imágenes", () => {
 	it("incluye las imágenes que comparten las fases 0 y 1", () => {
 		for (const word of ["oso", "avión", "uva", "pato", "luna"]) {
 			expect(pictures.some((p) => p.id === pictureId(word))).toBe(true);
+		}
+	});
+
+	it("audioKey e imageKey siguen su convención y no están intercambiados", () => {
+		for (const picture of pictures) {
+			expect([picture.text, picture.audioKey]).toEqual([
+				picture.text,
+				`word:${picture.text}`,
+			]);
+			expect([picture.text, picture.imageKey]).toEqual([
+				picture.text,
+				`img:${picture.text}`,
+			]);
+		}
+	});
+
+	it("las sílabas de cada imagen reconstruyen su palabra", () => {
+		for (const picture of pictures) {
+			expect([picture.text, picture.syllables?.join("")]).toEqual([
+				picture.text,
+				picture.text,
+			]);
+			expect((picture.syllables ?? []).length).toBeGreaterThan(0);
 		}
 	});
 });
