@@ -182,6 +182,45 @@ function arrangeNoAdjacent(
 	return arranged;
 }
 
+/**
+ * Reduce los pares de plantillas repetidas seguidas intercambiando posiciones, sin tocar
+ * nunca la última: cerrar con el ejercicio más fácil es una garantía dura. Cuando la
+ * plantilla mayoritaria no es la más fácil, un par es inevitable, pero tres no: el
+ * algoritmo voraz puede dejar la peor disposición y esta pasada la mejora.
+ */
+function reduceAdjacency(list: PlannedExercise[]): PlannedExercise[] {
+	const out = [...list];
+	const pares = (arr: PlannedExercise[]) => {
+		let n = 0;
+		for (let i = 1; i < arr.length; i += 1) {
+			if (arr[i]?.templateId === arr[i - 1]?.templateId) n += 1;
+		}
+		return n;
+	};
+	const ultimo = out.length - 1;
+	for (let vuelta = 0; vuelta < out.length; vuelta += 1) {
+		let mejoro = false;
+		for (let i = 0; i < ultimo; i += 1) {
+			for (let j = i + 1; j < ultimo; j += 1) {
+				const antes = pares(out);
+				const a = out[i];
+				const b = out[j];
+				if (a === undefined || b === undefined) continue;
+				out[i] = b;
+				out[j] = a;
+				if (pares(out) < antes) {
+					mejoro = true;
+				} else {
+					out[i] = a;
+					out[j] = b;
+				}
+			}
+		}
+		if (!mejoro) break;
+	}
+	return out;
+}
+
 export function planSession(input: {
 	content: CurriculumIndex;
 	state: ProgressState;
@@ -321,6 +360,7 @@ export function planSession(input: {
 	);
 	const rest = evaluations.filter((e) => e.id !== easiest.id);
 	const arranged = arrangeNoAdjacent(rest, rng, easiest.templateId);
+	const mejorado = reduceAdjacency([...arranged, easiest]);
 
-	return [...presentations, ...arranged, easiest];
+	return [...presentations, ...mejorado];
 }
