@@ -117,4 +117,17 @@ describe("unitSchema", () => {
 		};
 		expect(unitSchema.parse(unidad).phase).toBe(3);
 	});
+
+	it("rechaza una unidad jugable sin plantillas declaradas", () => {
+		const unidad = {
+			id: "phase1:sin-ejercicios",
+			phase: 1,
+			title: "Sin ejercicios",
+			audioKey: "unit:x",
+			requires: [],
+			introduces: ["phoneme:a"],
+			exercises: [],
+		};
+		expect(unitSchema.safeParse(unidad).success).toBe(false);
+	});
 });
