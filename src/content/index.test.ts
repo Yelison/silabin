@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCurriculum, curriculum } from "@/content/index";
-import type { Curriculum } from "@/content/types";
+import type { Curriculum, Item, Unit } from "@/content/types";
 
 describe("currículo ensamblado", () => {
 	it("carga sin lanzar y contiene las unidades de las fases 0 a 3", () => {
@@ -23,7 +23,13 @@ describe("currículo ensamblado", () => {
 		);
 		for (const unit of curriculum.units.values()) {
 			for (const required of unit.requires) {
-				expect(position.get(required)!).toBeLessThan(position.get(unit.id)!);
+				const antes = position.get(required);
+				const despues = position.get(unit.id);
+				expect([
+					unit.id,
+					required,
+					antes !== undefined && despues !== undefined && antes < despues,
+				]).toEqual([unit.id, required, true]);
 			}
 		}
 	});
@@ -95,6 +101,23 @@ describe("currículo ensamblado", () => {
 			}
 		}
 	});
+
+	it("las ocho unidades de Fase 3 están vacías y encadenan desde phase2:p", () => {
+		const futuras = curriculum.unitOrder
+			.map((id) => curriculum.units.get(id))
+			.filter((unidad) => unidad?.phase === 3);
+		expect(futuras).toHaveLength(8);
+		expect(futuras[0]?.requires).toEqual(["phase2:p"]);
+		for (const [index, unidad] of futuras.entries()) {
+			expect([unidad?.id, unidad?.introduces]).toEqual([unidad?.id, []]);
+			if (index > 0) {
+				expect([unidad?.id, unidad?.requires]).toEqual([
+					unidad?.id,
+					[futuras[index - 1]?.id],
+				]);
+			}
+		}
+	});
 });
 
 describe("buildCurriculum, validaciones", () => {
@@ -126,7 +149,7 @@ describe("buildCurriculum, validaciones", () => {
 			items: [item],
 			units: [{ ...unit, requires: ["no-existe"] }],
 		};
-		expect(() => buildCurriculum(raw)).toThrow(/prerrequisito/i);
+		expect(() => buildCurriculum(raw)).toThrow(/prerrequisito inexistente/i);
 	});
 
 	it("rechaza un ítem introducido que no existe", () => {
@@ -153,5 +176,60 @@ describe("buildCurriculum, validaciones", () => {
 			],
 		};
 		expect(() => buildCurriculum(raw)).toThrow(/ciclo/i);
+	});
+
+	it("el orden topológico desempata alfabéticamente y no depende del orden de entrada", () => {
+		const suelta = (id: string): Unit => ({
+			id,
+			phase: 3,
+			title: id,
+			audioKey: `unit:${id}`,
+			requires: [],
+			introduces: [],
+			exercises: [],
+		});
+		const esperado = ["alfa", "media", "zeta"];
+		expect(
+			buildCurriculum({
+				items: [],
+				units: [suelta("zeta"), suelta("alfa"), suelta("media")],
+			}).unitOrder,
+		).toEqual(esperado);
+		expect(
+			buildCurriculum({
+				items: [],
+				units: [suelta("media"), suelta("zeta"), suelta("alfa")],
+			}).unitOrder,
+		).toEqual(esperado);
+	});
+
+	it("rechaza un dato que solo el esquema Zod puede detectar", () => {
+		// Los tipos Item y Unit se infieren de los esquemas SIN refinar, así que TypeScript
+		// no fuerza las cuatro reglas de negocio. La llamada a curriculumSchema.parse es la
+		// única barrera: sin este test se podía borrar y toda la suite seguía en verde.
+		const letraSinDisplay: Item = {
+			id: "letter:a",
+			kind: "letter",
+			text: "a",
+			phonemes: ["a"],
+			audioKey: "phoneme:a",
+		};
+		expect(() =>
+			buildCurriculum({ items: [letraSinDisplay], units: [unit] }),
+		).toThrow();
+
+		const palabraSinSilabas: Item = {
+			id: "word:mapa",
+			kind: "word",
+			text: "mapa",
+			phonemes: ["m", "a", "p", "a"],
+			audioKey: "word:mapa",
+		};
+		expect(() =>
+			buildCurriculum({
+				items: [palabraSinSilabas],
+				units: [{ ...unit, introduces: ["word:mapa"] }],
+			}),
+		).toThrow();
 	});
 });
