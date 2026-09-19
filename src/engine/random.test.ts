@@ -46,10 +46,19 @@ describe("createRng", () => {
 		expect(() => createRng(1).pick([])).toThrow(/vacío/i);
 	});
 
+	it("pick no devuelve siempre el mismo elemento", () => {
+		// Que el resultado pertenezca al arreglo es necesario pero no suficiente: una
+		// implementación que devolviera siempre el primero lo cumpliría igual.
+		const rng = createRng(5);
+		const items = ["a", "b", "c", "d"];
+		const vistos = new Set(Array.from({ length: 200 }, () => rng.pick(items)));
+		expect([...vistos].sort()).toEqual(items);
+	});
+
 	it("shuffle conserva todos los elementos y no muta el original", () => {
 		const original = [1, 2, 3, 4, 5];
 		const shuffled = createRng(11).shuffle(original);
-		expect([...shuffled].sort()).toEqual(original);
+		expect([...shuffled].sort((a, b) => a - b)).toEqual(original);
 		expect(original).toEqual([1, 2, 3, 4, 5]);
 	});
 
@@ -67,6 +76,11 @@ describe("createRng", () => {
 	it("int lanza si el máximo no es positivo", () => {
 		expect(() => createRng(1).int(0)).toThrow(/mayor que cero/i);
 		expect(() => createRng(1).int(-3)).toThrow(/mayor que cero/i);
+	});
+
+	it("shuffle es determinista con la misma semilla", () => {
+		const items = [1, 2, 3, 4, 5, 6, 7, 8];
+		expect(createRng(21).shuffle(items)).toEqual(createRng(21).shuffle(items));
 	});
 });
 
@@ -103,10 +117,5 @@ describe("estados iniciales", () => {
 		const dos = emptyProgressState();
 		uno.counters.traces = 7;
 		expect(dos.counters.traces).toBe(0);
-	});
-
-	it("shuffle es determinista con la misma semilla", () => {
-		const items = [1, 2, 3, 4, 5, 6, 7, 8];
-		expect(createRng(21).shuffle(items)).toEqual(createRng(21).shuffle(items));
 	});
 });
