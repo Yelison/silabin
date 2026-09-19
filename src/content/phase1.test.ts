@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { phase0Units } from "@/content/phase0";
 import { phase1Items, phase1Units, VOWEL_ORDER } from "@/content/phase1";
 import { picturesByInitialPhoneme } from "@/content/pictures";
 import { itemSchema, unitSchema } from "@/content/types";
@@ -22,12 +23,15 @@ describe("Fase 1", () => {
 			expect(itemSchema.safeParse(item).success).toBe(true);
 	});
 
-	it("cada unidad introduce un fonema y una letra", () => {
-		for (const unit of phase1Units) {
-			expect(unit.introduces).toHaveLength(2);
-			expect(unit.introduces[0]?.startsWith("phoneme:")).toBe(true);
-			expect(unit.introduces[1]?.startsWith("letter:")).toBe(true);
-		}
+	it("cada unidad introduce el fonema y la letra de su propia vocal", () => {
+		// Comprobar solo los prefijos dejaba pasar una permutación: la unidad de la a
+		// enseñando el sonido de la a y la forma de la e.
+		VOWEL_ORDER.forEach((vowel, index) => {
+			expect([vowel, phase1Units[index]?.introduces]).toEqual([
+				vowel,
+				[`phoneme:${vowel}`, `letter:${vowel}`],
+			]);
+		});
 	});
 
 	it("cada letra trae su par mayúscula y minúscula", () => {
@@ -50,6 +54,11 @@ describe("Fase 1", () => {
 		expect(phase1Units.map((u) => u.phase)).toEqual([1, 1, 1, 1, 1]);
 	});
 
+	it("el prerrequisito de la primera vocal apunta a una unidad que existe de verdad", () => {
+		const requerida = phase1Units[0]?.requires[0];
+		expect(phase0Units.some((unit) => unit.id === requerida)).toBe(true);
+	});
+
 	it("cada ítem lo introduce exactamente una unidad, sin huérfanos", () => {
 		const introducidos = phase1Units.flatMap((u) => u.introduces);
 		expect([...introducidos].sort()).toEqual(
@@ -58,13 +67,16 @@ describe("Fase 1", () => {
 		expect(phase1Items).toHaveLength(10);
 	});
 
-	it("cada unidad usa las cuatro plantillas de la fase", () => {
+	it("cada unidad declara las cuatro plantillas con sus pesos", () => {
 		for (const unit of phase1Units) {
-			expect(unit.exercises.map((e) => e.templateId).sort()).toEqual([
-				"initial-sound",
-				"listen-tap",
-				"say-it",
-				"trace",
+			expect([unit.id, unit.exercises]).toEqual([
+				unit.id,
+				[
+					{ templateId: "initial-sound", weight: 1 },
+					{ templateId: "listen-tap", weight: 3 },
+					{ templateId: "trace", weight: 2 },
+					{ templateId: "say-it", weight: 2 },
+				],
 			]);
 		}
 	});
@@ -96,5 +108,16 @@ describe("Fase 1", () => {
 			expect([vowel, phoneme?.phonemes]).toEqual([vowel, [vowel]]);
 			expect([vowel, letter?.audioKey]).toEqual([vowel, `phoneme:${vowel}`]);
 		}
+	});
+
+	it("cada unidad tiene su propio audio de introducción", () => {
+		const claves = phase1Units.map((unit) => unit.audioKey);
+		expect(new Set(claves).size).toBe(claves.length);
+		VOWEL_ORDER.forEach((vowel, index) => {
+			expect([vowel, phase1Units[index]?.audioKey]).toEqual([
+				vowel,
+				`unit:phase1:vowel-${vowel}`,
+			]);
+		});
 	});
 });
