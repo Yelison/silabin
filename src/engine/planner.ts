@@ -220,13 +220,10 @@ export function planSession(input: {
 			templateCounts.set(templateId, (templateCounts.get(templateId) ?? 0) + 1);
 		const level: DistractorLevel =
 			itemProgressOf(state, itemId).firstTryCorrect >= 1 ? "hard" : "easy";
-		const { optionIds, correctOptionId } = buildOptions({
-			content,
-			item,
-			templateId,
-			level,
-			rng,
-		});
+		const { optionIds, correctOptionId } =
+			kind === "presentation"
+				? { optionIds: [], correctOptionId: null }
+				: buildOptions({ content, item, templateId, level, rng });
 		counter += 1;
 		return {
 			id: `ex-${counter}`,

@@ -230,6 +230,18 @@ describe("el plan siempre es coherente, sobre muchas semillas y estados", () => 
 							expect(templates[ejercicio.templateId].itemKinds).toContain(
 								item?.kind,
 							);
+							if (ejercicio.kind === "presentation") {
+								// Una presentación no ofrece opciones: el niño solo mira y escucha.
+								expect([ejercicio.id, ejercicio.optionIds]).toEqual([
+									ejercicio.id,
+									[],
+								]);
+								expect([ejercicio.id, ejercicio.correctOptionId]).toEqual([
+									ejercicio.id,
+									null,
+								]);
+								continue;
+							}
 							const rango = templates[ejercicio.templateId].options;
 							if (rango === undefined) {
 								expect([ejercicio.id, ejercicio.optionIds]).toEqual([
