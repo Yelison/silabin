@@ -5,6 +5,7 @@ import {
 	applyResolution,
 	applySessionEnd,
 } from "@/engine/apply";
+import { createRng } from "@/engine/random";
 import {
 	type ExerciseResolution,
 	emptyProgressState,
@@ -108,9 +109,23 @@ describe("applyResolution con crédito de dominio", () => {
 	});
 
 	it("no reescribe la fecha de dominio ya puesta", () => {
+		// Con la misma fecha en todas las llamadas, la comprobación sería NOW === NOW y el
+		// test no podría fallar aunque la fecha se reescribiera en cada acierto.
+		const DESPUES = "2027-01-01T00:00:00.000Z";
 		let state = emptyProgressState();
-		for (const session of [0, 1, 2]) state = credit(state, session);
-		state = credit(state, 3);
+		for (const sesion of [0, 1, 2]) state = credit(state, sesion);
+		expect(state.items["syllable:ma"]?.masteredAt).toBe(NOW);
+
+		state = applyResolution({
+			content,
+			state,
+			itemId: "syllable:ma",
+			templateId: "listen-tap",
+			resolution: { status: "mastery-credit" },
+			sessionIndex: 3,
+			now: DESPUES,
+		});
+
 		expect(state.items["syllable:ma"]?.masteredAt).toBe(NOW);
 	});
 });
@@ -145,6 +160,27 @@ describe("applyResolution con ayuda", () => {
 		expect(state.items["syllable:ma"]?.assisted).toBe(1);
 		expect(state.items["syllable:ma"]?.box).toBe(1);
 		expect(state.items["syllable:ma"]?.firstTryCorrect).toBe(0);
+	});
+
+	it("un resultado asistido no quita nada a un ítem ya dominado", () => {
+		let state = emptyProgressState();
+		for (const sesion of [0, 1, 2]) state = credit(state, sesion);
+		const dominado = state.items["syllable:ma"];
+		expect(dominado?.firstTryCorrect).toBe(3);
+
+		state = applyResolution({
+			content,
+			state,
+			itemId: "syllable:ma",
+			templateId: "listen-tap",
+			resolution: { status: "assisted" },
+			sessionIndex: 3,
+			now: NOW,
+		});
+
+		expect(state.items["syllable:ma"]?.firstTryCorrect).toBe(3);
+		expect(state.items["syllable:ma"]?.masteredAt).toBe(NOW);
+		expect(state.items["syllable:ma"]?.assisted).toBe(1);
 	});
 });
 
@@ -219,17 +255,24 @@ describe("invariantes que ninguna secuencia puede romper", () => {
 			{ status: "correct-with-hint", hintsUsed: 2 },
 			{ status: "assisted" },
 		];
-		const plantillas = ["listen-tap", "trace", "say-it", "read-word"] as const;
+		const rng = createRng(20260919);
 		let state = emptyProgressState();
 		for (let paso = 0; paso < 200; paso += 1) {
 			const sessionIndex = Math.floor(paso / 5);
+			const itemId = rng.pick(["syllable:ma", "word:mapa", "letter:m"]);
+			const templateId = rng.pick([
+				"listen-tap",
+				"trace",
+				"say-it",
+				"read-word",
+			] as const);
+			const resolution = rng.pick(resoluciones);
 			state = applyResolution({
 				content,
 				state,
-				itemId:
-					["syllable:ma", "word:mapa", "letter:m"][paso % 3] ?? "syllable:ma",
-				templateId: plantillas[paso % 4] ?? "listen-tap",
-				resolution: resoluciones[paso % 4] ?? { status: "assisted" },
+				itemId,
+				templateId,
+				resolution,
 				sessionIndex,
 				now: NOW,
 			});
@@ -263,19 +306,23 @@ describe("invariantes que ninguna secuencia puede romper", () => {
 		}
 	});
 
-	it("applyResolution no muta el estado que recibe", () => {
-		const antes = emptyProgressState();
-		const copia = JSON.parse(JSON.stringify(antes));
-		applyResolution({
-			content,
-			state: antes,
-			itemId: "syllable:ma",
-			templateId: "listen-tap",
-			resolution: { status: "mastery-credit" },
-			sessionIndex: 0,
-			now: NOW,
-		});
-		expect(antes).toEqual(copia);
+	it("no muta el estado que recibe, ni siquiera cuando el ítem ya tenía progreso", () => {
+		// Partir del estado vacío no sirve: sin un progreso preexistente no hay nada que se
+		// pueda mutar en su sitio, y una mutación directa pasaría inadvertida.
+		let state = credit(emptyProgressState(), 0);
+		state = credit(state, 1);
+		const anterior = state;
+		const copia = JSON.parse(JSON.stringify(anterior));
+
+		const siguiente = credit(anterior, 2);
+
+		expect(anterior).toEqual(copia);
+		expect(anterior.items["syllable:ma"]?.firstTryCorrect).toBe(2);
+		expect(siguiente.items["syllable:ma"]?.firstTryCorrect).toBe(3);
+		expect(siguiente.items["syllable:ma"]).not.toBe(
+			anterior.items["syllable:ma"],
+		);
+		expect(siguiente.counters).not.toBe(anterior.counters);
 	});
 
 	it("lanza con un ítem que no existe en el currículo", () => {
