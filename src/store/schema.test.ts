@@ -80,6 +80,77 @@ describe("esquema", () => {
 	});
 });
 
+describe("límites de los contadores", () => {
+	const clavesDeContadores = [
+		"traces",
+		"sessions",
+		"voiceOk",
+		"wordsRead",
+	] as const;
+
+	it("rechaza un contador negativo", () => {
+		const state = emptyPersistedState();
+		for (const clave of clavesDeContadores) {
+			const roto = {
+				...state,
+				counters: { ...state.counters, [clave]: -1 },
+			};
+			const resultado = persistedStateSchema.safeParse(roto);
+			expect(resultado.success, clave).toBe(false);
+		}
+	});
+
+	it("rechaza un contador no entero", () => {
+		const state = emptyPersistedState();
+		for (const clave of clavesDeContadores) {
+			const roto = {
+				...state,
+				counters: { ...state.counters, [clave]: 1.5 },
+			};
+			const resultado = persistedStateSchema.safeParse(roto);
+			expect(resultado.success, clave).toBe(false);
+		}
+	});
+
+	it("rechaza sessionCounter negativo o no entero", () => {
+		const state = emptyPersistedState();
+		expect(
+			persistedStateSchema.safeParse({ ...state, sessionCounter: -1 }).success,
+		).toBe(false);
+		expect(
+			persistedStateSchema.safeParse({ ...state, sessionCounter: 1.5 }).success,
+		).toBe(false);
+	});
+
+	it("rechaza firstTryCorrect negativo en un ítem", () => {
+		const state = emptyPersistedState();
+		state.items["letter:a"] = {
+			box: 1,
+			presented: true,
+			firstTryCorrect: -1,
+			assisted: 0,
+			lastSessionIndex: 0,
+			lastCreditSession: null,
+			masteredAt: null,
+		};
+		expect(persistedStateSchema.safeParse(state).success).toBe(false);
+	});
+
+	it("rechaza assisted no entero en un ítem", () => {
+		const state = emptyPersistedState();
+		state.items["letter:a"] = {
+			box: 1,
+			presented: true,
+			firstTryCorrect: 0,
+			assisted: 1.5,
+			lastSessionIndex: 0,
+			lastCreditSession: null,
+			masteredAt: null,
+		};
+		expect(persistedStateSchema.safeParse(state).success).toBe(false);
+	});
+});
+
 describe("migrate", () => {
 	it("devuelve el documento tal cual si es válido y de la versión actual", () => {
 		const state = emptyPersistedState();
@@ -105,5 +176,46 @@ describe("migrate", () => {
 		const state = emptyPersistedState();
 		state.units["phase1:vowel-a"] = { status: "done", bestStars: 3 };
 		expect(migrate(state).state.units["phase1:vowel-a"]?.bestStars).toBe(3);
+	});
+
+	// Ruling del controlador: en v1 migrate() no hace rescate por clave. Una sola
+	// clave corrupta y ajena al progreso (aquí, settings.pinHash) tira todo el
+	// documento, aunque items, units y sessions fueran válidos. Es deliberado:
+	// recovered=true existe para que la interfaz ofrezca restaurar desde una
+	// exportación (Tarea 22), no para que aquí se intente salvar nada por clave.
+	// El día que exista rescate por clave en v2, este test debe FALLAR a
+	// propósito: eso es lo que fuerza a decidir en voz alta, no en silencio,
+	// qué comportamiento nuevo se quiere.
+	it("v1 descarta todo el progreso a propósito si una sola clave ajena está corrupta", () => {
+		const state = emptyPersistedState();
+		state.items["letter:a"] = {
+			box: 3,
+			presented: true,
+			firstTryCorrect: 3,
+			assisted: 0,
+			lastSessionIndex: 2,
+			lastCreditSession: 2,
+			masteredAt: "2026-09-18T12:00:00.000Z",
+		};
+		state.units["phase1:vowel-a"] = { status: "done", bestStars: 3 };
+		state.sessions.push({
+			index: 0,
+			unitId: "phase1:vowel-a",
+			stars: 3,
+			endedAt: "2026-09-18T12:00:00.000Z",
+		});
+
+		// Clave ajena al progreso, corrupta: pinHash debería ser string | null.
+		const roto = {
+			...state,
+			settings: { ...state.settings, pinHash: 42 },
+		};
+
+		const resultado = migrate(roto);
+
+		expect(resultado.recovered).toBe(true);
+		expect(resultado.state.items).toEqual({});
+		expect(resultado.state.units).toEqual({});
+		expect(resultado.state.sessions).toEqual([]);
 	});
 });

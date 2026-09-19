@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Counters, ItemProgress, UnitProgress } from "@/engine/types";
 import { emptyProgressState } from "@/engine/types";
 
 export const CURRENT_VERSION = 1;
@@ -21,6 +22,12 @@ export const settingsSchema = z.object({
 });
 export type Settings = z.infer<typeof settingsSchema>;
 
+// El `satisfies` ata este esquema a ItemProgress de @/engine/types: si un campo
+// se borra o cambia de tipo en cualquiera de los dos lados, el compilador falla
+// aquí mismo en vez de dejar que el esquema y el tipo del motor se desincronicen
+// en silencio. Es de un solo sentido: detecta un campo que falte (o que cambie
+// de tipo), pero no un campo de más en el esquema ni uno quitado de ItemProgress
+// que el esquema todavía declare.
 const itemProgressSchema = z.object({
 	box: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
 	presented: z.boolean(),
@@ -29,12 +36,13 @@ const itemProgressSchema = z.object({
 	lastSessionIndex: z.number().int(),
 	lastCreditSession: z.number().int().nullable(),
 	masteredAt: z.string().nullable(),
-});
+}) satisfies z.ZodType<ItemProgress>;
 
+// Misma ata para UnitProgress. Ver el comentario sobre itemProgressSchema.
 const unitProgressSchema = z.object({
 	status: z.enum(["locked", "active", "done"]),
 	bestStars: starsSchema,
-});
+}) satisfies z.ZodType<UnitProgress>;
 
 export const sessionRecordSchema = z.object({
 	index: z.number().int().min(0),
@@ -54,18 +62,21 @@ export const rewardStateSchema = z.object({
 });
 export type RewardState = z.infer<typeof rewardStateSchema>;
 
+// Misma ata para Counters. Ver el comentario sobre itemProgressSchema.
+const countersSchema = z.object({
+	traces: z.number().int().min(0),
+	sessions: z.number().int().min(0),
+	voiceOk: z.number().int().min(0),
+	wordsRead: z.number().int().min(0),
+}) satisfies z.ZodType<Counters>;
+
 export const persistedStateSchema = z.object({
 	version: z.literal(CURRENT_VERSION),
 	settings: settingsSchema,
 	items: z.record(z.string(), itemProgressSchema),
 	units: z.record(z.string(), unitProgressSchema),
 	sessionCounter: z.number().int().min(0),
-	counters: z.object({
-		traces: z.number().int().min(0),
-		sessions: z.number().int().min(0),
-		voiceOk: z.number().int().min(0),
-		wordsRead: z.number().int().min(0),
-	}),
+	counters: countersSchema,
 	sessions: z.array(sessionRecordSchema),
 	rewards: rewardStateSchema,
 });
