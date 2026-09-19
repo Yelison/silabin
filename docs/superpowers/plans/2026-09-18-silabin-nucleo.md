@@ -4021,16 +4021,53 @@ describe('pickDistractors', () => {
     expect(new Set(out.map((i) => i.id)).size).toBe(4);
   });
 
-  it('en nivel fácil prefiere formas distintas', () => {
-    const pool = [letter('o'), letter('e'), letter('m'), letter('i')];
-    const out = pickDistractors({ target: letter('a'), pool, count: 2, rng: createRng(4), level: 'easy' });
-    expect(out.map((i) => i.text).sort()).toEqual(['i', 'm']);
+  it('el nivel fácil elige, en promedio, opciones menos parecidas que el difícil', () => {
+    // Fijar la salida exacta de una semilla concreta es frágil: cualquier cambio en el
+    // barajado rompería el test sin que el criterio estuviera mal. Se comprueba la
+    // propiedad sobre muchas semillas en vez de un resultado puntual.
+    const pool = ['o', 'e', 'c', 's', 'm', 'i', 'l', 'u'].map(letter);
+    const media = (level: 'easy' | 'hard') => {
+      let total = 0;
+      let cuenta = 0;
+      for (let seed = 1; seed <= 40; seed += 1) {
+        for (const elegido of pickDistractors({
+          target: letter('a'), pool, count: 2, rng: createRng(seed), level,
+        })) {
+          total += similarity(letter('a'), elegido);
+          cuenta += 1;
+        }
+      }
+      return total / cuenta;
+    };
+    expect(media('easy')).toBeLessThan(media('hard'));
   });
 
-  it('en nivel difícil prefiere las más parecidas', () => {
-    const pool = [letter('o'), letter('e'), letter('m'), letter('i')];
-    const out = pickDistractors({ target: letter('a'), pool, count: 2, rng: createRng(4), level: 'hard' });
-    expect(out.map((i) => i.text).sort()).toEqual(['e', 'o']);
+  it('sobre un banco SIN empates, la ventana da variedad real', () => {
+    // Las vocales no empatan entre sí, así que el orden por parecido es estricto: sin la
+    // ventana, el nivel difícil devolvía SIEMPRE la misma pareja en las 30 semillas.
+    const vocales = ['a', 'e', 'i', 'o', 'u'].map(letter);
+    const vistas = new Set<string>();
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const salida = pickDistractors({
+        target: letter('a'), pool: vocales, count: 2, rng: createRng(seed), level: 'hard',
+      });
+      vistas.add([...salida.map((i) => i.text)].sort().join('+'));
+    }
+    expect(vistas.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('sobre un banco CON empates, el barajado previo da variedad', () => {
+    // Las cinco sílabas de una consonante empatan todas en parecido, así que aquí lo que
+    // da variedad es el barajado previo, no la ventana: sin él, la variedad cae de 4 a 2.
+    const banco = ['ma', 'me', 'mi', 'mo', 'mu'].map(syllable);
+    const vistas = new Set<string>();
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const salida = pickDistractors({
+        target: syllable('ma'), pool: banco, count: 1, rng: createRng(seed), level: 'hard',
+      });
+      vistas.add(salida.map((i) => i.text).join(''));
+    }
+    expect(vistas.size).toBeGreaterThanOrEqual(3);
   });
 
   it('para sílabas en nivel difícil elige las que comparten consonante', () => {
@@ -4192,21 +4229,29 @@ export function pickDistractors(input: {
     );
   }
 
-  // Se mezcla primero para que los empates de similitud se resuelvan de forma determinista pero variada.
+  // Dos mecanismos dan variedad, y cada uno cubre un caso distinto. El barajado previo
+  // resuelve los empates de parecido: con las cinco sílabas de una consonante, todas
+  // empatan y sin barajar saldrían siempre las mismas. La ventana resuelve el orden
+  // estricto: con las cinco vocales no hay empates, y quedarse con la cabeza del orden
+  // devolvía SIEMPRE la misma pareja. Medido sobre 30 semillas, quitar el barajado baja
+  // las sílabas de 4 combinaciones a 2, y quitar la ventana baja las vocales de 5 a 1.
+  // Un niño que ve veinte veces la misma terna aprende a descartar por eliminación en vez
+  // de a leer, así que la variedad es un requisito, no un adorno.
   const shuffled = rng.shuffle(allowed);
   const sorted = [...shuffled].sort((a, b) => {
     const diff = similarity(target, b) - similarity(target, a);
     return level === 'hard' ? diff : -diff;
   });
 
-  return sorted.slice(0, count);
+  const ventana = sorted.slice(0, Math.min(sorted.length, count + 1));
+  return rng.shuffle(ventana).slice(0, count);
 }
 ```
 
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/distractors.test.ts`
-Expected: los 17 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
+Expected: los 18 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
 
 - [ ] **Step 5: Commit**
 
@@ -4404,6 +4449,69 @@ describe('orden de los ejercicios', () => {
   it('cada ejercicio tiene un id único en la sesión', () => {
     const sesion = plan(presented('phase2:m'), 'phase2:m', 6);
     expect(new Set(sesion.map((e) => e.id)).size).toBe(sesion.length);
+  });
+});
+
+describe('el plan siempre es coherente, sobre muchas semillas y estados', () => {
+  it('30 semillas por 3 estados: longitud correcta y todo ejercicio utilizable', () => {
+    // El planificador es el módulo con más probabilidad de reventar en producción, porque
+    // combina currículo, progreso, plantillas y distractores. Esta propiedad comprueba que
+    // en ninguna combinación produce un plan que la interfaz no pueda dibujar.
+    const estados: [string, ProgressState][] = [
+      ['recién empezado', emptyProgressState()],
+      ['unidad presentada', presented('phase1:vowel-a')],
+      ['con repaso pendiente', { ...presented('phase1:vowel-a'), sessionCounter: 12 }],
+    ];
+    for (const [etiqueta, state] of estados) {
+      for (const unitId of ['phase0:clap', 'phase1:vowel-a', 'phase2:m']) {
+        for (let seed = 1; seed <= 30; seed += 1) {
+          for (const length of [5, 6] as const) {
+            const sesion = planSession({ content: curriculum, state, activeUnitId: unitId, sessionLength: length, seed });
+            expect([etiqueta, unitId, seed, sesion.length]).toEqual([etiqueta, unitId, seed, length]);
+            for (const ejercicio of sesion) {
+              const item = curriculum.items.get(ejercicio.itemId);
+              expect([etiqueta, ejercicio.itemId, item !== undefined]).toEqual([etiqueta, ejercicio.itemId, true]);
+              expect(templates[ejercicio.templateId].itemKinds).toContain(item?.kind);
+              const rango = templates[ejercicio.templateId].options;
+              if (rango === undefined) {
+                expect([ejercicio.id, ejercicio.optionIds]).toEqual([ejercicio.id, []]);
+              } else {
+                expect(ejercicio.optionIds).toContain(ejercicio.correctOptionId);
+                expect([ejercicio.id, new Set(ejercicio.optionIds).size]).toEqual([ejercicio.id, ejercicio.optionIds.length]);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('cierra con el ejercicio más fácil en todas las semillas, no solo en una', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const evaluaciones = plan(presented('phase2:m'), 'phase2:m', 6, seed)
+        .filter((e) => e.kind === 'evaluation');
+      const minima = Math.min(...evaluaciones.map((e) => templates[e.templateId].difficulty));
+      const ultima = evaluaciones.at(-1);
+      expect([seed, templates[ultima!.templateId].difficulty]).toEqual([seed, minima]);
+    }
+  });
+
+  it('el repaso saca primero los ítems de la caja más baja', () => {
+    // La caja baja significa "se falló hace poco": es lo que más necesita volver.
+    let state = presented('phase1:vowel-a');
+    const ids = curriculum.units.get('phase1:vowel-a')?.introduces ?? [];
+    state = {
+      ...state,
+      items: {
+        ...state.items,
+        [ids[0] ?? '']: { ...emptyItemProgress(), presented: true, box: 3, lastSessionIndex: 0 },
+        [ids[1] ?? '']: { ...emptyItemProgress(), presented: true, box: 1, lastSessionIndex: 0 },
+      },
+      sessionCounter: 20,
+    };
+    const repaso = plan(state, 'phase1:vowel-e', 6).filter((e) => e.source === 'review');
+    expect(repaso.length).toBeGreaterThan(0);
+    expect(repaso[0]?.itemId).toBe(ids[1]);
   });
 });
 
@@ -4674,7 +4782,7 @@ export function planSession(input: {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/planner.test.ts && pnpm typecheck`
-Expected: los 19 tests PASS.
+Expected: los 23 tests PASS.
 
 Si el test de "no coloca dos veces la misma plantilla seguidas" falla para alguna semilla, comprueba primero cuántas plantillas distintas admite la unidad: con una sola plantilla aplicable la adyacencia es inevitable y el test debe excluir ese caso, no el algoritmo. Por eso ese test usa `phase2:m`, que admite cinco plantillas, y la unidad de sí o no tiene su propio test sin exigir variedad.
 
