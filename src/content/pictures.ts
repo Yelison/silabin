@@ -54,3 +54,7 @@ export const pictures: Item[] = RAW.map(([word, phonemes, syllables]) => ({
 	imageKey: `img:${word}`,
 	syllables: syllables.split("-"),
 }));
+
+export function picturesByInitialPhoneme(phoneme: string): Item[] {
+	return pictures.filter((picture) => picture.phonemes[0] === phoneme);
+}
