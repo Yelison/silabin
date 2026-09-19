@@ -77,10 +77,22 @@ describe("applyPresentation", () => {
 		expect(state.items["syllable:ma"]?.box).toBe(0);
 	});
 
-	it("no muta el estado recibido", () => {
-		const original = emptyProgressState();
-		applyPresentation(original, "syllable:ma", 0);
-		expect(original.items["syllable:ma"]).toBeUndefined();
+	it("no muta el estado recibido, ni siquiera cuando el ítem ya tenía progreso", () => {
+		// Igual que en applyResolution: partir del estado vacío no sirve, porque sin un
+		// progreso preexistente no hay nada que se pueda mutar en su sitio.
+		let state = credit(emptyProgressState(), 0);
+		state = credit(state, 1);
+		const anterior = state;
+		const copia = JSON.parse(JSON.stringify(anterior));
+
+		const siguiente = applyPresentation(anterior, "syllable:ma", 5);
+
+		expect(anterior).toEqual(copia);
+		expect(anterior.items["syllable:ma"]?.lastSessionIndex).toBe(1);
+		expect(siguiente.items["syllable:ma"]?.lastSessionIndex).toBe(5);
+		expect(siguiente.items["syllable:ma"]).not.toBe(
+			anterior.items["syllable:ma"],
+		);
 	});
 });
 
