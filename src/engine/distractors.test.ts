@@ -210,6 +210,26 @@ describe("pickDistractors", () => {
 		expect(vistas.size).toBeGreaterThanOrEqual(3);
 	});
 
+	it("sobre un banco CON empates, el barajado previo da variedad", () => {
+		// Los dos mecanismos cubren casos distintos y ambos hacen falta. La ventana da
+		// variedad cuando el orden por parecido es estricto, como en las vocales. El barajado
+		// previo la da cuando todos los candidatos empatan, como en las cinco sílabas de una
+		// misma consonante: sin él, la variedad cae de 4 combinaciones a 2.
+		const banco = ["ma", "me", "mi", "mo", "mu"].map(syllable);
+		const vistas = new Set<string>();
+		for (let seed = 1; seed <= 30; seed += 1) {
+			const salida = pickDistractors({
+				target: syllable("ma"),
+				pool: banco,
+				count: 1,
+				rng: createRng(seed),
+				level: "hard",
+			});
+			vistas.add(salida.map((i) => i.text).join(""));
+		}
+		expect(vistas.size).toBeGreaterThanOrEqual(3);
+	});
+
 	it("el nivel fácil elige, en promedio, opciones menos parecidas que el difícil", () => {
 		// Fijar la salida exacta para una semilla concreta es frágil: cualquier cambio en el
 		// barajado rompería el test sin que el criterio estuviera mal. Se comprueba la
