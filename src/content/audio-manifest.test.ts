@@ -125,6 +125,59 @@ describe("manifiesto de audio", () => {
 		expect(audioPath("phoneme:a", "do")).toBe("/audio/do/phoneme_a.m4a");
 	});
 
+	it('las preguntas de "¿lo oyes?" usan el sonido del fonema, no su nombre', () => {
+		// Con vocales el fonema crudo y su sonido se parecen, así que el defecto es casi
+		// invisible hoy. Con consonantes diría "¿Oyes m en..." en vez de "¿Oyes mmm en...",
+		// que es justo lo que la restricción de sonido-no-nombre prohíbe.
+		const SONIDOS: Record<string, string> = {
+			a: "aaa",
+			e: "eee",
+			i: "iii",
+			o: "ooo",
+			u: "uuu",
+			m: "mmm",
+			l: "lll",
+			s: "sss",
+			p: "p",
+		};
+		const claves = Object.keys(contentAudio).filter((k) =>
+			k.startsWith("instruction:hear:"),
+		);
+		expect(claves).toHaveLength(8);
+		for (const key of claves) {
+			const partes = key.slice("instruction:hear:".length).split("-");
+			const sonido = SONIDOS[partes[0] ?? ""];
+			expect([key, sonido === undefined]).toEqual([key, false]);
+			expect([key, contentAudio[key]]).toEqual([
+				key,
+				`¿Oyes ${sonido} en ${partes[1]}?`,
+			]);
+		}
+	});
+
+	it("las claves de contenido y de interfaz no colisionan", () => {
+		const contenido = Object.keys(contentAudio);
+		const interfaz = Object.keys(uiAudio);
+		expect(contenido.length + interfaz.length).toBe(
+			Object.keys(audioManifest).length,
+		);
+		for (const key of interfaz) {
+			expect([key, contenido.includes(key)]).toEqual([key, false]);
+		}
+	});
+
+	it("toda ruta termina en .m4a en los tres acentos", () => {
+		for (const key of Object.keys(audioManifest)) {
+			for (const accent of ACCENTS) {
+				expect([key, accent, audioPath(key, accent).endsWith(".m4a")]).toEqual([
+					key,
+					accent,
+					true,
+				]);
+			}
+		}
+	});
+
 	it.runIf(process.env.SILABIN_CHECK_AUDIO_FILES === "1")(
 		"todos los ficheros existen en los tres acentos",
 		() => {
