@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCurriculum } from "@/content/index";
+import { buildCurriculum, curriculum } from "@/content/index";
 import { MASTERY_TARGET } from "@/engine/mastery";
 import {
 	emptyItemProgress,
@@ -115,8 +115,74 @@ describe("activeUnitId", () => {
 		]);
 	});
 
-	it("con todo completo devuelve la última unidad, para poder seguir repasando", () => {
+	it("con todo completo devuelve null: el currículo jugable se agotó", () => {
+		// null es la señal honesta de "ya no queda unidad nueva". Devolver la última unidad
+		// hacía creer al planificador que seguía habiendo unidad activa, y con una unidad
+		// vacía de la Fase 3 producía sesiones sin sentido. Planificar el repaso de un
+		// currículo agotado es trabajo del Plan 2, no de aquí.
 		const todo = withMastered(["letter:a", "letter:b", "letter:c"]);
-		expect(activeUnitId(content, todo)).toBe("u3");
+		expect(activeUnitId(content, todo)).toBeNull();
+	});
+});
+
+describe("el currículo real, con sus unidades vacías de la Fase 3", () => {
+	/** Estado con TODOS los ítems del currículo dominados: el niño se lo sabe todo. */
+	function todoDominado(): ProgressState {
+		const state = emptyProgressState();
+		for (const id of curriculum.items.keys()) {
+			state.items[id] = {
+				...emptyItemProgress(),
+				firstTryCorrect: MASTERY_TARGET,
+				box: 3,
+			};
+		}
+		return state;
+	}
+
+	const vacias = curriculum.unitOrder.filter(
+		(id) => (curriculum.units.get(id)?.introduces.length ?? 0) === 0,
+	);
+	const jugables = curriculum.unitOrder.filter(
+		(id) => (curriculum.units.get(id)?.introduces.length ?? 0) > 0,
+	);
+
+	it("hay unidades vacías de verdad que probar, las 8 de la Fase 3", () => {
+		// Los tests de arriba usan un currículo sintético donde TODAS las unidades introducen
+		// algo, así que ninguno pasaba jamás una unidad vacía por recomputeUnitStatuses. Ese
+		// hueco es justo por donde se coló que las 8 unidades de la Fase 3 se dieran por
+		// terminadas en cascada al completar phase2:p.
+		expect(vacias).toHaveLength(8);
+		expect(vacias.every((id) => id.startsWith("phase3:"))).toBe(true);
+	});
+
+	it("las unidades sin ítems siguen bloqueadas aunque esté todo dominado", () => {
+		const statuses = recomputeUnitStatuses(curriculum, todoDominado());
+		for (const id of vacias)
+			expect([id, statuses[id]?.status]).toEqual([id, "locked"]);
+		for (const id of jugables)
+			expect([id, statuses[id]?.status]).toEqual([id, "done"]);
+	});
+
+	it("con todo el currículo dominado no hay unidad activa", () => {
+		expect(activeUnitId(curriculum, todoDominado())).toBeNull();
+	});
+
+	it("una unidad vacía guardada como done vuelve a locked al recalcular", () => {
+		// Un documento guardado por la versión con el fallo puede traer la Fase 3 entera como
+		// terminada. Se sanea al recalcular: una unidad sin ítems no puede haber costado ni un
+		// ejercicio, así que ahí no hay progreso del niño que se esté quitando.
+		const state = emptyProgressState();
+		state.units["phase3:t"] = { status: "done", bestStars: 3 };
+		expect(recomputeUnitStatuses(curriculum, state)["phase3:t"]?.status).toBe(
+			"locked",
+		);
+	});
+
+	it("una unidad jugable guardada como done sí sigue done: el progreso real no retrocede", () => {
+		const state = emptyProgressState();
+		state.units["phase0:clap"] = { status: "done", bestStars: 2 };
+		const statuses = recomputeUnitStatuses(curriculum, state);
+		expect(statuses["phase0:clap"]?.status).toBe("done");
+		expect(statuses["phase0:clap"]?.bestStars).toBe(2);
 	});
 });

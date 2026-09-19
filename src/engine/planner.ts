@@ -233,6 +233,12 @@ export function planSession(input: {
 	const unit = content.units.get(activeUnitId);
 	if (unit === undefined)
 		throw new Error(`Unidad desconocida: ${activeUnitId}`);
+	// Sin ítems que enseñar no hay sesión posible: con una unidad vacía este planificador
+	// devolvía ejercicios repetidos y repasos mal etiquetados en vez de avisar.
+	if (unit.introduces.length === 0)
+		throw new Error(
+			`La unidad ${activeUnitId} no introduce ningún ítem: no se puede planificar una sesión con ella`,
+		);
 	const sessionIndex = state.sessionCounter;
 	const owners = owningUnits(content);
 

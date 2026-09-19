@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCurriculum } from "@/content/index";
+import { buildCurriculum, curriculum } from "@/content/index";
 import {
 	isMastered,
 	isUnitComplete,
@@ -35,10 +35,39 @@ const content = buildCurriculum({
 	],
 });
 
+/** Una unidad de la Fase 3 tal y como está en el currículo real: sin ítems y sin plantillas. */
+const vacio = buildCurriculum({
+	items: [],
+	units: [
+		{
+			id: "v",
+			phase: 3 as const,
+			title: "V",
+			audioKey: "unit:v",
+			requires: [],
+			introduces: [],
+			exercises: [],
+		},
+	],
+});
+
 function stateWithMastered(count: number): ProgressState {
 	const state = emptyProgressState();
 	for (let n = 1; n <= count; n += 1) {
 		state.items[`syllable:m${n}`] = {
+			...emptyItemProgress(),
+			firstTryCorrect: MASTERY_TARGET,
+			box: 3,
+		};
+	}
+	return state;
+}
+
+/** Estado en el que están dominados exactamente los ítems que se le pasan. */
+function dominados(ids: readonly string[]): ProgressState {
+	const state = emptyProgressState();
+	for (const id of ids) {
+		state.items[id] = {
 			...emptyItemProgress(),
 			firstTryCorrect: MASTERY_TARGET,
 			box: 3,
@@ -72,22 +101,11 @@ describe("unitMasteryRatio", () => {
 		expect(unitMasteryRatio(content, stateWithMastered(5), "u")).toBe(1);
 	});
 
-	it("una unidad sin ítems cuenta como completa, es el caso de la Fase 3", () => {
-		const vacio = buildCurriculum({
-			items: [],
-			units: [
-				{
-					id: "v",
-					phase: 3 as const,
-					title: "V",
-					audioKey: "unit:v",
-					requires: [],
-					introduces: [],
-					exercises: [],
-				},
-			],
-		});
+	it("con una unidad sin ítems devuelve 1, que es solo la salvaguarda de no dividir entre cero", () => {
+		// Ese 1 no significa "terminada": las unidades vacías de la Fase 3 existen para que el
+		// mapa enseñe el camino bloqueado, y isUnitComplete lo dice claro justo debajo.
 		expect(unitMasteryRatio(vacio, emptyProgressState(), "v")).toBe(1);
+		expect(isUnitComplete(vacio, emptyProgressState(), "v")).toBe(false);
 	});
 });
 
@@ -96,6 +114,36 @@ describe("isUnitComplete", () => {
 		expect(UNIT_COMPLETION_THRESHOLD).toBe(0.8);
 		expect(isUnitComplete(content, stateWithMastered(3), "u")).toBe(false);
 		expect(isUnitComplete(content, stateWithMastered(4), "u")).toBe(true);
+	});
+
+	it("el 0,8 exacto del currículo real completa la unidad, y un ítem menos no", () => {
+		// El punto exacto es alcanzable en producción, no solo en un currículo de prueba:
+		// phase2:l introduce 15 ítems (12/15 = 0,8) y phase2:p introduce 20 (16/20 = 0,8).
+		// Con el umbral probado solo por encima y por debajo, cambiar >= por > pasaría
+		// desapercibido justo en las dos unidades donde el niño se lo juega.
+		for (const [unitId, justos] of [
+			["phase2:l", 12],
+			["phase2:p", 16],
+		] as const) {
+			const introduce = curriculum.units.get(unitId)?.introduces ?? [];
+			expect(justos / introduce.length).toBe(UNIT_COMPLETION_THRESHOLD);
+			expect([
+				unitId,
+				isUnitComplete(
+					curriculum,
+					dominados(introduce.slice(0, justos)),
+					unitId,
+				),
+			]).toEqual([unitId, true]);
+			expect([
+				unitId,
+				isUnitComplete(
+					curriculum,
+					dominados(introduce.slice(0, justos - 1)),
+					unitId,
+				),
+			]).toEqual([unitId, false]);
+		}
 	});
 });
 

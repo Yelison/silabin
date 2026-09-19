@@ -42,6 +42,31 @@ function presented(
 	return next;
 }
 
+/** Todo el currículo dominado: el niño se lo sabe todo, incluidas las unidades vacías. */
+function todoDominado(): ProgressState {
+	const state = emptyProgressState();
+	for (const id of curriculum.items.keys()) {
+		state.items[id] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 3,
+			firstTryCorrect: 3,
+			lastSessionIndex: 0,
+		};
+	}
+	return state;
+}
+
+/** Las unidades que se pueden jugar: las que introducen algún ítem. */
+const jugables = curriculum.unitOrder.filter(
+	(id) => (curriculum.units.get(id)?.introduces.length ?? 0) > 0,
+);
+
+/** Las unidades vacías de la Fase 3, que existen solo para dibujar el camino futuro. */
+const vacias = curriculum.unitOrder.filter(
+	(id) => (curriculum.units.get(id)?.introduces.length ?? 0) === 0,
+);
+
 describe("longitud y presentaciones", () => {
 	it("devuelve exactamente la cantidad de ejercicios pedida", () => {
 		expect(plan(emptyProgressState(), "phase1:vowel-a", 5)).toHaveLength(5);
@@ -169,9 +194,6 @@ describe("orden de los ejercicios", () => {
 		// pasada de mejora nunca escribe en la última posición. Si alguien rompiera ese
 		// límite, un test sobre tres unidades y cinco semillas no lo detectaría de forma
 		// fiable; este sí.
-		const jugables = [...curriculum.units.values()]
-			.filter((u) => u.phase !== 3 && u.introduces.length > 0)
-			.map((u) => u.id);
 		expect(jugables.length).toBeGreaterThanOrEqual(13);
 		for (const unitId of jugables) {
 			for (const length of [5, 6] as const) {
@@ -205,9 +227,6 @@ describe("orden de los ejercicios", () => {
 		// diseño del contenido: la variedad de esas sesiones viene de las palabras, no del
 		// tipo de ejercicio. Donde hay más de una plantilla aplicable, se exige como mucho un
 		// par repetido.
-		const jugables = [...curriculum.units.values()]
-			.filter((u) => u.phase !== 3 && u.introduces.length > 0)
-			.map((u) => u.id);
 		let conVariasPlantillas = 0;
 		for (const unitId of jugables) {
 			for (const length of [5, 6] as const) {
@@ -267,9 +286,13 @@ describe("el plan siempre es coherente, sobre muchas semillas y estados", () => 
 				"con repaso pendiente",
 				{ ...presented("phase1:vowel-a"), sessionCounter: 12 },
 			],
+			// El estado que faltaba: el niño que se lo sabe todo. Con él, el motor daba por
+			// completadas las 8 unidades vacías de la Fase 3 y el planificador acababa
+			// recibiendo una unidad sin ítems. Ningún test pasaba antes por aquí.
+			["todo dominado", todoDominado()],
 		];
 		for (const [etiqueta, state] of estados) {
-			for (const unitId of ["phase0:clap", "phase1:vowel-a", "phase2:m"]) {
+			for (const unitId of jugables) {
 				for (let seed = 1; seed <= 30; seed += 1) {
 					for (const length of [5, 6] as const) {
 						const sesion = planSession({
@@ -325,6 +348,19 @@ describe("el plan siempre es coherente, sobre muchas semillas y estados", () => 
 						}
 					}
 				}
+			}
+		}
+	});
+
+	it("rechaza planificar una unidad que no introduce nada, en vez de inventarse una sesión", () => {
+		// Con una unidad vacía el planificador devolvía ítems repetidos, ejercicios de repaso
+		// etiquetados como de la unidad activa y, con todo dominado, ninguna sesión.
+		expect(vacias.length).toBeGreaterThan(0);
+		for (const unitId of vacias) {
+			for (const state of [emptyProgressState(), todoDominado()]) {
+				expect(() => plan(state, unitId, 6)).toThrow(
+					/no introduce ningún ítem/i,
+				);
 			}
 		}
 	});

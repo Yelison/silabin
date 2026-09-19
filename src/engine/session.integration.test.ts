@@ -71,12 +71,14 @@ type Sesion = {
 	stars: Stars;
 };
 
+/** null cuando ya no queda unidad activa: el currículo jugable se agotó. */
 function jugarSesion(
 	state: ProgressState,
 	perfil: Perfil | Guion,
 	seed: number,
-): Sesion {
+): Sesion | null {
 	const unitId = activeUnitId(curriculum, state);
+	if (unitId === null) return null;
 	const perfilDeHoy =
 		typeof perfil === "function" ? perfil(state.sessionCounter) : perfil;
 	const plan = planSession({
@@ -116,12 +118,22 @@ function jugarSesion(
 	};
 }
 
+/**
+ * Juega una sesión dando por hecho que queda currículo. Si se agotara, avisa en vez de
+ * disimularlo: estos tests miden partidas cortas, y agotar el currículo dentro de una de
+ * ellas significaría que el motor avanza mucho más rápido de lo que dicen sus umbrales.
+ */
 function playSession(
 	state: ProgressState,
 	perfil: Perfil | Guion,
 	seed: number,
 ): ProgressState {
-	return jugarSesion(state, perfil, seed).state;
+	const sesion = jugarSesion(state, perfil, seed);
+	if (sesion === null)
+		throw new Error(
+			"El currículo se agotó antes de lo que este test da por supuesto",
+		);
+	return sesion.state;
 }
 
 /**
@@ -245,6 +257,7 @@ describe("un niño que empeora: acierta una sesión y falla la siguiente", () =>
 
 		for (let i = 0; i < 16; i += 1) {
 			const sesion = jugarSesion(state, alternaAciertoYFallo, i + 1);
+			if (sesion === null) throw new Error("currículo agotado, imposible aquí");
 			const previo = mejorPrevio.get(sesion.unitId) ?? 0;
 			if (sesion.stars < previo) sesionesPeores += 1;
 			state = sesion.state;
@@ -355,11 +368,57 @@ describe("el dominio exige sesiones distintas", () => {
 	});
 });
 
+describe("un niño perfecto que se termina el currículo", () => {
+	it("el motor avisa con null en vez de caer en una unidad vacía de la Fase 3", () => {
+		// Antes, al terminar phase2:p, las 8 unidades de la Fase 3 se daban por completadas en
+		// cascada y activeUnitId caía a la última del orden, phase3:b, que no introduce nada.
+		// Con ese id el planificador producía sesiones con ítems repetidos, repasos etiquetados
+		// como de la unidad activa y, con el currículo recién dominado, ninguna sesión.
+		const TOPE = 500;
+		let state = emptyProgressState();
+		let sesionesJugadas = 0;
+		for (let i = 0; i < TOPE; i += 1) {
+			const sesion = jugarSesion(state, "siempre-acierta", i + 1);
+			if (sesion === null) break;
+			state = sesion.state;
+			sesionesJugadas += 1;
+		}
+
+		// El agotamiento se alcanza de verdad dentro del tope; si no, el test no probaría nada.
+		expect(sesionesJugadas).toBeLessThan(TOPE);
+		expect(activeUnitId(curriculum, state)).toBeNull();
+
+		// Y se agotó por haber terminado lo jugable, no por haberse atascado: toda unidad con
+		// ítems queda terminada y toda unidad vacía sigue bloqueada.
+		for (const unitId of curriculum.unitOrder) {
+			const vacia =
+				(curriculum.units.get(unitId)?.introduces.length ?? 0) === 0;
+			expect([unitId, state.units[unitId]?.status]).toEqual([
+				unitId,
+				vacia ? "locked" : "done",
+			]);
+		}
+	});
+
+	it("planSession se niega a planificar con una unidad sin ítems", () => {
+		expect(() =>
+			planSession({
+				content: curriculum,
+				state: emptyProgressState(),
+				activeUnitId: "phase3:b",
+				sessionLength: 6,
+				seed: 1,
+			}),
+		).toThrow(/no introduce ningún ítem/i);
+	});
+});
+
 describe("invariantes de toda sesión", () => {
 	it("todos los ejercicios son coherentes en las tres fases", () => {
 		let state = emptyProgressState();
 		for (let i = 0; i < 40; i += 1) {
 			const unitId = activeUnitId(curriculum, state);
+			if (unitId === null) throw new Error("currículo agotado, imposible aquí");
 			const plan = planSession({
 				content: curriculum,
 				state,
