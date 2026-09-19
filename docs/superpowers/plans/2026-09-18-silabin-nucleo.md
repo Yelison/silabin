@@ -3544,6 +3544,7 @@ Crea `src/engine/apply.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum } from '@/content/index';
 import { applyPresentation, applyResolution, applySessionEnd } from '@/engine/apply';
+import { createRng } from '@/engine/random';
 import { emptyProgressState, type ExerciseResolution, type ProgressState } from '@/engine/types';
 
 const content = buildCurriculum({
@@ -3581,6 +3582,20 @@ describe('applyPresentation', () => {
     applyPresentation(original, 'syllable:ma', 0);
     expect(original.items['syllable:ma']).toBeUndefined();
   });
+
+  it('no muta el estado recibido, ni siquiera cuando el ítem ya tenía progreso', () => {
+    // Partir del estado vacío no basta: sin un progreso preexistente no hay nada que se
+    // pueda mutar en su sitio, y una asignación directa del objeto pasaría inadvertida.
+    let state = credit(emptyProgressState(), 0);
+    state = credit(state, 1);
+    const anterior = state;
+    const copia = JSON.parse(JSON.stringify(anterior));
+    const siguiente = applyPresentation(anterior, 'syllable:ma', 5);
+    expect(anterior).toEqual(copia);
+    expect(anterior.items['syllable:ma']?.lastSessionIndex).toBe(1);
+    expect(siguiente.items['syllable:ma']?.lastSessionIndex).toBe(5);
+    expect(siguiente.items['syllable:ma']).not.toBe(anterior.items['syllable:ma']);
+  });
 });
 
 describe('applyResolution con crédito de dominio', () => {
@@ -3608,10 +3623,29 @@ describe('applyResolution con crédito de dominio', () => {
   });
 
   it('no reescribe la fecha de dominio ya puesta', () => {
+    // Con la misma fecha en todas las llamadas la comprobación sería NOW === NOW, y el
+    // test no podría fallar aunque la fecha se reescribiera en cada acierto.
+    const DESPUES = '2027-01-01T00:00:00.000Z';
     let state = emptyProgressState();
     for (const session of [0, 1, 2]) state = credit(state, session);
-    state = credit(state, 3);
     expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+    state = applyResolution({
+      content, state, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'mastery-credit' }, sessionIndex: 3, now: DESPUES,
+    });
+    expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+  });
+
+  it('un resultado asistido no quita nada a un ítem ya dominado', () => {
+    let state = emptyProgressState();
+    for (const session of [0, 1, 2]) state = credit(state, session);
+    state = applyResolution({
+      content, state, itemId: 'syllable:ma', templateId: 'listen-tap',
+      resolution: { status: 'assisted' }, sessionIndex: 3, now: NOW,
+    });
+    expect(state.items['syllable:ma']?.firstTryCorrect).toBe(3);
+    expect(state.items['syllable:ma']?.masteredAt).toBe(NOW);
+    expect(state.items['syllable:ma']?.assisted).toBe(1);
   });
 });
 
@@ -3685,15 +3719,20 @@ describe('invariantes que ninguna secuencia puede romper', () => {
       { status: 'assisted' },
     ];
     const plantillas = ['listen-tap', 'trace', 'say-it', 'read-word'] as const;
+    const items = ['syllable:ma', 'word:mapa', 'letter:m'];
+    // Se elige con el generador con semilla del proyecto y no con índices por módulo:
+    // esos ciclos quedan en fase entre sí, ciertas combinaciones nunca ocurren, y los
+    // invariantes se acaban cumpliendo de forma vacía sin cubrir nada.
+    const rng = createRng(20260919);
     let state = emptyProgressState();
     for (let paso = 0; paso < 200; paso += 1) {
       const sessionIndex = Math.floor(paso / 5);
       state = applyResolution({
         content,
         state,
-        itemId: ['syllable:ma', 'word:mapa', 'letter:m'][paso % 3] ?? 'syllable:ma',
-        templateId: plantillas[paso % 4] ?? 'listen-tap',
-        resolution: resoluciones[paso % 4] ?? { status: 'assisted' },
+        itemId: rng.pick(items),
+        templateId: rng.pick(plantillas),
+        resolution: rng.pick(resoluciones),
         sessionIndex,
         now: NOW,
       });
@@ -3870,7 +3909,7 @@ export function applySessionEnd(input: {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/apply.test.ts && pnpm typecheck`
-Expected: los 16 tests PASS.
+Expected: los 19 tests PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -4013,6 +4052,56 @@ describe('pickDistractors', () => {
     expect(a.map((i) => i.id)).toEqual(b.map((i) => i.id));
   });
 
+  it('en 50 semillas distintas nunca aparece una letra espejo del objetivo', () => {
+    // Es la restricción pedagógica más importante del módulo: a esta edad el cerebro ve
+    // b, d, p y q como la misma forma girada. Comprobarlo con una sola semilla dejaría
+    // el resultado a merced de la suerte.
+    const pool = ['b', 'd', 'p', 'q', 'm', 'a', 'i', 'l'].map(letter);
+    for (const grupo of [['b', 'd', 'p', 'q']]) {
+      for (const texto of grupo) {
+        for (let seed = 1; seed <= 50; seed += 1) {
+          const salida = pickDistractors({
+            target: letter(texto), pool, count: 2, rng: createRng(seed), level: 'hard',
+          });
+          for (const elegido of salida) {
+            expect([texto, seed, grupo.includes(elegido.text)]).toEqual([texto, seed, false]);
+          }
+        }
+      }
+    }
+  });
+
+  it('el nivel fácil elige, en promedio, opciones menos parecidas que el difícil', () => {
+    // Fijar la salida exacta para una semilla concreta es frágil: cualquier cambio en el
+    // barajado rompería el test sin que el criterio estuviera mal. Se comprueba la
+    // propiedad sobre muchas semillas en vez de un resultado puntual.
+    const pool = ['o', 'e', 'c', 's', 'm', 'i', 'l', 'u'].map(letter);
+    const media = (level: 'easy' | 'hard') => {
+      let total = 0;
+      let cuenta = 0;
+      for (let seed = 1; seed <= 40; seed += 1) {
+        for (const elegido of pickDistractors({
+          target: letter('a'), pool, count: 2, rng: createRng(seed), level,
+        })) {
+          total += similarity(letter('a'), elegido);
+          cuenta += 1;
+        }
+      }
+      return total / cuenta;
+    };
+    expect(media('easy')).toBeLessThan(media('hard'));
+  });
+
+  it('similarity también distingue palabras, no solo letras y sílabas', () => {
+    const palabra = (text: string, syllables: string[]): Item => ({
+      id: `word:${text}`, kind: 'word', text, phonemes: [...text],
+      audioKey: `word:${text}`, syllables,
+    });
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('mala', ['ma', 'la']))).toBe(2);
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('lupa', ['lu', 'pa']))).toBe(1);
+    expect(similarity(palabra('mapa', ['ma', 'pa']), palabra('oso', ['o', 'so']))).toBe(0);
+  });
+
   it('lanza si el grupo de candidatos no alcanza', () => {
     expect(() =>
       pickDistractors({ target: letter('a'), pool: [letter('a')], count: 2, rng: createRng(7), level: 'easy' }),
@@ -4117,7 +4206,7 @@ export function pickDistractors(input: {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/engine/distractors.test.ts`
-Expected: los 14 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
+Expected: los 17 tests PASS. Si el test de nivel fácil o difícil falla por el orden de los empates, ajusta la semilla del test, no el criterio de ordenación.
 
 - [ ] **Step 5: Commit**
 
