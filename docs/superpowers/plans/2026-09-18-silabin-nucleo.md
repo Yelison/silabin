@@ -2295,7 +2295,7 @@ Crea `src/content/index.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { buildCurriculum, curriculum } from '@/content/index';
-import type { Curriculum } from '@/content/types';
+import type { Curriculum, Item, Unit } from '@/content/types';
 
 describe('currículo ensamblado', () => {
   it('carga sin lanzar y contiene las unidades de las fases 0 a 3', () => {
@@ -2314,7 +2314,24 @@ describe('currículo ensamblado', () => {
     const position = new Map(curriculum.unitOrder.map((id, index) => [id, index]));
     for (const unit of curriculum.units.values()) {
       for (const required of unit.requires) {
-        expect(position.get(required)!).toBeLessThan(position.get(unit.id)!);
+        const antes = position.get(required);
+        const despues = position.get(unit.id);
+        expect([unit.id, required, antes !== undefined && despues !== undefined && antes < despues])
+          .toEqual([unit.id, required, true]);
+      }
+    }
+  });
+
+  it('las ocho unidades de Fase 3 están vacías y encadenan desde phase2:p', () => {
+    const futuras = curriculum.unitOrder
+      .map((id) => curriculum.units.get(id))
+      .filter((unidad) => unidad?.phase === 3);
+    expect(futuras).toHaveLength(8);
+    expect(futuras[0]?.requires).toEqual(['phase2:p']);
+    for (const [index, unidad] of futuras.entries()) {
+      expect([unidad?.id, unidad?.introduces]).toEqual([unidad?.id, []]);
+      if (index > 0) {
+        expect([unidad?.id, unidad?.requires]).toEqual([unidad?.id, [futuras[index - 1]?.id]]);
       }
     }
   });
@@ -2389,8 +2406,40 @@ describe('buildCurriculum, validaciones', () => {
   });
 
   it('rechaza un prerrequisito inexistente', () => {
+    // La expresión es específica a propósito: con solo /prerrequisito/i el test pasaba
+    // aunque se borrara esta comprobación, porque el flujo caía en la detección de ciclos
+    // y su mensaje ("Hay un ciclo de prerrequisitos entre...") satisfacía la misma regla.
     const raw: Curriculum = { items: [item], units: [{ ...unit, requires: ['no-existe'] }] };
-    expect(() => buildCurriculum(raw)).toThrow(/prerrequisito/i);
+    expect(() => buildCurriculum(raw)).toThrow(/prerrequisito inexistente/i);
+  });
+
+  it('rechaza un dato que solo el esquema Zod puede detectar', () => {
+    // Los tipos Item y Unit se infieren de los esquemas SIN refinar, así que TypeScript no
+    // fuerza las cuatro reglas de negocio: letra con display, palabra con sílabas, oral con
+    // task, unidad jugable con contenido. La llamada a curriculumSchema.parse es la única
+    // barrera, y sin este test se podía borrar y toda la suite seguía en verde.
+    const letraSinDisplay: Item = {
+      id: 'letter:a', kind: 'letter', text: 'a', phonemes: ['a'], audioKey: 'phoneme:a',
+    };
+    expect(() => buildCurriculum({ items: [letraSinDisplay], units: [unit] })).toThrow();
+
+    const palabraSinSilabas: Item = {
+      id: 'word:mapa', kind: 'word', text: 'mapa', phonemes: ['m', 'a', 'p', 'a'], audioKey: 'word:mapa',
+    };
+    expect(() =>
+      buildCurriculum({ items: [palabraSinSilabas], units: [{ ...unit, introduces: ['word:mapa'] }] }),
+    ).toThrow();
+  });
+
+  it('el orden topológico desempata alfabéticamente y no depende del orden de entrada', () => {
+    const suelta = (id: string): Unit => ({
+      id, phase: 3, title: id, audioKey: `unit:${id}`, requires: [], introduces: [], exercises: [],
+    });
+    const esperado = ['alfa', 'media', 'zeta'];
+    expect(buildCurriculum({ items: [], units: [suelta('zeta'), suelta('alfa'), suelta('media')] }).unitOrder)
+      .toEqual(esperado);
+    expect(buildCurriculum({ items: [], units: [suelta('media'), suelta('zeta'), suelta('alfa')] }).unitOrder)
+      .toEqual(esperado);
   });
 
   it('rechaza un ítem introducido que no existe', () => {
@@ -2525,8 +2574,8 @@ export const curriculum: CurriculumIndex = buildCurriculum({
 
 - [ ] **Step 5: Verificar que pasa toda la capa de contenido**
 
-Run: `pnpm test src/content && pnpm typecheck`
-Expected: todos los archivos de `content/` en verde, con 15 tests en index.test.ts, y `tsc` sin errores.
+Run: `pnpm test src/content && pnpm typecheck && pnpm lint`
+Expected: todos los archivos de `content/` en verde, con 18 tests en index.test.ts, `tsc` sin errores y el linter **sin ningún aviso**.
 
 - [ ] **Step 6: Commit**
 
@@ -2564,6 +2613,7 @@ Crea `src/engine/random.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/engine/random';
+import { emptyItemProgress, emptyProgressState } from '@/engine/types';
 
 describe('createRng', () => {
   it('produce la misma secuencia con la misma semilla', () => {
@@ -2610,6 +2660,57 @@ describe('createRng', () => {
     const shuffled = createRng(11).shuffle(original);
     expect([...shuffled].sort()).toEqual(original);
     expect(original).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('shuffle realmente reordena, no devuelve la entrada tal cual', () => {
+    // Conservar los elementos y ser determinista son condiciones necesarias pero no
+    // suficientes: una función que devolviera la entrada sin tocarla las cumpliría las dos.
+    const original = Array.from({ length: 20 }, (_, index) => index);
+    const reordenado = [1, 2, 3, 4, 5].some(
+      (seed) => createRng(seed).shuffle(original).join(',') !== original.join(','),
+    );
+    expect(reordenado).toBe(true);
+  });
+
+  it('int lanza si el máximo no es positivo', () => {
+    expect(() => createRng(1).int(0)).toThrow(/mayor que cero/i);
+    expect(() => createRng(1).int(-3)).toThrow(/mayor que cero/i);
+  });
+});
+
+describe('estados iniciales', () => {
+  it('emptyItemProgress arranca sin progreso y sin haberse presentado', () => {
+    expect(emptyItemProgress()).toEqual({
+      box: 0,
+      presented: false,
+      firstTryCorrect: 0,
+      assisted: 0,
+      lastSessionIndex: -1,
+      lastCreditSession: null,
+      masteredAt: null,
+    });
+  });
+
+  it('emptyProgressState arranca vacío y con los contadores a cero', () => {
+    expect(emptyProgressState()).toEqual({
+      items: {},
+      units: {},
+      sessionCounter: 0,
+      counters: { traces: 0, sessions: 0, voiceOk: 0, wordsRead: 0 },
+    });
+  });
+
+  it('cada llamada devuelve un objeto nuevo, no una referencia compartida', () => {
+    // Si devolvieran un singleton, el progreso de un ítem se filtraría a todos los demás.
+    const a = emptyItemProgress();
+    const b = emptyItemProgress();
+    a.box = 3;
+    expect(b.box).toBe(0);
+
+    const uno = emptyProgressState();
+    const dos = emptyProgressState();
+    uno.counters.traces = 7;
+    expect(dos.counters.traces).toBe(0);
   });
 
   it('shuffle es determinista con la misma semilla', () => {
@@ -2759,7 +2860,7 @@ export function createRng(seed: number): Rng {
 - [ ] **Step 5: Verificar que pasa**
 
 Run: `pnpm test src/engine/random.test.ts && pnpm typecheck`
-Expected: los 8 tests PASS.
+Expected: los 13 tests PASS.
 
 - [ ] **Step 6: Commit**
 
