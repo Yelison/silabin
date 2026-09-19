@@ -721,6 +721,11 @@ describe('syllabify', () => {
     expect(syllabify('pan')).toEqual([]);
     expect(syllabify('plato')).toEqual([]);
   });
+
+  it('reconoce la u, que ninguna otra palabra de prueba ejercita', () => {
+    expect(syllabify('luna')).toEqual(['lu', 'na']);
+    expect(syllabify('uso')).toEqual(['u', 'so']);
+  });
 });
 
 describe('hasOnlyOpenSyllables', () => {
@@ -754,13 +759,21 @@ describe('accentIsFinalOnly', () => {
   it('acepta una palabra sin tilde', () => {
     expect(accentIsFinalOnly('mapa')).toBe(true);
   });
+
+  it('acepta la tilde cuando la última sílaba es solo la vocal acentuada', () => {
+    expect(accentIsFinalOnly('leí')).toBe(true);
+    expect(accentIsFinalOnly('oí')).toBe(true);
+  });
 });
 
 describe('areMirrorConfusable', () => {
-  it('agrupa b, d, p y q', () => {
-    expect(areMirrorConfusable('b', 'd')).toBe(true);
-    expect(areMirrorConfusable('p', 'q')).toBe(true);
-    expect(areMirrorConfusable('b', 'q')).toBe(true);
+  it('agrupa las seis parejas de b, d, p y q en los dos sentidos', () => {
+    const grupo = ['b', 'd', 'p', 'q'];
+    for (const a of grupo) {
+      for (const b of grupo) {
+        expect([a, b, areMirrorConfusable(a, b)]).toEqual([a, b, a !== b]);
+      }
+    }
   });
 
   it('no agrupa letras de formas distintas', () => {
@@ -851,7 +864,7 @@ export function areMirrorConfusable(a: string, b: string): boolean {
 - [ ] **Step 4: Verificar que pasa**
 
 Run: `pnpm test src/content/invariants.test.ts`
-Expected: los 13 tests PASS.
+Expected: los 13 tests PASS. Los tres últimos existen porque una revisión demostró por mutación que sin ellos se podía romper la frontera de la última sílaba, quitar la vocal `u` del conjunto, o hacer que una letra se considerase espejo de sí misma, sin que ningún test fallara.
 
 - [ ] **Step 5: Commit**
 
@@ -1911,6 +1924,14 @@ describe('currículo ensamblado', () => {
   it('todo prerrequisito apunta a una unidad existente', () => {
     for (const unit of curriculum.units.values()) {
       for (const required of unit.requires) expect(curriculum.units.has(required)).toBe(true);
+    }
+  });
+
+  it('el texto de todo ítem está en minúsculas', () => {
+    // Los invariantes de content/invariants.ts asumen minúsculas: con mayúsculas no lanzan,
+    // devuelven respuestas vacuamente coherentes sin avisar de que la entrada estaba mal.
+    for (const item of curriculum.items.values()) {
+      expect([item.id, item.text]).toEqual([item.id, item.text.toLowerCase()]);
     }
   });
 
