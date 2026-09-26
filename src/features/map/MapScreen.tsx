@@ -36,7 +36,7 @@ const FASES = unidadesPorFase();
 
 function Estrellas({ n }: { n: number }) {
 	return (
-		<span aria-hidden="true" className="text-yellow-500">
+		<span aria-hidden="true" className="text-celebrate">
 			{[0, 1, 2].map((i) => (
 				<span key={i}>{i < n ? "★" : "☆"}</span>
 			))}
@@ -64,9 +64,9 @@ function UnitButton(props: {
 	else label = unit.title;
 
 	const estilo = {
-		done: "bg-green-100",
-		locked: "bg-gray-100 text-gray-400",
-		active: "bg-amber-200 ring-4 ring-amber-400 font-semibold",
+		done: "bg-calm",
+		locked: "bg-card text-ink-soft opacity-60",
+		active: "bg-action ring-4 ring-action font-semibold",
 	}[status];
 
 	return (

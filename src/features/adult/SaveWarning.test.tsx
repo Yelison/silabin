@@ -137,6 +137,8 @@ describe("SaveWarning", () => {
 		expect(html).not.toMatch(
 			/(text|bg|border|stroke|fill)-(red|rose|orange|amber)|#f00\b|#ff0000|\bred\b|✕|✗|❌|⚠/,
 		);
-		expect(html).toMatch(/gray|grey/);
+		// Antes de la Tarea 1 de plantillas-toque el icono usaba `text-gray-400` a secas;
+		// ahora los colores solo salen de los tokens y el neutro del adulto es `ink-soft`.
+		expect(html).toMatch(/ink-soft/);
 	});
 });
