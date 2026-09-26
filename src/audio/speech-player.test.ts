@@ -3,6 +3,7 @@ import { createSilentPlayer } from "@/audio/silent-player";
 import {
 	createSpeechPlayer,
 	pickVoice,
+	SEGMENT_FALLBACK_MS,
 	SPEECH_GUARD_MIN_MS,
 	SYLLABLE_GAP_MS,
 } from "@/audio/speech-player";
@@ -11,6 +12,7 @@ class FakeUtterance {
 	text: string;
 	lang = "";
 	voice: SpeechSynthesisVoice | null = null;
+	onstart: (() => void) | null = null;
 	onend: (() => void) | null = null;
 	onerror: (() => void) | null = null;
 	constructor(text: string) {
@@ -22,12 +24,20 @@ class FakeSynth {
 	spoken: FakeUtterance[] = [];
 	cancelCalls = 0;
 	log: string[] | undefined;
+	/** Retraso antes de `onstart`; por omisión dispara en el mismo tick de `speak()`. */
+	startDelayMs: number | undefined;
+	/** Si es `true`, `onstart` nunca llega (para probar el respaldo). */
+	suppressOnstart = false;
 	private voices: SpeechSynthesisVoice[] = [];
 	private listeners = new Set<() => void>();
 
 	speak = (u: FakeUtterance) => {
 		this.spoken.push(u);
 		this.log?.push(`speak:${u.text}`);
+		if (this.suppressOnstart) return;
+		const fire = () => u.onstart?.();
+		if (this.startDelayMs === undefined) fire();
+		else setTimeout(fire, this.startDelayMs);
 	};
 	cancel = () => {
 		this.cancelCalls++;
@@ -197,7 +207,7 @@ describe("play", () => {
 		await done;
 	});
 
-	it("A5: beats llama a beat antes de cada sílaba", async () => {
+	it("A5: beats llama a beat y a onSegment en el onstart de cada sílaba, no antes", async () => {
 		synth.log = [];
 		const log = synth.log;
 		const player = await unlockedPlayer({ beat: () => log.push("beat") });
@@ -212,13 +222,16 @@ describe("play", () => {
 		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS);
 		synth.endLast();
 		await done;
+		// La sílaba se pide primero; la luz y el golpe llegan con el onstart de esa sílaba,
+		// no antes de pedirla (así coinciden con la voz también en Edge). Se descarta el
+		// "speak:" de la locución vacía de unlock().
 		expect(log.filter((e) => e !== "speak:")).toEqual([
+			"speak:me",
 			"segment:0",
 			"beat",
-			"speak:me",
+			"speak:sa",
 			"segment:1",
 			"beat",
-			"speak:sa",
 		]);
 	});
 
@@ -446,14 +459,16 @@ describe("robustez de la cola", () => {
 			},
 		});
 		await expect(failing).rejects.toBe(boom);
+		// "me" ya se había pedido: onSegment llega con el onstart, después de synth.speak.
+		expect(synth.texts()).toEqual(["me"]);
 		const next = player.play({ key: "word:casa" });
 		await settle();
-		expect(synth.texts()).toEqual(["casa"]);
+		expect(synth.texts()).toEqual(["me", "casa"]);
 		synth.endLast();
 		await expect(next).resolves.toBeUndefined();
 	});
 
-	it("si onSegment llama a stop, esa sílaba no se dice y la petición resuelve", async () => {
+	it("si onSegment llama a stop, no sigue a la siguiente sílaba y la petición resuelve", async () => {
 		const player = await unlockedPlayer();
 		const done = player.play({
 			key: "word:mesa",
@@ -463,7 +478,8 @@ describe("robustez de la cola", () => {
 		});
 		await expect(done).resolves.toBeUndefined();
 		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS * 3);
-		expect(synth.texts()).toEqual([]);
+		// "me" ya se había pedido antes de que onSegment pudiera llamar a stop().
+		expect(synth.texts()).toEqual(["me"]);
 	});
 
 	it("si onSegment llama a stop en beats, tampoco suena el golpe", async () => {
@@ -477,10 +493,10 @@ describe("robustez de la cola", () => {
 		});
 		await expect(done).resolves.toBeUndefined();
 		expect(beat).not.toHaveBeenCalled();
-		expect(synth.texts()).toEqual([]);
+		expect(synth.texts()).toEqual(["me"]);
 	});
 
-	it("si beat llama a stop, la sílaba no se dice", async () => {
+	it("si beat llama a stop, no sigue a la siguiente sílaba", async () => {
 		let player: ReturnType<typeof createSpeechPlayer> | undefined;
 		player = await unlockedPlayer({ beat: () => player?.stop() });
 		const done = player.play({
@@ -490,7 +506,8 @@ describe("robustez de la cola", () => {
 		});
 		await expect(done).resolves.toBeUndefined();
 		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS * 3);
-		expect(synth.texts()).toEqual([]);
+		// "me" ya se había pedido antes de que beat() pudiera llamar a stop().
+		expect(synth.texts()).toEqual(["me"]);
 	});
 });
 
@@ -597,6 +614,146 @@ describe("voz", () => {
 	it("A13: penalizar no es excluir: una única voz de fantasía se devuelve igual", () => {
 		const grandma = voice("es-MX", "Grandma");
 		expect(pickVoice([grandma], "mx")).toBe(grandma);
+	});
+});
+
+describe("pausa entre sílabas con voces de red", () => {
+	it("A15: con latencia 0, la pausa sigue siendo SYLLABLE_GAP_MS", async () => {
+		const player = await unlockedPlayer();
+		const done = player.play({
+			key: "word:gato",
+			style: "by-syllable",
+			syllables: ["ga", "to"],
+		});
+		await settle();
+		expect(synth.texts()).toEqual(["ga"]);
+		synth.endLast();
+		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS - 1);
+		expect(synth.texts()).toEqual(["ga"]);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(synth.texts()).toEqual(["ga", "to"]);
+		synth.endLast();
+		await done;
+	});
+
+	it("A16: con 400 ms de latencia, la pausa siguiente es 0 (no se suma a la anterior)", async () => {
+		synth.startDelayMs = 400;
+		const player = await unlockedPlayer();
+		const done = player.play({
+			key: "word:gato",
+			style: "by-syllable",
+			syllables: ["ga", "to"],
+		});
+		await settle();
+		expect(synth.texts()).toEqual(["ga"]);
+		// Llega el onstart real de "ga" (latencia 400 ms), después el onend.
+		await vi.advanceTimersByTimeAsync(400);
+		synth.endLast();
+		await settle();
+		// pausa = max(0, 350 − 400) = 0: "to" se pide enseguida.
+		expect(synth.texts()).toEqual(["ga", "to"]);
+		await vi.advanceTimersByTimeAsync(400);
+		synth.endLast();
+		await done;
+	});
+
+	it("A17: con 200 ms de latencia, la pausa siguiente es de 150 ms", async () => {
+		synth.startDelayMs = 200;
+		const player = await unlockedPlayer();
+		const done = player.play({
+			key: "word:gato",
+			style: "by-syllable",
+			syllables: ["ga", "to"],
+		});
+		await settle();
+		expect(synth.texts()).toEqual(["ga"]);
+		await vi.advanceTimersByTimeAsync(200);
+		synth.endLast();
+		await settle();
+		expect(synth.texts()).toEqual(["ga"]);
+		await vi.advanceTimersByTimeAsync(149);
+		expect(synth.texts()).toEqual(["ga"]);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(synth.texts()).toEqual(["ga", "to"]);
+		await vi.advanceTimersByTimeAsync(200);
+		synth.endLast();
+		await done;
+	});
+
+	it("A18/A20: beat y onSegment(0) llegan una sola vez, sin adelantarse a la voz", async () => {
+		synth.startDelayMs = 300;
+		const log: string[] = [];
+		const player = await unlockedPlayer({ beat: () => log.push("beat") });
+		const done = player.play({
+			key: "word:mesa",
+			style: "beats",
+			syllables: ["me", "sa"],
+			onSegment: (i) => log.push(`segment:${i}`),
+		});
+		await settle();
+		// No se adelantan a pedir la sílaba.
+		expect(log).toEqual([]);
+		await vi.advanceTimersByTimeAsync(SEGMENT_FALLBACK_MS - 1);
+		expect(log).toEqual([]);
+		await vi.advanceTimersByTimeAsync(1);
+		// A los 250 ms, el respaldo los lanza (la voz aún no ha arrancado).
+		expect(log).toEqual(["segment:0", "beat"]);
+		await vi.advanceTimersByTimeAsync(50);
+		// A los 300 ms llega el onstart real: no se repiten.
+		expect(log).toEqual(["segment:0", "beat"]);
+		synth.endLast();
+		// La latencia real (300 ms) sigue midiéndose: pausa = max(0, 350 − 300) = 50.
+		await vi.advanceTimersByTimeAsync(50);
+		expect(synth.texts()).toEqual(["me", "sa"]);
+		synth.endLast();
+		await done;
+	});
+
+	it("A19: si onstart nunca llega, el respaldo dispara una sola vez y la cola sigue", async () => {
+		synth.suppressOnstart = true;
+		const log: string[] = [];
+		const player = await unlockedPlayer({ beat: () => log.push("beat") });
+		const done = player.play({
+			key: "word:mesa",
+			style: "beats",
+			syllables: ["me", "sa"],
+			onSegment: (i) => log.push(`segment:${i}`),
+		});
+		await settle();
+		expect(log).toEqual([]);
+		await vi.advanceTimersByTimeAsync(SEGMENT_FALLBACK_MS - 1);
+		expect(log).toEqual([]);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(log).toEqual(["segment:0", "beat"]);
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(log).toEqual(["segment:0", "beat"]);
+		// Sin onstart, pero con onend: la cola avanza igual (latencia 0, pausa completa).
+		synth.endLast();
+		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS);
+		expect(synth.texts()).toEqual(["me", "sa"]);
+		await vi.advanceTimersByTimeAsync(SEGMENT_FALLBACK_MS);
+		expect(log).toEqual(["segment:0", "beat", "segment:1", "beat"]);
+		synth.endLast();
+		await done;
+	});
+
+	it("A21: stop() durante la espera de onstart no dispara onSegment ni beat tardíos", async () => {
+		synth.suppressOnstart = true;
+		const log: string[] = [];
+		const player = await unlockedPlayer({ beat: () => log.push("beat") });
+		const done = player.play({
+			key: "word:mesa",
+			style: "beats",
+			syllables: ["me", "sa"],
+			onSegment: (i) => log.push(`segment:${i}`),
+		});
+		await settle();
+		player.stop();
+		// stop() limpia también el respaldo pendiente, no solo la guarda de onend.
+		expect(vi.getTimerCount()).toBe(0);
+		await vi.advanceTimersByTimeAsync(SEGMENT_FALLBACK_MS + 1000);
+		expect(log).toEqual([]);
+		await expect(done).resolves.toBeUndefined();
 	});
 });
 

@@ -4,6 +4,12 @@ import { type Accent, audioManifest } from "@/content/audio-manifest";
 /** Pausa entre sílabas en `by-syllable` y `beats`. */
 export const SYLLABLE_GAP_MS = 350;
 
+/**
+ * Si `onstart` no llega en este tiempo, `onSegment` y `beat` se lanzan igual (una sola vez)
+ * para no depender de él: en Edge, las voces "Natural" tardan en arrancar por la red.
+ */
+export const SEGMENT_FALLBACK_MS = 250;
+
 /** Mínimo que se espera a un `onend` antes de darlo por perdido (iOS lo pierde a veces). */
 export const SPEECH_GUARD_MIN_MS = 3000;
 const SPEECH_GUARD_PER_CHAR_MS = 250;
@@ -168,31 +174,86 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 	 */
 	let current: SpeechSynthesisUtterance | null = null;
 
-	function speakOne(text: string): Promise<void> {
-		return new Promise<void>((resolve) => {
-			let timer: ReturnType<typeof setTimeout> | undefined;
+	/**
+	 * Dice una locución y resuelve con la latencia de arranque medida (el tiempo entre
+	 * `synth.speak` y el primer `onstart`; 0 si `onstart` no llega). Si se pasa `onStarted`,
+	 * se llama una sola vez, en el `onstart`, o a los `SEGMENT_FALLBACK_MS` si no llega antes;
+	 * nunca bloquea la resolución de la promesa (que depende solo de `onend`/`onerror`/guarda).
+	 */
+	function speakOne(text: string, onStarted?: () => void): Promise<number> {
+		return new Promise<number>((resolve, reject) => {
+			let guardTimer: ReturnType<typeof setTimeout> | undefined;
+			let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
 			let mine: SpeechSynthesisUtterance | undefined;
-			const finish = () => {
-				clearTimeout(timer);
-				if (current === mine) current = null;
-				if (interrupt === finish) interrupt = null;
-				resolve();
+			let settled = false;
+			let segmentFired = false;
+			let recordedRealStart = false;
+			let latency = 0;
+			let sentAt = 0;
+
+			const clearTimers = () => {
+				clearTimeout(guardTimer);
+				clearTimeout(fallbackTimer);
 			};
-			interrupt = finish;
-			if (synth === undefined) return finish();
+			const succeed = () => {
+				if (settled) return;
+				settled = true;
+				clearTimers();
+				if (current === mine) current = null;
+				if (interrupt === onInterrupt) interrupt = null;
+				resolve(latency);
+			};
+			const fail = (err: unknown) => {
+				if (settled) return;
+				settled = true;
+				clearTimers();
+				if (current === mine) current = null;
+				if (interrupt === onInterrupt) interrupt = null;
+				reject(err);
+			};
+			const onInterrupt = () => succeed();
+			interrupt = onInterrupt;
+
+			const triggerSegmentOnce = () => {
+				if (segmentFired || settled) return;
+				segmentFired = true;
+				clearTimeout(fallbackTimer);
+				// Fuera de la pila de `synth.speak`: si `onStarted` lanza, no lo traga el
+				// `catch` pensado para el propio `speak`, y tampoco bloquea la cola.
+				queueMicrotask(() => {
+					if (settled) return;
+					try {
+						onStarted?.();
+					} catch (err) {
+						fail(err);
+					}
+				});
+			};
+
+			if (synth === undefined) return succeed();
 			try {
 				const utterance = new SpeechSynthesisUtterance(text);
 				mine = utterance;
 				utterance.lang = voice?.lang ?? ACCENT_LANG[accent];
 				if (voice !== null) utterance.voice = voice;
-				utterance.onend = finish;
-				utterance.onerror = finish;
+				utterance.onstart = () => {
+					if (settled || recordedRealStart) return;
+					recordedRealStart = true;
+					latency = Date.now() - sentAt;
+					triggerSegmentOnce();
+				};
+				utterance.onend = succeed;
+				utterance.onerror = succeed;
 				current = utterance;
 				// Si `onend` no llega nunca, el audio no debe bloquear la cola.
-				timer = setTimeout(finish, speechGuardMs(text));
+				guardTimer = setTimeout(succeed, speechGuardMs(text));
+				if (onStarted !== undefined) {
+					fallbackTimer = setTimeout(triggerSegmentOnce, SEGMENT_FALLBACK_MS);
+				}
+				sentAt = Date.now();
 				synth.speak(utterance);
 			} catch {
-				finish();
+				succeed();
 			}
 		});
 	}
@@ -220,17 +281,23 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 			await speakOne(text);
 			return;
 		}
+		// Estimación: la red tarda parecido en sílabas seguidas, así que la pausa de la
+		// sílaba i descuenta la latencia de arranque medida en la sílaba i−1.
+		let previousLatency = 0;
 		for (let i = 0; i < syllables.length; i++) {
 			if (gen !== generation) return;
 			if (i > 0) {
-				await pause(SYLLABLE_GAP_MS);
+				await pause(Math.max(0, SYLLABLE_GAP_MS - previousLatency));
 				if (gen !== generation) return;
 			}
-			request.onSegment?.(i);
+			const index = i;
+			const onStarted = () => {
+				request.onSegment?.(index);
+				if (gen !== generation) return;
+				if (style === "beats") beat();
+			};
+			previousLatency = await speakOne(syllables[index] ?? "", onStarted);
 			if (gen !== generation) return;
-			if (style === "beats") beat();
-			if (gen !== generation) return;
-			await speakOne(syllables[i] ?? "");
 		}
 	}
 
