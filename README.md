@@ -251,6 +251,16 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
    con `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
    [cómo se trabaja](#cómo-se-trabaja-en-este-repo). Antes de escribirlo, revisa las
    [trampas vivas](#trampas-conocidas), sobre todo la 9.
+   - **Decisión abierta: estilo visual (preguntar al autor antes de escribir el Plan 3).**
+     Ningún plan lo cubre. El spec fija solo la tecnología (Tailwind 4, Framer Motion) y las
+     reglas de interfaz (objetivos ≥ 72 px, `motion-safe:`, celebración < 4 s). Hoy
+     `src/app/globals.css` tiene dos variables de color y la fuente del sistema; no hay paleta,
+     tipografía propia, ilustraciones ni sistema de componentes, y ningún documento declara el
+     aspecto actual provisional (solo el emoji, D1, y la voz). El Plan 6 menciona «recompensas
+     y cosméticos» y Framer Motion «si hace falta», pero no el aspecto general. Riesgo: cada
+     plantilla nueva del Plan 3 nacería con Tailwind suelto y habría que rehacerlas todas al
+     llegar el diseño. Opciones: un plan propio de diseño visual (paleta, tipografía,
+     ilustraciones, tema y componentes base) antes del Plan 3, o dejarlo en el Plan 6.
 5. Llevar el ledger del plan **versionado desde el primer día** en
    `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
    sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
