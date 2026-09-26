@@ -234,7 +234,8 @@ export function SessionScreen(props: {
 		}
 		if (terminada && !ending.current) {
 			ending.current = true;
-			void endSession().then(onEnd);
+			// Si cerrar falla no se deja la pantalla en blanco: se sale al mapa.
+			void endSession().then(onEnd, salir);
 		}
 	}, [run, vacia, sinVista, terminada]);
 

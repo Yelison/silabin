@@ -356,6 +356,18 @@ describe("SessionScreen", () => {
 		expect(store.getState().run).toBeNull();
 	});
 
+	it("M1: si cerrar la sesión falla la pantalla no se queda en blanco: se sale y no se avisa a onEnd", async () => {
+		const { store, onEnd, onExit, run } = await montar();
+		store.setState({
+			endSession: vi.fn().mockRejectedValue(new Error("disco lleno")),
+		});
+		store.setState({
+			run: { ...run(), cursor: run().exercises.length },
+		});
+		await waitFor(() => expect(onExit).toHaveBeenCalledTimes(1));
+		expect(onEnd).not.toHaveBeenCalled();
+	});
+
 	it("una plantilla sin vista registrada abandona la sesión y vuelve al mapa sin pintar nada", async () => {
 		const { store, onExit, onEnd, container } = await montar({ views: {} });
 		await waitFor(() => expect(onExit).toHaveBeenCalledTimes(1));
