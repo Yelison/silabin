@@ -63,6 +63,19 @@ describe("Fase 0", () => {
 		}
 	});
 
+	it("T1.5: cada oral:clap lleva las sílabas de su imagen, y la respuesta es su cantidad", () => {
+		const pelota = phase0Items.find((i) => i.id === "oral:clap:pelota");
+		expect(pelota?.syllables).toEqual(["pe", "lo", "ta"]);
+		expect(pelota?.task?.answer).toBe("3");
+		for (const item of phase0Items.filter((i) =>
+			i.id.startsWith("oral:clap:"),
+		)) {
+			const imagen = pictures.find((p) => p.id === pictureId(item.text));
+			expect([item.id, item.syllables]).toEqual([item.id, imagen?.syllables]);
+			expect(item.task?.answer).toBe(String(item.syllables?.length));
+		}
+	});
+
 	it("cada palabra del juego de palmas existe en el catálogo de imágenes", () => {
 		for (const item of phase0Items.filter((i) =>
 			i.id.startsWith("oral:clap:"),

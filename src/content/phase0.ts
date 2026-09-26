@@ -1,9 +1,9 @@
 import { pictureId, pictures } from "@/content/pictures";
 import type { Item, Unit } from "@/content/types";
 
-function syllableCount(word: string): string {
+function syllablesOf(word: string): string[] {
 	const picture = pictures.find((p) => p.id === pictureId(word));
-	return String(picture?.syllables?.length ?? 0);
+	return picture?.syllables ?? [];
 }
 
 const CLAP_WORDS = [
@@ -18,15 +18,21 @@ const CLAP_WORDS = [
 	"tomate",
 ];
 
-const clapItems: Item[] = CLAP_WORDS.map((word) => ({
-	id: `oral:clap:${word}`,
-	kind: "oral-skill",
-	text: word,
-	phonemes: [],
-	audioKey: `word:${word}`,
-	imageKey: `img:${word}`,
-	task: { answer: syllableCount(word) },
-}));
+// Las sílabas viajan con el ítem para que la interfaz pueda dar las pistas (una palmada por
+// sílaba) sin decidir nada: la respuesta sigue siendo su cantidad.
+const clapItems: Item[] = CLAP_WORDS.map((word) => {
+	const syllables = syllablesOf(word);
+	return {
+		id: `oral:clap:${word}`,
+		kind: "oral-skill",
+		text: word,
+		phonemes: [],
+		audioKey: `word:${word}`,
+		imageKey: `img:${word}`,
+		syllables,
+		task: { answer: String(syllables.length) },
+	};
+});
 
 /** [objetivo, palabra que rima, distractor que no rima] */
 const RHYME_TRIOS: [string, string, string][] = [

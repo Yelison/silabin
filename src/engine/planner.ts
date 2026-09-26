@@ -36,14 +36,11 @@ function templatesFor(unit: Unit, item: Item): TemplateId[] {
 
 function basePool(unit: Unit, item: Item): TemplateId[] {
 	const weighted = templatesFor(unit, item);
-	if (weighted.length > 0) return weighted;
-
-	const fallback = (Object.keys(templates) as TemplateId[]).filter((id) =>
-		templates[id].itemKinds.includes(item.kind),
-	);
-	if (fallback.length === 0)
-		throw new Error(`Ninguna plantilla acepta un ítem de clase ${item.kind}`);
-	return fallback;
+	if (weighted.length === 0)
+		throw new Error(
+			`La unidad ${unit.id} no declara ninguna plantilla para el ítem ${item.id} (${item.kind})`,
+		);
+	return weighted;
 }
 
 /**

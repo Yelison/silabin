@@ -85,7 +85,7 @@ describe("Fase 2, estructura", () => {
 		expect(phase1Units.some((unit) => unit.id === requerida)).toBe(true);
 	});
 
-	it("cada unidad declara sus cinco plantillas con sus pesos", () => {
+	it("cada unidad declara sus seis plantillas con sus pesos (initial-sound es la única que acepta phoneme)", () => {
 		for (const unit of phase2Units) {
 			expect([unit.id, unit.exercises]).toEqual([
 				unit.id,
@@ -95,6 +95,7 @@ describe("Fase 2, estructura", () => {
 					{ templateId: "trace", weight: 1 },
 					{ templateId: "say-it", weight: 3 },
 					{ templateId: "read-word", weight: 2 },
+					{ templateId: "initial-sound", weight: 1 },
 				],
 			]);
 		}

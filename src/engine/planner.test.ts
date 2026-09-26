@@ -680,3 +680,54 @@ describe("plantillas y opciones", () => {
 		);
 	});
 });
+
+describe("sin respaldo global de plantillas", () => {
+	it("T1.3: una unidad que no declara plantilla para su ítem lanza con los ids de la unidad y del ítem", () => {
+		const contenido = buildCurriculum({
+			items: [
+				{
+					id: "oral:clap:sol",
+					kind: "oral-skill",
+					text: "sol",
+					phonemes: [],
+					audioKey: "word:sol",
+					task: { answer: "1" },
+				},
+			],
+			units: [
+				{
+					id: "solo-listen-tap",
+					phase: 0,
+					title: "Solo listen-tap",
+					audioKey: "unit:solo-listen-tap",
+					requires: [],
+					introduces: ["oral:clap:sol"],
+					exercises: [{ templateId: "listen-tap", weight: 1 }],
+				},
+			],
+		});
+		expect(() =>
+			planSession({
+				content: contenido,
+				state: emptyProgressState(),
+				activeUnitId: "solo-listen-tap",
+				sessionLength: 5,
+				seed: 1,
+			}),
+		).toThrow(
+			"La unidad solo-listen-tap no declara ninguna plantilla para el ítem oral:clap:sol (oral-skill)",
+		);
+	});
+
+	it("T1.4: en phase2:m los ejercicios de phoneme:m usan initial-sound", () => {
+		const delFonema = [1, 2, 3, 4, 5, 6, 7, 8].flatMap((seed) =>
+			plan(presented("phase2:m"), "phase2:m", 6, seed).filter(
+				(e) => e.itemId === "phoneme:m",
+			),
+		);
+		expect(delFonema.length).toBeGreaterThan(0);
+		for (const ejercicio of delFonema) {
+			expect(ejercicio.templateId).toBe("initial-sound");
+		}
+	});
+});

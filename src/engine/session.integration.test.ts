@@ -18,8 +18,8 @@ import {
 	starsForSession,
 	totalStars,
 	UNIT_COMPLETION_THRESHOLD,
-	unitMasteryRatio,
 } from "@/engine";
+import { unitMasteryRatio } from "@/engine/mastery";
 
 type Perfil = "siempre-acierta" | "falla-una-vez" | "siempre-falla";
 

@@ -1,3 +1,7 @@
+import type { CurriculumIndex } from "@/content/index";
+import type { ItemKind } from "@/content/kinds";
+import { templates } from "@/content/templates";
+
 export const VOWELS = new Set(["a", "e", "i", "o", "u"]);
 export const MIRROR_GROUPS: readonly (readonly string[])[] = [
 	["b", "d", "p", "q"],
@@ -73,4 +77,34 @@ export function accentIsFinalOnly(word: string): boolean {
 export function areMirrorConfusable(a: string, b: string): boolean {
 	if (a === b) return false;
 	return MIRROR_GROUPS.some((group) => group.includes(a) && group.includes(b));
+}
+
+export type ItemWithoutTemplate = {
+	unitId: string;
+	itemId: string;
+	kind: ItemKind;
+};
+
+/**
+ * Los ítems que una unidad introduce pero para los que no declara ninguna plantilla que los
+ * acepte. El planificador no tiene respaldo global: una unidad así rompería la sesión del niño,
+ * así que el contenido no puede permitirla. Vacío significa que el currículo es coherente.
+ */
+export function itemsWithoutTemplate(
+	content: CurriculumIndex,
+): ItemWithoutTemplate[] {
+	const out: ItemWithoutTemplate[] = [];
+	for (const unitId of content.unitOrder) {
+		const unit = content.units.get(unitId);
+		if (unit === undefined) continue;
+		for (const itemId of unit.introduces) {
+			const item = content.items.get(itemId);
+			if (item === undefined) continue;
+			const declarada = unit.exercises.some((exercise) =>
+				templates[exercise.templateId].itemKinds.includes(item.kind),
+			);
+			if (!declarada) out.push({ unitId, itemId, kind: item.kind });
+		}
+	}
+	return out;
 }

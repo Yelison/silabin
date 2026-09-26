@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { buildCurriculum, curriculum } from "@/content/index";
 import {
 	accentIsFinalOnly,
 	areMirrorConfusable,
 	hasAdjacentVowels,
 	hasOnlyOpenSyllables,
+	itemsWithoutTemplate,
 	stripDiacritics,
 	syllabify,
 } from "@/content/invariants";
@@ -88,5 +90,44 @@ describe("areMirrorConfusable", () => {
 	it("no agrupa letras de formas distintas", () => {
 		expect(areMirrorConfusable("m", "a")).toBe(false);
 		expect(areMirrorConfusable("b", "b")).toBe(false);
+	});
+});
+
+describe("itemsWithoutTemplate", () => {
+	it("T1.1: toda unidad del currículo real tiene plantilla para cada ítem que introduce", () => {
+		expect(itemsWithoutTemplate(curriculum)).toEqual([]);
+	});
+
+	it("T1.2: detecta una unidad que introduce un ítem que ninguna de sus plantillas acepta", () => {
+		const contenido = buildCurriculum({
+			items: [
+				{
+					id: "oral:clap:sol",
+					kind: "oral-skill",
+					text: "sol",
+					phonemes: [],
+					audioKey: "word:sol",
+					task: { answer: "1" },
+				},
+			],
+			units: [
+				{
+					id: "solo-listen-tap",
+					phase: 0,
+					title: "Solo listen-tap",
+					audioKey: "unit:solo-listen-tap",
+					requires: [],
+					introduces: ["oral:clap:sol"],
+					exercises: [{ templateId: "listen-tap", weight: 1 }],
+				},
+			],
+		});
+		expect(itemsWithoutTemplate(contenido)).toEqual([
+			{
+				unitId: "solo-listen-tap",
+				itemId: "oral:clap:sol",
+				kind: "oral-skill",
+			},
+		]);
 	});
 });
