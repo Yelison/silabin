@@ -22,7 +22,7 @@ D11 la prueba manual del Plan 2 (`pnpm dev`) la hace el autor ANTES de despachar
 
 ## Estado
 
-Tarea 1 completa (sesión 1). Siguiente: Tarea 2.
+Tareas 1 (sesión 1) y 2 (sesión 2) completas. Siguiente: Tarea 3.
 D11 cumplida (2026-09-26): el autor probó con `pnpm dev` en Edge y Chrome (Windows, WSL2): sesiones, pistas y guardado bien (lo comprobó con la exportación o IndexedDB, porque el mapa no enseña nada hasta completar la unidad). Única incidencia: en Edge la pausa entre sílabas es mucho más larga («ga ····· to») por la latencia de las voces «Natural» de red; en Chrome no pasa. Añadida a la Tarea 1 (casos A15-A21). No probado en iPhone/iPad.
 Tras la prueba, la Tarea 1 lleva tres partes con commits separados: base visual, elección de voz (A8-A14) y pausa entre sílabas (A15-A21). El coordinador puede despachar las dos de audio como un segundo implementador dentro de la misma tarea, con su propia revisión completa.
 minor (deferred) para el Plan 6: el mapa no enseña ningún avance hasta completar una unidad (5-6 sesiones en `phase0:clap`); ni el niño ni el adulto ven que se guarda.
@@ -63,3 +63,16 @@ Task 1b: minor (deferred): A18 y A20 fusionados en un solo test (cubre las dos p
 Task 1b: minor (deferred): los tests reescritos de robustez no comprueban `synth.cancelCalls` localmente (lo cubre otro test existente).
 Task 1: complete (commits 24d1e12..36d0a06, review clean; 1a y 1b revisadas por separado)
 Sesión 1: Tarea 1 hecha. Tokens sesión 1: (pendiente, lo apunta el autor).
+
+## Tarea 2 (motor y contenido)
+
+Sesión 2 (2026-09-26). BASE 3393b89.
+Ruling: `rimeOf` conserva la grafía (`ratón` → «ón», como dice la firma) y M8/M9 comparan tras quitar tildes (la tabla de M8 escribe «on») — la firma y la tabla se contradecían; la grafía con tilde sirve mejor como texto del manifiesto para la voz — si fuera equivocado, se cambia una normalización y dos tests.
+Ruling: piezas de `build` y `isForbiddenDistractor`: la consonante del ítem siempre entra; las demás consonantes vistas se añaden en orden de `seen` saltando cualquiera que forme par prohibido (b/d/p/q) con una ya incluida — el plan dice «nunca b/d/p/q juntas» sin fijar cuál cae — si fuera equivocado, el niño ve alguna consonante menos entre las piezas.
+Task 2: implementada en 214ea6b. Revisión: Approved con 2 Important (mutaciones supervivientes: exclusión b/d/p/q solo probada contra la consonante propia; rama «termina en s» de `rimeOf` sin caso). Entran en la ronda 1.
+Task 2: minor (deferred): el patrón `letter:${phoneme}` se repite en `answers.ts` y `planner.ts`; un `letterIdOf` lo unificaría.
+Task 2: minor (deferred): M11 barre 200 semillas por unidad para cubrir combinaciones; determinista, pero de cobertura probabilística.
+Task 2: fix round 1/5 (2 addressed, 0 open — test de dos consonantes vistas que chocan entre sí; casos de `rimeOf` terminados en s: «lunas», «compás»; commits 214ea6b..9e36d46)
+Task 2: minor (deferred): `expectedPieces`/`reducedPieces` lanzan ante datos incoherentes; las Tareas 3-5 deben llamarlos solo en `build` o capturarlo en sus tests.
+Task 2: complete (commits 3393b89..9e36d46, review clean)
+Sesión 2: Tarea 2 hecha. Siguiente: Tarea 3.
