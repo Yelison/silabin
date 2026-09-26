@@ -22,7 +22,7 @@ D11 la prueba manual del Plan 2 (`pnpm dev`) la hace el autor ANTES de despachar
 
 ## Estado
 
-Plan escrito; ninguna tarea despachada.
+Tarea 1 completa (sesión 1). Siguiente: Tarea 2.
 D11 cumplida (2026-09-26): el autor probó con `pnpm dev` en Edge y Chrome (Windows, WSL2): sesiones, pistas y guardado bien (lo comprobó con la exportación o IndexedDB, porque el mapa no enseña nada hasta completar la unidad). Única incidencia: en Edge la pausa entre sílabas es mucho más larga («ga ····· to») por la latencia de las voces «Natural» de red; en Chrome no pasa. Añadida a la Tarea 1 (casos A15-A21). No probado en iPhone/iPad.
 Tras la prueba, la Tarea 1 lleva tres partes con commits separados: base visual, elección de voz (A8-A14) y pausa entre sílabas (A15-A21). El coordinador puede despachar las dos de audio como un segundo implementador dentro de la misma tarea, con su propia revisión completa.
 minor (deferred) para el Plan 6: el mapa no enseña ningún avance hasta completar una unidad (5-6 sesiones en `phase0:clap`); ni el niño ni el adulto ven que se guarda.
@@ -52,3 +52,14 @@ Task 1a: minor (deferred): `MapScreen` estado `active` pasa a `bg-action ring-ac
 Task 1a: minor (deferred): guard `if (locked) return` redundante con `disabled` de `ReplayButton` en `count-syllables/Evaluation.tsx`.
 Task 1a: fix round 1/5 (1 addressed, 0 open — bordes de estado a ≥ 3:1: calm-border #5187C7, mark-border #AC7600, mínimo 3.07:1; commits 04f551d..b9f2fd4)
 Task 1a: complete (commits 24d1e12..b9f2fd4, review clean)
+
+## Tarea 1b (voz y pausa entre sílabas)
+
+Task 1b: implementada en 7cd36ed (voz, A8-A14) y 36d0a06 (pausa, A15-A21), BASE 18b296d. Revisión completa: Approved, 5 mutaciones (4 muertas, 1 superviviente legítima).
+Ruling: se aceptan las 5 aserciones reescritas en `speech-player.test.ts` (A5 y 4 de robustez de la cola: ahora la sílaba en curso ya se ha pedido a `synth` cuando `onSegment`/`beat` llaman a `stop()`) — es consecuencia forzada del contrato «onSegment y beat en el onstart», y el revisor comprobó por mutación que la invariante (sin sílabas ni callbacks tras `stop()`) sigue protegida; `stop()` sigue llamando a `synth.cancel()` — si fuera equivocado, en un navegador real podría oírse el arranque de una sílaba ya cancelada.
+Ruling: la mutación 2 del brief (pausa negativa sin `max(0, …)`) sobrevive y se acepta — `setTimeout` con retraso negativo equivale a 0 y no es distinguible desde fuera; el `Math.max` se queda como claridad — coste si fuera equivocado: ninguno observable.
+Ruling: R19 aplicado (en `pickVoice` el acento pesa más que la calidad; A10).
+Task 1b: minor (deferred): A18 y A20 fusionados en un solo test (cubre las dos propiedades).
+Task 1b: minor (deferred): los tests reescritos de robustez no comprueban `synth.cancelCalls` localmente (lo cubre otro test existente).
+Task 1: complete (commits 24d1e12..36d0a06, review clean; 1a y 1b revisadas por separado)
+Sesión 1: Tarea 1 hecha. Tokens sesión 1: (pendiente, lo apunta el autor).
