@@ -40,16 +40,50 @@ function normalizeLang(lang: string): string {
 	return lang.replace("_", "-").toLowerCase();
 }
 
-function pickVoice(
+/** Voces "mejoradas": suenan más naturales que la primera de la lista del dispositivo. */
+const QUALITY_NAME_RE = /natural|neural|premium|enhanced|mejorad/i;
+/** Voces de fantasía de Apple: no sirven para enseñar el sonido de una letra. */
+const FANTASY_NAME_RE =
+	/\b(eddy|flo|grandma|grandpa|abuel[oa]|reed|rocko|sandy|shelley)\b/i;
+
+function voiceScore(v: SpeechSynthesisVoice): number {
+	let score = 0;
+	if (QUALITY_NAME_RE.test(v.name)) score += 2;
+	if (FANTASY_NAME_RE.test(v.name)) score -= 2;
+	return score;
+}
+
+/** La de mayor puntuación del grupo; en empate, la primera de la lista. Penalizar no es excluir. */
+function bestVoiceOf(
+	voices: readonly SpeechSynthesisVoice[],
+): SpeechSynthesisVoice | null {
+	if (voices.length === 0) return null;
+	let best = voices[0] as SpeechSynthesisVoice;
+	let bestScore = voiceScore(best);
+	for (let i = 1; i < voices.length; i++) {
+		const v = voices[i] as SpeechSynthesisVoice;
+		const score = voiceScore(v);
+		if (score > bestScore) {
+			best = v;
+			bestScore = score;
+		}
+	}
+	return best;
+}
+
+/**
+ * Primero el acento, después la calidad (R19): dentro del grupo del idioma exacto del
+ * acento, o si no hay ninguna, dentro de cualquier `es-*`, gana la voz con mejor puntuación.
+ */
+export function pickVoice(
 	voices: readonly SpeechSynthesisVoice[],
 	accent: Accent,
 ): SpeechSynthesisVoice | null {
 	const wanted = normalizeLang(ACCENT_LANG[accent]);
-	return (
-		voices.find((v) => normalizeLang(v.lang) === wanted) ??
-		voices.find((v) => normalizeLang(v.lang).startsWith("es")) ??
-		null
-	);
+	const exact = voices.filter((v) => normalizeLang(v.lang) === wanted);
+	if (exact.length > 0) return bestVoiceOf(exact);
+	const anyEs = voices.filter((v) => normalizeLang(v.lang).startsWith("es"));
+	return bestVoiceOf(anyEs);
 }
 
 type AudioContextCtor = typeof AudioContext;

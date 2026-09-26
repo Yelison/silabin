@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSilentPlayer } from "@/audio/silent-player";
 import {
 	createSpeechPlayer,
+	pickVoice,
 	SPEECH_GUARD_MIN_MS,
 	SYLLABLE_GAP_MS,
 } from "@/audio/speech-player";
@@ -561,6 +562,41 @@ describe("voz", () => {
 			synth.endLast();
 			await done;
 		}
+	});
+
+	it("A8: entre dos voces del mismo acento, gana la Mejorada", () => {
+		const paulina = voice("es-MX", "Paulina");
+		const mejorada = voice("es-MX", "Paulina (Mejorada)");
+		expect(pickVoice([paulina, mejorada], "mx")).toBe(mejorada);
+	});
+
+	it("A9: la Natural de Microsoft gana a la estándar del mismo acento", () => {
+		const sabina = voice("es-MX", "Microsoft Sabina");
+		const dalia = voice("es-MX", "Microsoft Dalia Online (Natural)");
+		expect(pickVoice([sabina, dalia], "mx")).toBe(dalia);
+	});
+
+	it("A10: el acento manda sobre la calidad (R19)", () => {
+		const paloma = voice("es-US", "Paloma (Natural)");
+		const paulina = voice("es-MX", "Paulina");
+		expect(pickVoice([paloma, paulina], "mx")).toBe(paulina);
+	});
+
+	it("A11: una voz de fantasía se penaliza frente a una estándar del mismo acento", () => {
+		const eddy = voice("es-MX", "Eddy");
+		const paulina = voice("es-MX", "Paulina");
+		expect(pickVoice([eddy, paulina], "mx")).toBe(paulina);
+	});
+
+	it("A12: sin el acento exacto, dentro de cualquier es-* gana la de más calidad", () => {
+		const monica = voice("es-ES", "Mónica (Premium)");
+		const jorge = voice("es-ES", "Jorge");
+		expect(pickVoice([monica, jorge], "do")).toBe(monica);
+	});
+
+	it("A13: penalizar no es excluir: una única voz de fantasía se devuelve igual", () => {
+		const grandma = voice("es-MX", "Grandma");
+		expect(pickVoice([grandma], "mx")).toBe(grandma);
 	});
 });
 
