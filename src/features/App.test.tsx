@@ -9,18 +9,26 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { curriculum } from "@/engine";
 import { App } from "@/features/App";
+import { TAP_SETTLE_MS } from "@/features/session/count-syllables/Evaluation";
 import { templateViews } from "@/features/session/registry";
 import { crearStore, fakeAudio, vistasFalsas } from "@/features/test-support";
+import { createMemoryAdapter } from "@/store";
 
-// Hasta que la Tarea 8 registre las vistas reales, la sesión se prueba con vistas falsas.
+// Las vistas reales de la plantilla, para devolverlas tras cada test que las sustituye.
+const vistasReales = templateViews["count-syllables"];
+if (vistasReales === undefined)
+	throw new Error("count-syllables debe estar registrada");
+
+// Salvo el test de integración (C12), la sesión se prueba con vistas falsas.
 beforeEach(() => {
 	templateViews["count-syllables"] = vistasFalsas().views;
 });
 afterEach(() => {
 	cleanup();
 	vi.useRealTimers();
-	delete templateViews["count-syllables"];
+	templateViews["count-syllables"] = vistasReales;
 });
 
 const iniciar = () => screen.findByRole("button", { name: "Empezar" });
@@ -148,5 +156,53 @@ describe("App", () => {
 		expect(
 			await screen.findByRole("button", { name: /progreso guardado/i }),
 		).toBeDefined();
+	});
+
+	it("C12: una sesión completa de phase0:clap con las vistas reales, tocando el tambor lo que pide cada palabra, acaba con 3 estrellas y la sesión guardada", async () => {
+		templateViews["count-syllables"] = vistasReales;
+		const adapter = createMemoryAdapter();
+		const store = crearStore(adapter);
+		const audio = fakeAudio();
+		const { container } = render(<App store={store} audio={audio} />);
+		const user = userEvent.setup();
+		await user.click(await iniciar());
+		await user.click(
+			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
+		);
+		vi.useFakeTimers();
+		const pasar = (ms: number) =>
+			act(async () => {
+				await vi.advanceTimersByTimeAsync(ms);
+			});
+		let evaluaciones = 0;
+		for (let i = 0; i < 40; i++) {
+			await pasar(100);
+			if (container.querySelector('[data-screen="end"]') !== null) break;
+			const siguiente = screen.queryByRole("button", { name: "Siguiente" });
+			const tambor = screen.queryByRole("button", { name: "Tambor" });
+			if (siguiente !== null) fireEvent.click(siguiente);
+			else if (tambor !== null) {
+				const run = store.getState().run;
+				const ejercicio = run?.exercises[run.cursor];
+				const respuesta =
+					ejercicio && curriculum.items.get(ejercicio.itemId)?.task?.answer;
+				for (let t = 0; t < Number(respuesta); t++) fireEvent.click(tambor);
+				evaluaciones++;
+				await pasar(TAP_SETTLE_MS);
+			}
+			// La celebración del acierto y el guardado del ejercicio.
+			await pasar(1000);
+		}
+		expect(evaluaciones).toBeGreaterThan(0);
+		expect(container.querySelector('[data-screen="end"]')).not.toBeNull();
+		expect(store.getState().summary?.stars).toBe(3);
+		expect(screen.getByRole("img", { name: "3 estrellas" })).toBeDefined();
+		const guardado = (await adapter.read()) as {
+			sessionCounter: number;
+			items: Record<string, { presented: boolean }>;
+		};
+		expect(guardado.sessionCounter).toBe(1);
+		expect(Object.values(guardado.items).some((it) => it.presented)).toBe(true);
+		expect(audio.beat).toHaveBeenCalled();
 	});
 });

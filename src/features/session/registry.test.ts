@@ -10,6 +10,7 @@ import {
 import {
 	IMPLEMENTED_TEMPLATES,
 	isSessionPlayable,
+	templateViews,
 } from "@/features/session/registry";
 
 function progreso(): ProgressState {
@@ -180,5 +181,14 @@ describe("isSessionPlayable", () => {
 
 	it("hoy solo count-syllables está implementada", () => {
 		expect([...IMPLEMENTED_TEMPLATES]).toEqual(["count-syllables"]);
+	});
+});
+
+describe("templateViews", () => {
+	it("cada plantilla que se declara jugable tiene su Presentation y su Evaluation registradas", () => {
+		for (const id of IMPLEMENTED_TEMPLATES) {
+			expect(templateViews[id]?.Presentation, id).toBeTypeOf("function");
+			expect(templateViews[id]?.Evaluation, id).toBeTypeOf("function");
+		}
 	});
 });

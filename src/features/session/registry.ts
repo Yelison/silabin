@@ -9,6 +9,8 @@ import {
 	type TemplateId,
 	type Unit,
 } from "@/engine";
+import { Evaluation as CountSyllablesEvaluation } from "@/features/session/count-syllables/Evaluation";
+import { Presentation as CountSyllablesPresentation } from "@/features/session/count-syllables/Presentation";
 
 /** Lo que recibe la vista de presentación de una plantilla: enseña el ítem y avisa al terminar. */
 export type PresentationProps = {
@@ -37,8 +39,13 @@ export type TemplateViews = {
 	Evaluation: ComponentType<EvaluationProps>;
 };
 
-/** Las vistas que la interfaz sabe pintar. La Tarea 8 registra aquí `count-syllables`. */
-export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {};
+/** Las vistas que la interfaz sabe pintar. Cada plantilla nueva se registra aquí. */
+export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
+	"count-syllables": {
+		Presentation: CountSyllablesPresentation,
+		Evaluation: CountSyllablesEvaluation,
+	},
+};
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
 export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
