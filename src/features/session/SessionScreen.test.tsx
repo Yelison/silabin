@@ -15,6 +15,7 @@ import {
 	conProveedores,
 	crearStore,
 	fakeAudio,
+	respuestaCorrecta,
 	vistasFalsas,
 } from "@/features/test-support";
 
@@ -24,7 +25,10 @@ afterEach(() => {
 });
 
 async function montar(
-	opciones: { views?: Partial<Record<"count-syllables", TemplateViews>> } = {},
+	opciones: {
+		views?: Partial<Record<"count-syllables", TemplateViews>>;
+		celebrationMs?: number;
+	} = {},
 ) {
 	const store = crearStore();
 	await store.getState().load();
@@ -33,7 +37,7 @@ async function montar(
 	const vistas = vistasFalsas();
 	const onEnd = vi.fn();
 	const onExit = vi.fn();
-	const { container } = render(
+	const { container, unmount } = render(
 		conProveedores(
 			store,
 			audio,
@@ -41,7 +45,7 @@ async function montar(
 				onEnd={onEnd}
 				onExit={onExit}
 				views={opciones.views ?? { "count-syllables": vistas.views }}
-				celebrationMs={0}
+				celebrationMs={opciones.celebrationMs ?? 0}
 			/>,
 		),
 	);
@@ -51,7 +55,17 @@ async function montar(
 		if (r === null) throw new Error("No hay corrida");
 		return r;
 	};
-	return { store, audio, vistas, onEnd, onExit, container, claves, run };
+	return {
+		store,
+		audio,
+		vistas,
+		onEnd,
+		onExit,
+		container,
+		unmount,
+		claves,
+		run,
+	};
 }
 
 /** Pasa las presentaciones del principio hasta que se pinta la primera evaluación. */
@@ -181,6 +195,8 @@ describe("SessionScreen", () => {
 		);
 		expect(vistas.ultimo()?.feedback?.hint?.rung).toBe("model");
 		expect(vistas.ultimo()?.locked).toBe(false);
+		// El modelo no es un intento nuevo: la entrada no se reinicia.
+		expect(vistas.ultimo()?.attemptKey).toBe(2);
 		// Ni segundo retry, ni celebración, ni avance mientras el modelo no se complete.
 		await new Promise((r) => setTimeout(r, 20));
 		expect(claves().filter((k) => k === "feedback:retry")).toHaveLength(2);
@@ -325,5 +341,154 @@ describe("SessionScreen", () => {
 		await waitFor(() => expect(run().cursor).toBe(antes + 1));
 		for (const c of audio.play.mock.calls)
 			expect(c[0].onSegment).toBeUndefined();
+	});
+	describe("guardias de desmontaje y pausa de celebración", () => {
+		/** Registra los rechazos sin capturar que ocurran mientras dure el test. */
+		function vigilarRechazos() {
+			const rechazos: unknown[] = [];
+			const oyente = (e: unknown) => rechazos.push(e);
+			process.on("unhandledRejection", oyente);
+			return {
+				rechazos,
+				parar: () => process.off("unhandledRejection", oyente),
+			};
+		}
+		const vaciar = () => new Promise((r) => setTimeout(r, 20));
+
+		it("un celebrate:correct que resuelve tras desmontar no avanza la corrida", async () => {
+			const { run, audio, claves, unmount } = await montar();
+			const user = userEvent.setup();
+			await hastaEvaluacion(user);
+			const cursor = run().cursor;
+			let soltar: () => void = () => {};
+			audio.play.mockImplementation((r) =>
+				r.key === "celebrate:correct"
+					? new Promise<void>((res) => {
+							soltar = res;
+						})
+					: Promise.resolve(),
+			);
+			await user.click(bien());
+			await waitFor(() => expect(claves()).toContain("celebrate:correct"));
+			unmount();
+			soltar();
+			await vaciar();
+			expect(run().cursor).toBe(cursor);
+		});
+
+		it("un celebrate:correct que resuelve tras abandonar la sesión no lanza (next sin corrida)", async () => {
+			const { store, audio, claves } = await montar();
+			const user = userEvent.setup();
+			await hastaEvaluacion(user);
+			let soltar: () => void = () => {};
+			audio.play.mockImplementation((r) =>
+				r.key === "celebrate:correct"
+					? new Promise<void>((res) => {
+							soltar = res;
+						})
+					: Promise.resolve(),
+			);
+			const vigilancia = vigilarRechazos();
+			try {
+				await user.click(bien());
+				await waitFor(() => expect(claves()).toContain("celebrate:correct"));
+				act(() => store.getState().abandonSession());
+				soltar();
+				await vaciar();
+				expect(vigilancia.rechazos).toEqual([]);
+				expect(store.getState().run).toBeNull();
+			} finally {
+				vigilancia.parar();
+			}
+		});
+
+		it("una respuesta que se registra ya desmontado no suena ni avanza nada", async () => {
+			const { run, vistas, claves, unmount } = await montar();
+			const user = userEvent.setup();
+			await hastaEvaluacion(user);
+			const cursor = run().cursor;
+			const onAnswer = vistas.ultimo()?.onAnswer;
+			const sonidos = claves().length;
+			// El desmontaje ocurre antes de que `answer()` resuelva.
+			await act(async () => {
+				onAnswer?.("__respuesta_mala__");
+				unmount();
+			});
+			await vaciar();
+			expect(claves()).toHaveLength(sonidos);
+			expect(run().cursor).toBe(cursor);
+		});
+
+		it("una respuesta buena que se registra ya desmontado no celebra ni avanza", async () => {
+			const { run, vistas, claves, unmount } = await montar();
+			const user = userEvent.setup();
+			await hastaEvaluacion(user);
+			const cursor = run().cursor;
+			const onAnswer = vistas.ultimo()?.onAnswer;
+			const exercise = vistas.ultimo()?.exercise;
+			const item = vistas.ultimo()?.item;
+			if (
+				onAnswer === undefined ||
+				exercise === undefined ||
+				item === undefined
+			)
+				throw new Error("sin props");
+			await act(async () => {
+				onAnswer(respuestaCorrecta({ exercise, item }));
+				unmount();
+			});
+			await vaciar();
+			expect(claves()).not.toContain("celebrate:correct");
+			expect(run().cursor).toBe(cursor);
+		});
+
+		it("dos onDone seguidos de la presentación, en el mismo tick, avanzan un solo ejercicio", async () => {
+			const { run, vistas } = await montar();
+			const onDone = vistas.presentaciones[0]?.onDone;
+			const vigilancia = vigilarRechazos();
+			try {
+				await act(async () => {
+					onDone?.();
+					onDone?.();
+				});
+				await vaciar();
+				expect(run().cursor).toBe(1);
+				expect(vigilancia.rechazos).toEqual([]);
+			} finally {
+				vigilancia.parar();
+			}
+		});
+
+		it("la pausa de celebración: next() espera a celebrationMs y data-celebrating dura lo que la pausa", async () => {
+			const { run, container } = await montar({ celebrationMs: 700 });
+			const user = userEvent.setup();
+			await hastaEvaluacion(user);
+			const cursor = run().cursor;
+			expect(container.querySelector("[data-celebrating]")).toBeNull();
+
+			vi.useFakeTimers();
+			fireEvent.click(bien());
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			expect(
+				container.querySelector('[data-celebrating="true"]'),
+			).not.toBeNull();
+			expect(run().cursor).toBe(cursor);
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(699);
+			});
+			expect(run().cursor).toBe(cursor);
+			expect(
+				container.querySelector('[data-celebrating="true"]'),
+			).not.toBeNull();
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(1);
+			});
+			expect(run().cursor).toBe(cursor + 1);
+			expect(container.querySelector("[data-celebrating]")).toBeNull();
+		});
 	});
 });

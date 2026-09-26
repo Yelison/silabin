@@ -90,17 +90,21 @@ export function respuestaCorrecta(p: {
  */
 export function vistasFalsas() {
 	const pintados: EvaluationProps[] = [];
+	const presentaciones: PresentationProps[] = [];
 	const views: TemplateViews = {
-		Presentation: (p: PresentationProps) => (
-			<button
-				type="button"
-				data-view="presentation"
-				data-exercise={p.exercise.id}
-				onClick={p.onDone}
-			>
-				listo
-			</button>
-		),
+		Presentation: (p: PresentationProps) => {
+			presentaciones.push(p);
+			return (
+				<button
+					type="button"
+					data-view="presentation"
+					data-exercise={p.exercise.id}
+					onClick={p.onDone}
+				>
+					listo
+				</button>
+			);
+		},
 		Evaluation: (p: EvaluationProps) => {
 			pintados.push(p);
 			return (
@@ -120,5 +124,10 @@ export function vistasFalsas() {
 			);
 		},
 	};
-	return { views, pintados, ultimo: () => pintados[pintados.length - 1] };
+	return {
+		views,
+		pintados,
+		presentaciones,
+		ultimo: () => pintados[pintados.length - 1],
+	};
 }
