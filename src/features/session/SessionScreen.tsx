@@ -105,9 +105,13 @@ function ExerciseView(props: {
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: efecto de montaje
 	useEffect(() => {
-		if (exercise.kind === "evaluation")
+		if (exercise.kind === "evaluation") {
 			void sonar(`instruction:${exercise.templateId}`);
-		// Solo al montar el ejercicio: un reintento no repite la instrucción.
+			// Un repaso no tiene presentación: sin oír la palabra el niño le pondría nombre al
+			// dibujo («balón» o «pelota») y fallaría el primer intento. La cola ordena las dos.
+			if (item !== undefined) void sonar(item.audioKey);
+		}
+		// Solo al montar el ejercicio: un reintento no repite ni la instrucción ni la palabra.
 	}, []);
 
 	async function resolver(respuesta: string) {

@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { curriculum } from "@/engine";
 import type { TemplateViews } from "@/features/session/registry";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import {
@@ -121,6 +122,39 @@ describe("SessionScreen", () => {
 		).toHaveLength(1);
 		await user.click(mal());
 		await waitFor(() => expect(claves()).toContain("feedback:retry"));
+		expect(
+			claves().filter((k) => k === "instruction:count-syllables"),
+		).toHaveLength(1);
+	});
+
+	it("I1: al montar una evaluación suenan, en este orden, la instrucción y la palabra; una presentación no cambia", async () => {
+		const { claves, run } = await montar();
+		const user = userEvent.setup();
+		// La presentación (vista falsa) no pide nada por su cuenta.
+		expect(claves()).toEqual([]);
+		await hastaEvaluacion(user);
+		const ejercicio = run().exercises[run().cursor];
+		const palabra = curriculum.items.get(ejercicio?.itemId ?? "")?.audioKey;
+		expect(palabra).toMatch(/^word:/);
+		expect(claves().filter((k) => k !== "instruction:count-syllables")).toEqual(
+			[palabra],
+		);
+		expect(claves().slice(-2)).toEqual([
+			"instruction:count-syllables",
+			palabra,
+		]);
+	});
+
+	it("I1: un reintento tras fallar no vuelve a pedir ni la instrucción ni la palabra", async () => {
+		const { claves, run } = await montar();
+		const user = userEvent.setup();
+		await hastaEvaluacion(user);
+		const palabra = curriculum.items.get(
+			run().exercises[run().cursor]?.itemId ?? "",
+		)?.audioKey;
+		await user.click(mal());
+		await waitFor(() => expect(claves()).toContain("feedback:retry"));
+		expect(claves().filter((k) => k === palabra)).toHaveLength(1);
 		expect(
 			claves().filter((k) => k === "instruction:count-syllables"),
 		).toHaveLength(1);
