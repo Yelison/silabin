@@ -109,3 +109,9 @@ Task 8: pendiente para el usuario (prueba manual): `pnpm dev`, una sesión compl
 Sesión 4: T8 cerrada (2 tareas en esta sesión: T7 y T8).
 
 Corte de sesión 4 tras la Tarea 8 (T7 y T8 en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger» y sigue con la Tarea 9, cierre de documentación (rango del plan 703-739; brief en `.superpowers/sdd/2026-09-26-silabin-sesion/task-9-brief.md`), modelo Sonnet, revisión de cumplimiento sin mutación. Anotar R6 (`checkAnswer` lanza para `trace`/`say-it`) como trampa en el README. Después: revisión final de la rama con `model: "opus"` (paquete `review-package … $(git merge-base main HEAD) HEAD`), apuntándola a los `minor (deferred)` y a los Rulings R1-R12; el minor de las luces que desplazan el tambor (T8) es candidato a arreglar antes del merge. Decidir con el usuario la prueba manual pendiente.
+
+Sesión 5: solo Tarea 9 y revisión final.
+
+Task 9: fix round 1/2 (1 addressed, 0 open — la deuda menor del README omitía 8 `minor (deferred)` del registro; commits 5b47cfd..cbd519c)
+Task 9: complete (commits 1197c3b..cbd519c, revisión de cumplimiento sin mutación, re-revisión acotada 8/8 ADDRESSED; 609 tests pasados, 1 omitido)
+Task 9: R6 anotada como trampa 9 viva en el README.
