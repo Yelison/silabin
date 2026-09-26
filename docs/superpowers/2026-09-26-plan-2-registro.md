@@ -40,3 +40,7 @@ T7 586-639 · T8 640-702 · T9 703-721.
 ## Progreso
 
 (Task <N>: complete … se añade aquí al cerrar cada tarea)
+
+Task 1: complete (commits 67025a0..d8f1dd2, review clean; 4/4 mutaciones del plan y 6 propias muertas)
+Task 1: minor (deferred): `invariants.test.ts:61-92` T1.2 usa una unidad con un ítem; un invariante que solo mire el primer elemento de `introduces` sobrevive (añadir un segundo ítem malo).
+Task 1: minor (deferred): el mensaje del commit dice que T1.1 falla por las unidades de Fase 2; en realidad falló primero por la función inexistente (la mutación 2 demuestra que las detecta).
