@@ -63,7 +63,10 @@ completo dentro, y rondas de corrección de hasta 5 vueltas. Reglas:
   grandes o un resumen automático de contexto), no empieces la siguiente: deja el ledger al
   día, haz commit y di: «Buen momento para cortar: ejecuta `/clear` y empieza con
   "Retoma el Plan N desde el ledger"». Con `/clear` se sigue en el mismo modelo, así que
-  recuerda también cuál debe ser.
+  recuerda también cuál debe ser. **Siempre que recomiendes `/clear`, incluye en el mismo
+  mensaje, en un bloque de código copiable, el primer mensaje exacto que el usuario debe
+  escribir después:** plan y ruta, rama, ledger (`grep -n` y tramo final), tareas
+  completas, siguiente tarea con su brief y rango de líneas, y los Rulings que le afectan.
 
 **Planes más cortos**
 - Por tarea, el plan fija el contrato (tipos, firmas, qué ficheros toca), la lista de casos
