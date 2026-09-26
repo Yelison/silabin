@@ -7,12 +7,13 @@ import {
 	createSilentPlayer,
 	createSpeechPlayer,
 } from "@/audio";
-import { BigButton } from "@/components/BigButton";
 import { curriculum } from "@/engine";
 import { downloadInBrowser } from "@/features/adult/ExportGesture";
 import { SaveWarning } from "@/features/adult/SaveWarning";
 import { AppProviders, useApp } from "@/features/app-context";
 import { MapScreen } from "@/features/map/MapScreen";
+import { EndScreen } from "@/features/session/EndScreen";
+import { SessionScreen } from "@/features/session/SessionScreen";
 import { StartScreen } from "@/features/start/StartScreen";
 import { type AppState, createAppStore, createIdbAdapter } from "@/store";
 
@@ -37,7 +38,6 @@ function createAudio(accent: "do" | "mx" | "neutro"): AudioPlayer {
 function Screens() {
 	const status = useApp((s) => s.status);
 	const beginSession = useApp((s) => s.beginSession);
-	const abandonSession = useApp((s) => s.abandonSession);
 	const [screen, setScreen] = useState<Screen>("start");
 
 	if (status !== "ready") return null;
@@ -56,22 +56,12 @@ function Screens() {
 				/>
 			)}
 			{screen === "session" && (
-				// Provisional: la Tarea 7 monta aquí el hilo de la sesión.
-				<main
-					data-screen="session"
-					className="flex min-h-screen items-center justify-center"
-				>
-					<BigButton
-						aria-label="Volver al mapa"
-						onClick={() => {
-							abandonSession();
-							setScreen("map");
-						}}
-					>
-						◀
-					</BigButton>
-				</main>
+				<SessionScreen
+					onEnd={() => setScreen("end")}
+					onExit={() => setScreen("map")}
+				/>
 			)}
+			{screen === "end" && <EndScreen onDone={() => setScreen("map")} />}
 		</>
 	);
 }

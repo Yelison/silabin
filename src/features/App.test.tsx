@@ -1,11 +1,27 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "@/features/App";
-import { crearStore, fakeAudio } from "@/features/test-support";
+import { templateViews } from "@/features/session/registry";
+import { crearStore, fakeAudio, vistasFalsas } from "@/features/test-support";
 
-afterEach(cleanup);
+// Hasta que la Tarea 8 registre las vistas reales, la sesión se prueba con vistas falsas.
+beforeEach(() => {
+	templateViews["count-syllables"] = vistasFalsas().views;
+});
+afterEach(() => {
+	cleanup();
+	vi.useRealTimers();
+	delete templateViews["count-syllables"];
+});
 
 const iniciar = () => screen.findByRole("button", { name: "Empezar" });
 
@@ -53,7 +69,7 @@ describe("App", () => {
 		expect(container.querySelector('[data-screen="session"]')).not.toBeNull();
 	});
 
-	it("desde la sesión provisional se vuelve al mapa sin dejar la corrida abierta", async () => {
+	it("desde la sesión, mantener la esquina 1,5 s vuelve al mapa sin dejar la corrida abierta", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
@@ -61,8 +77,63 @@ describe("App", () => {
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
-		await user.click(screen.getByRole("button", { name: "Volver al mapa" }));
+		vi.useFakeTimers();
+		fireEvent.pointerDown(screen.getByRole("button", { name: /salir/i }));
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
 		expect(store.getState().run).toBeNull();
+		expect(container.querySelector('[data-unit="phase0:clap"]')).not.toBeNull();
+	});
+
+	it("sin vista registrada para la plantilla, la sesión vuelve al mapa sin dejar la corrida abierta", async () => {
+		delete templateViews["count-syllables"];
+		const store = crearStore();
+		const { container } = render(<App store={store} audio={fakeAudio()} />);
+		const user = userEvent.setup();
+		await user.click(await iniciar());
+		await user.click(
+			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
+		);
+		await waitFor(() =>
+			expect(
+				container.querySelector('[data-unit="phase0:clap"]'),
+			).not.toBeNull(),
+		);
+		expect(store.getState().run).toBeNull();
+	});
+
+	it("E7: al resolver la última evaluación aparece el fin con las estrellas del resumen, y un toque vuelve al mapa", async () => {
+		const store = crearStore();
+		const { container } = render(<App store={store} audio={fakeAudio()} />);
+		const user = userEvent.setup();
+		await user.click(await iniciar());
+		await user.click(
+			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
+		);
+		for (let i = 0; i < 30; i++) {
+			if (container.querySelector('[data-screen="end"]') !== null) break;
+			const listo = screen.queryByRole("button", { name: "listo" });
+			const bien = screen.queryByRole("button", { name: "bien" });
+			const cursor = store.getState().run?.cursor;
+			if (listo !== null) await user.click(listo);
+			else if (bien !== null) await user.click(bien);
+			await waitFor(() =>
+				expect(
+					container.querySelector('[data-screen="end"]') !== null ||
+						store.getState().run?.cursor !== cursor,
+				).toBe(true),
+			);
+		}
+		const resumen = store.getState().summary;
+		expect(resumen?.stars).toBe(3);
+		expect(container.querySelector('[data-screen="end"]')).not.toBeNull();
+		expect(screen.getByRole("img", { name: "3 estrellas" })).toBeDefined();
+		expect(container.querySelector('[data-screen="session"]')).toBeNull();
+
+		await user.click(screen.getByRole("button", { name: "Continuar" }));
+		expect(store.getState().summary).toBeNull();
+		expect(container.querySelector('[data-screen="end"]')).toBeNull();
 		expect(container.querySelector('[data-unit="phase0:clap"]')).not.toBeNull();
 	});
 
