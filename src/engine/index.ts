@@ -33,6 +33,21 @@ export {
 	STAR_MILESTONES,
 	totalStars,
 } from "@/engine/rewards";
+export type {
+	AttemptFeedback,
+	SessionRun,
+	SessionSummary,
+} from "@/engine/session";
+export {
+	checkAnswer,
+	completePresentation,
+	currentExercise,
+	finishSession,
+	isSessionOver,
+	nextExercise,
+	startSession,
+	submitAnswer,
+} from "@/engine/session";
 export { firstTryRatio, starsForSession } from "@/engine/stars";
 export type {
 	Box,

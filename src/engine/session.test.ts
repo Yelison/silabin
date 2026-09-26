@@ -1,0 +1,484 @@
+import { describe, expect, it } from "vitest";
+import {
+	checkAnswer,
+	completePresentation,
+	currentExercise,
+	curriculum,
+	emptyProgressState,
+	finishSession,
+	isSessionOver,
+	itemProgressOf,
+	nextExercise,
+	type PlannedExercise,
+	type ProgressState,
+	type SessionRun,
+	starsForSession,
+	startSession,
+	submitAnswer,
+} from "@/engine";
+
+const NOW = "2026-09-26T12:00:00.000Z";
+
+function empezar(
+	progress: ProgressState = emptyProgressState(),
+	sessionLength: 5 | 6 = 5,
+): SessionRun {
+	return startSession({
+		content: curriculum,
+		progress,
+		sessionLength,
+		seed: 1,
+	});
+}
+
+function ejercicioActual(run: SessionRun): PlannedExercise {
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("la sesión ya acabó");
+	return exercise;
+}
+
+/** La respuesta que el contenido da por buena para el ejercicio en curso. */
+function respuestaCorrecta(run: SessionRun): string {
+	const exercise = ejercicioActual(run);
+	if (exercise.correctOptionId !== null) return exercise.correctOptionId;
+	const answer = curriculum.items.get(exercise.itemId)?.task?.answer;
+	if (answer === undefined) throw new Error("ítem sin respuesta");
+	return answer;
+}
+
+const RESPUESTA_MALA = "respuesta-que-no-es";
+
+function responder(run: SessionRun, answer: string) {
+	return submitAnswer({ content: curriculum, run, answer, now: NOW });
+}
+
+/** Pasa las presentaciones del principio hasta llegar a la primera evaluación. */
+function hastaPrimeraEvaluacion(run: SessionRun): SessionRun {
+	let actual = run;
+	while (ejercicioActual(actual).kind === "presentation")
+		actual = completePresentation(actual);
+	return actual;
+}
+
+/** Recorre la sesión entera; `plan` decide cuántos fallos previos lleva cada evaluación. */
+function jugarTodo(
+	run: SessionRun,
+	fallosPrevios: (indiceEvaluacion: number) => number,
+): SessionRun {
+	let actual = run;
+	let evaluacion = 0;
+	while (!isSessionOver(actual)) {
+		if (ejercicioActual(actual).kind === "presentation") {
+			actual = completePresentation(actual);
+			continue;
+		}
+		const fallos = fallosPrevios(evaluacion);
+		for (let i = 0; i < fallos; i++)
+			actual = responder(actual, RESPUESTA_MALA).run;
+		if (fallos < 3) actual = responder(actual, respuestaCorrecta(actual)).run;
+		actual = nextExercise(actual);
+		evaluacion += 1;
+	}
+	return actual;
+}
+
+describe("startSession", () => {
+	it("R1: sobre estado vacío arranca phase0:clap con las presentaciones primero", () => {
+		const run = empezar();
+		expect(run.unitId).toBe("phase0:clap");
+		expect(run.sessionIndex).toBe(0);
+		expect(run.cursor).toBe(0);
+		expect(run.resolutions).toEqual([]);
+		expect(run.attempt).toEqual({ attempt: 1, hintsShown: 0, resolved: false });
+		expect(run.exercises.slice(0, 2).map((e) => e.kind)).toEqual([
+			"presentation",
+			"presentation",
+		]);
+		expect(run.exercises.slice(2).every((e) => e.kind === "evaluation")).toBe(
+			true,
+		);
+		expect(isSessionOver(run)).toBe(false);
+	});
+
+	it("R1b: decide la unidad activa con los estados recalculados, no con los guardados", () => {
+		// Un documento antiguo que dice 'active' para una unidad bloqueada y no tiene la primera.
+		const guardado: ProgressState = {
+			...emptyProgressState(),
+			units: {
+				"phase0:clap": { status: "locked", bestStars: 0 },
+				"phase0:rhyme": { status: "active", bestStars: 0 },
+			},
+		};
+		const run = empezar(guardado);
+		expect(run.unitId).toBe("phase0:clap");
+		expect(run.progress.units["phase0:clap"]?.status).toBe("active");
+		expect(run.progress.units["phase0:rhyme"]?.status).toBe("locked");
+	});
+
+	it("R1c: si no queda unidad activa la sesión es de solo repaso, con unitId null", () => {
+		const items: ProgressState["items"] = {};
+		for (const id of curriculum.items.keys())
+			items[id] = {
+				...itemProgressOf(emptyProgressState(), id),
+				presented: true,
+				box: 3,
+				firstTryCorrect: 9,
+				lastCreditSession: 0,
+				masteredAt: NOW,
+			};
+		const units: ProgressState["units"] = {};
+		for (const id of curriculum.unitOrder)
+			units[id] = { status: "done", bestStars: 3 };
+		const run = empezar({ ...emptyProgressState(), items, units });
+		expect(run.unitId).toBeNull();
+		expect(run.exercises.every((e) => e.source === "review")).toBe(true);
+	});
+});
+
+describe("checkAnswer", () => {
+	const exercise = (correctOptionId: string | null): PlannedExercise => ({
+		id: "ex-1",
+		kind: "evaluation",
+		templateId: "count-syllables",
+		itemId: "oral:clap:mesa",
+		optionIds: correctOptionId === null ? [] : [correctOptionId, "y"],
+		correctOptionId,
+		source: "active-unit",
+	});
+	const mesa = curriculum.items.get("oral:clap:mesa");
+
+	it("R2: sin opciones compara con task.answer, sin normalizar", () => {
+		if (mesa === undefined) throw new Error("falta oral:clap:mesa");
+		expect(checkAnswer(exercise(null), mesa, "2")).toBe("correct");
+		expect(checkAnswer(exercise(null), mesa, "3")).toBe("wrong");
+		expect(checkAnswer(exercise(null), mesa, " 2")).toBe("wrong");
+		expect(checkAnswer(exercise(null), mesa, "2 ")).toBe("wrong");
+	});
+
+	it("R3: con correctOptionId compara con él y no con task.answer", () => {
+		if (mesa === undefined) throw new Error("falta oral:clap:mesa");
+		expect(checkAnswer(exercise("x"), mesa, "x")).toBe("correct");
+		expect(checkAnswer(exercise("x"), mesa, "y")).toBe("wrong");
+		expect(checkAnswer(exercise("x"), mesa, "2")).toBe("wrong");
+	});
+
+	it("R3b: sin opción correcta ni respuesta en el ítem lanza", () => {
+		const letra = curriculum.items.get("letter:a");
+		if (letra === undefined) throw new Error("falta letter:a");
+		expect(letra.task).toBeUndefined();
+		expect(() => checkAnswer(exercise(null), letra, "a")).toThrow();
+	});
+});
+
+describe("completePresentation", () => {
+	it("R5: dos presentaciones avanzan el cursor y marcan los ítems como presentados", () => {
+		const run = empezar();
+		const uno = completePresentation(run);
+		const dos = completePresentation(uno);
+		expect(uno.cursor).toBe(1);
+		expect(dos.cursor).toBe(2);
+		for (const exercise of run.exercises.slice(0, 2)) {
+			expect(run.progress.items[exercise.itemId]?.presented).toBeUndefined();
+			expect(dos.progress.items[exercise.itemId]?.presented).toBe(true);
+			expect(dos.progress.items[exercise.itemId]?.lastSessionIndex).toBe(0);
+		}
+	});
+
+	it("solo vale sobre una presentación", () => {
+		const enEvaluacion = hastaPrimeraEvaluacion(empezar());
+		expect(() => completePresentation(enEvaluacion)).toThrow();
+	});
+
+	it("lanza cuando la sesión ya acabó", () => {
+		const acabada = jugarTodo(empezar(), () => 0);
+		expect(() => completePresentation(acabada)).toThrow();
+	});
+});
+
+describe("submitAnswer", () => {
+	it("R4: sobre una presentación lanza", () => {
+		expect(() => responder(empezar(), "2")).toThrow();
+	});
+
+	it("R6: acierto al primer intento da crédito de dominio y no avanza el cursor", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		const itemId = ejercicioActual(run).itemId;
+		const { run: despues, feedback } = responder(run, respuestaCorrecta(run));
+		expect(feedback).toEqual({
+			hint: null,
+			resolution: { status: "mastery-credit" },
+		});
+		expect(despues.cursor).toBe(run.cursor);
+		expect(despues.attempt.resolved).toBe(true);
+		expect(despues.resolutions).toEqual([{ status: "mastery-credit" }]);
+		expect(despues.progress.items[itemId]?.firstTryCorrect).toBe(1);
+	});
+
+	it("R7: tres fallos dan las pistas reduce, sound y el modelo, y se resuelve asistida", () => {
+		let run = hastaPrimeraEvaluacion(empezar());
+		const itemId = ejercicioActual(run).itemId;
+		const pistas: (string | undefined)[] = [];
+		const resoluciones: (string | undefined)[] = [];
+		for (let i = 0; i < 3; i++) {
+			const paso = responder(run, RESPUESTA_MALA);
+			pistas.push(paso.feedback.hint?.rung);
+			resoluciones.push(paso.feedback.resolution?.status);
+			run = paso.run;
+			expect(run.cursor).toBe(2);
+		}
+		expect(pistas).toEqual(["reduce", "sound", "model"]);
+		expect(resoluciones).toEqual([undefined, undefined, "assisted"]);
+		expect(run.resolutions).toEqual([{ status: "assisted" }]);
+		expect(run.progress.items[itemId]?.assisted).toBe(1);
+	});
+
+	it("R8: fallo y luego acierto es correct-with-hint y el ítem baja a caja 1", () => {
+		let run = hastaPrimeraEvaluacion(empezar());
+		const itemId = ejercicioActual(run).itemId;
+		// Con el ítem ya en caja 3 se ve que baja a 1 y no se queda o sube.
+		run = {
+			...run,
+			progress: {
+				...run.progress,
+				items: {
+					...run.progress.items,
+					[itemId]: { ...itemProgressOf(run.progress, itemId), box: 3 },
+				},
+			},
+		};
+		const fallo = responder(run, RESPUESTA_MALA);
+		expect(fallo.feedback.resolution).toBeNull();
+		expect(fallo.run.resolutions).toEqual([]);
+		const acierto = responder(fallo.run, respuestaCorrecta(fallo.run));
+		expect(acierto.feedback.resolution).toEqual({
+			status: "correct-with-hint",
+			hintsUsed: 1,
+		});
+		expect(acierto.run.resolutions).toEqual([
+			{ status: "correct-with-hint", hintsUsed: 1 },
+		]);
+		expect(acierto.run.progress.items[itemId]?.box).toBe(1);
+	});
+
+	it("R9: sobre una evaluación ya resuelta lanza", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		const resuelta = responder(run, respuestaCorrecta(run)).run;
+		expect(() => responder(resuelta, respuestaCorrecta(run))).toThrow();
+	});
+
+	it("lanza cuando la sesión ya acabó", () => {
+		const acabada = jugarTodo(empezar(), () => 0);
+		expect(() => responder(acabada, "2")).toThrow();
+	});
+
+	it("nunca normaliza en silencio: ' 2' cuenta como fallo", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		const { feedback } = responder(run, ` ${respuestaCorrecta(run)}`);
+		expect(feedback.hint?.rung).toBe("reduce");
+		expect(feedback.resolution).toBeNull();
+	});
+});
+
+describe("nextExercise", () => {
+	it("R9b: antes de resolver lanza", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		expect(() => nextExercise(run)).toThrow();
+		const conFallo = responder(run, RESPUESTA_MALA).run;
+		expect(() => nextExercise(conFallo)).toThrow();
+	});
+
+	it("lanza sobre una presentación", () => {
+		expect(() => nextExercise(empezar())).toThrow();
+	});
+
+	it("R10: avanza y reinicia el estado del intento", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		// Un fallo previo deja el intento en 2 con una pista, para que el reinicio se note.
+		const conFallo = responder(run, RESPUESTA_MALA).run;
+		const resuelta = responder(conFallo, respuestaCorrecta(conFallo)).run;
+		expect(resuelta.attempt.attempt).toBe(2);
+		const siguiente = nextExercise(resuelta);
+		expect(siguiente.cursor).toBe(run.cursor + 1);
+		expect(siguiente.attempt).toEqual({
+			attempt: 1,
+			hintsShown: 0,
+			resolved: false,
+		});
+	});
+});
+
+describe("finishSession", () => {
+	it("R11: sesión entera acertando al primer intento da 3 estrellas y cuenta la sesión", () => {
+		const run = jugarTodo(empezar(), () => 0);
+		expect(isSessionOver(run)).toBe(true);
+		expect(currentExercise(run)).toBeNull();
+		const resumen = finishSession({
+			content: curriculum,
+			run,
+			alreadyUnlocked: [],
+			now: NOW,
+		});
+		expect(resumen.stars).toBe(3);
+		expect(resumen.entry).toEqual({
+			index: 0,
+			unitId: "phase0:clap",
+			stars: 3,
+			endedAt: NOW,
+		});
+		expect(resumen.progress.sessionCounter).toBe(1);
+		expect(resumen.progress.units["phase0:clap"]?.bestStars).toBe(3);
+		expect(resumen.newRewardIds).toContain("first-session");
+	});
+
+	it("R12: las presentaciones no cuentan; las estrellas salen solo de las evaluaciones", () => {
+		const inicio = empezar(emptyProgressState(), 6);
+		const evaluaciones = inicio.exercises.filter(
+			(e) => e.kind === "evaluation",
+		).length;
+		expect(evaluaciones).toBe(4);
+		// Una evaluación asistida de cuatro: 3/4 al primer intento.
+		const run = jugarTodo(inicio, (i) => (i === 1 ? 3 : 0));
+		expect(run.resolutions).toHaveLength(evaluaciones);
+		const resumen = finishSession({
+			content: curriculum,
+			run,
+			alreadyUnlocked: [],
+			now: NOW,
+		});
+		expect(resumen.stars).toBe(starsForSession(run.resolutions));
+		expect(resumen.stars).toBe(1);
+		expect(resumen.progress.units["phase0:clap"]?.bestStars).toBe(1);
+	});
+
+	it("R13: antes de acabar lanza", () => {
+		const run = hastaPrimeraEvaluacion(empezar());
+		expect(() =>
+			finishSession({
+				content: curriculum,
+				run,
+				alreadyUnlocked: [],
+				now: NOW,
+			}),
+		).toThrow();
+	});
+
+	it("R14: un logro que ya estaba desbloqueado no vuelve a salir como nuevo", () => {
+		const run = jugarTodo(empezar(), () => 0);
+		const nuevo = finishSession({
+			content: curriculum,
+			run,
+			alreadyUnlocked: [],
+			now: NOW,
+		});
+		expect(nuevo.newRewardIds).toContain("first-session");
+		const repetido = finishSession({
+			content: curriculum,
+			run,
+			alreadyUnlocked: ["first-session"],
+			now: NOW,
+		});
+		expect(repetido.newRewardIds).not.toContain("first-session");
+		expect(repetido.newRewardIds).toEqual(
+			nuevo.newRewardIds.filter((id) => id !== "first-session"),
+		);
+	});
+
+	it("una sesión de solo repaso termina con unitId null y sin tocar mejores marcas", () => {
+		const items: ProgressState["items"] = {};
+		for (const id of curriculum.items.keys())
+			items[id] = {
+				...itemProgressOf(emptyProgressState(), id),
+				presented: true,
+				box: 1,
+				firstTryCorrect: 9,
+				lastCreditSession: 0,
+				masteredAt: NOW,
+			};
+		const units: ProgressState["units"] = {};
+		for (const id of curriculum.unitOrder)
+			units[id] = { status: "done", bestStars: 2 };
+		const inicio = empezar({
+			...emptyProgressState(),
+			sessionCounter: 7,
+			items,
+			units,
+		});
+		expect(inicio.unitId).toBeNull();
+		// Trazo y voz aún no tienen evaluador y checkAnswer lanza con ellos: se juega solo
+		// lo que ya se puede evaluar.
+		const jugable = {
+			...inicio,
+			exercises: inicio.exercises.filter((e) => e.templateId === "listen-tap"),
+		};
+		expect(jugable.exercises.length).toBeGreaterThan(0);
+		const run = jugarTodo(jugable, () => 0);
+		const resumen = finishSession({
+			content: curriculum,
+			run,
+			alreadyUnlocked: [],
+			now: NOW,
+		});
+		expect(resumen.entry.unitId).toBeNull();
+		expect(resumen.entry.index).toBe(7);
+		expect(resumen.progress.sessionCounter).toBe(8);
+		for (const id of curriculum.unitOrder)
+			expect(resumen.progress.units[id]?.bestStars).toBe(units[id]?.bestStars);
+	});
+});
+
+describe("índice de sesión", () => {
+	it("presentaciones y resoluciones se anotan con el índice de la sesión, no con 0", () => {
+		const inicio = empezar({ ...emptyProgressState(), sessionCounter: 3 });
+		expect(inicio.sessionIndex).toBe(3);
+		const dos = completePresentation(completePresentation(inicio));
+		for (const exercise of inicio.exercises.slice(0, 2))
+			expect(dos.progress.items[exercise.itemId]?.lastSessionIndex).toBe(3);
+		const evaluada = responder(dos, respuestaCorrecta(dos)).run;
+		const itemId = ejercicioActual(dos).itemId;
+		expect(evaluada.progress.items[itemId]?.lastSessionIndex).toBe(3);
+		expect(evaluada.progress.items[itemId]?.lastCreditSession).toBe(3);
+	});
+});
+
+describe("pureza", () => {
+	it("R15: ninguna función muta el run que recibe", () => {
+		const fotografiar = (run: SessionRun) => structuredClone(run);
+		const comprobar = <T>(
+			run: SessionRun,
+			llamada: (r: SessionRun) => T,
+		): T => {
+			const antes = fotografiar(run);
+			const resultado = llamada(run);
+			expect(run).toEqual(antes);
+			return resultado;
+		};
+
+		let run = empezar();
+		run = comprobar(run, completePresentation);
+		run = comprobar(run, completePresentation);
+		// fallo, luego acierto
+		run = comprobar(run, (r) => responder(r, RESPUESTA_MALA)).run;
+		run = comprobar(run, (r) => responder(r, respuestaCorrecta(r))).run;
+		run = comprobar(run, nextExercise);
+		run = comprobar(run, (r) => responder(r, respuestaCorrecta(r))).run;
+		run = comprobar(run, nextExercise);
+		run = comprobar(run, (r) => responder(r, respuestaCorrecta(r))).run;
+		run = comprobar(run, nextExercise);
+		expect(isSessionOver(run)).toBe(true);
+		comprobar(run, (r) =>
+			finishSession({
+				content: curriculum,
+				run: r,
+				alreadyUnlocked: [],
+				now: NOW,
+			}),
+		);
+	});
+
+	it("startSession no muta el progreso que recibe", () => {
+		const progress = emptyProgressState();
+		const antes = structuredClone(progress);
+		empezar(progress);
+		expect(progress).toEqual(antes);
+	});
+});
