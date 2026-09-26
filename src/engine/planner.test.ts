@@ -855,10 +855,25 @@ describe("sesión de solo repaso (activeUnitId null)", () => {
 	});
 
 	it("los vencidos van antes que los que aún no les toca, aunque tengan caja más alta", () => {
-		const state = todoDominado();
+		// Todo en caja 1 y presentado en la sesión 1, con el contador en 1: nada está vencido
+		// (1 - 1 < 1). Solo "vencidos primero" puede meter en la sesión al de caja 3, que por
+		// caja sería el último de más de sessionLength candidatos.
+		const state = emptyProgressState();
 		state.sessionCounter = 1;
-		// En caja 3 con intervalo 7 y lastSessionIndex 0, nada está vencido; este sí.
-		const vencido = "letter:m";
+		for (const id of curriculum.items.keys()) {
+			state.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				box: 1,
+				firstTryCorrect: 1,
+				lastSessionIndex: 1,
+			};
+		}
+		// Ordenado por id sería el último: ni caja, ni antigüedad, ni id lo favorecen.
+		const vencido = [...curriculum.items.keys()].sort((a, b) =>
+			b.localeCompare(a),
+		)[0];
+		if (vencido === undefined) throw new Error("currículo vacío");
 		state.items[vencido] = {
 			...emptyItemProgress(),
 			presented: true,
@@ -866,17 +881,39 @@ describe("sesión de solo repaso (activeUnitId null)", () => {
 			firstTryCorrect: 3,
 			lastSessionIndex: -10,
 		};
-		// Y este no lo está, aunque su caja es menor que la del vencido.
-		const alDia = "syllable:ma";
-		state.items[alDia] = {
-			...emptyItemProgress(),
-			presented: true,
-			box: 1,
-			firstTryCorrect: 1,
-			lastSessionIndex: 1,
-		};
+		expect(curriculum.items.size).toBeGreaterThan(5);
 		for (let seed = 1; seed <= 5; seed += 1) {
 			expect(repaso(state, 5, seed).map((e) => e.itemId)).toContain(vencido);
+		}
+	});
+
+	it("a igual caja, sale antes el ítem de sesión más antigua", () => {
+		// Todo vencido y en la misma caja: solo lastSessionIndex ascendente puede meter en la
+		// sesión al más antiguo, que por id sería el último de más de sessionLength candidatos.
+		const state = todoVencido();
+		for (const id of curriculum.items.keys()) {
+			state.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				box: 2,
+				firstTryCorrect: 2,
+				lastSessionIndex: 50,
+			};
+		}
+		const antiguo = [...curriculum.items.keys()].sort((a, b) =>
+			b.localeCompare(a),
+		)[0];
+		if (antiguo === undefined) throw new Error("currículo vacío");
+		state.items[antiguo] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 2,
+			firstTryCorrect: 2,
+			lastSessionIndex: 10,
+		};
+		expect(curriculum.items.size).toBeGreaterThan(5);
+		for (let seed = 1; seed <= 5; seed += 1) {
+			expect(repaso(state, 5, seed).map((e) => e.itemId)).toContain(antiguo);
 		}
 	});
 
@@ -956,7 +993,7 @@ describe("sesión de solo repaso (activeUnitId null)", () => {
 		);
 	});
 
-	it("una unidad activa desconocida sigue lanzando, y null no la confunde", () => {
+	it("una unidad activa desconocida sigue lanzando", () => {
 		expect(() => plan(emptyProgressState(), "no-existe")).toThrow(
 			/Unidad desconocida/,
 		);
