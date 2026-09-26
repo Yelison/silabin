@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { endingKey, stretchInKey, stretchKey } from "@/content/audio-keys";
 import {
 	ACCENTS,
 	audioManifest,
@@ -11,7 +12,7 @@ import {
 import { phase0Items, phase0Units } from "@/content/phase0";
 import { phase1Items, phase1Units } from "@/content/phase1";
 import { phase2Items, phase2Units } from "@/content/phase2";
-import { pictures } from "@/content/pictures";
+import { pictureId, pictures } from "@/content/pictures";
 import { templateIds, templates } from "@/content/templates";
 
 describe("manifiesto de audio", () => {
@@ -24,6 +25,11 @@ describe("manifiesto de audio", () => {
 		// partir de esa misma función y el test sería tautológico: no podría fallar nunca.
 		// El conjunto esperado se recalcula aquí desde los datos crudos, así que este test
 		// detectaría que referencedAudioKeys() olvidara, por ejemplo, los audios de unidad.
+		const rimas = phase0Items.filter((i) => i.id.startsWith("oral:rhyme:"));
+		const siONo = phase0Items.filter((i) => i.id.startsWith("oral:hear:"));
+		const conSonido = [...phase1Items, ...phase2Items].filter(
+			(i) => i.kind === "letter" || i.kind === "syllable" || i.kind === "word",
+		);
 		const esperado = new Set([
 			...[...pictures, ...phase0Items, ...phase1Items, ...phase2Items].map(
 				(i) => i.audioKey,
@@ -31,9 +37,24 @@ describe("manifiesto de audio", () => {
 			...[...phase0Units, ...phase1Units, ...phase2Units].map(
 				(u) => u.audioKey,
 			),
+			...rimas.flatMap((i) => [
+				endingKey(pictureId(i.text)),
+				...(i.task?.optionIds ?? []).map(endingKey),
+			]),
+			...conSonido.map((i) => stretchKey(i.id)),
+			...siONo
+				.filter((i) => i.task?.answer === "si")
+				.map((i) => stretchInKey(i.id)),
 		]);
 		expect([...Object.keys(contentAudio)].sort()).toEqual([...esperado].sort());
 		expect([...referencedAudioKeys()].sort()).toEqual([...esperado].sort());
+	});
+
+	it("M12: los audios derivados dicen lo esperado", () => {
+		expect(contentAudio["ending:gato"]).toBe("ato");
+		expect(contentAudio["stretch:syllable:ma"]).toBe("mmma");
+		expect(contentAudio["stretch:syllable:pa"]).toBe("pa");
+		expect(contentAudio["stretch-in:a-pato"]).toBe("paaato");
 	});
 
 	it("los audios de unidad están en el manifiesto y dicen el título de su unidad", () => {

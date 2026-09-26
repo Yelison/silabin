@@ -102,6 +102,9 @@ const hearItems: Item[] = HEAR_TRIPLES.map(([phoneme, word, present]) => ({
 	phonemes: [],
 	audioKey: `instruction:hear:${phoneme}-${word}`,
 	imageKey: `img:${word}`,
+	// Como en clapItems: viajan con el ítem para la pista "despacio", sin que la interfaz
+	// tenga que decidir nada.
+	syllables: syllablesOf(word),
 	task: { answer: present ? "si" : "no" },
 }));
 

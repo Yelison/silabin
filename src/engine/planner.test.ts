@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCurriculum, curriculum } from "@/content/index";
+import {
+	buildCurriculum,
+	type CurriculumIndex,
+	curriculum,
+} from "@/content/index";
 import { templates } from "@/content/templates";
 import { applyResolution, applySessionEnd } from "@/engine/apply";
 import { MAX_PRESENTATIONS, owningUnits, planSession } from "@/engine/planner";
@@ -396,11 +400,19 @@ describe("el plan siempre es coherente, sobre muchas semillas y estados", () => 
 								continue;
 							}
 							const rango = templates[ejercicio.templateId].options;
-							if (rango === undefined) {
+							if (rango === undefined && ejercicio.templateId !== "build") {
 								expect([ejercicio.id, ejercicio.optionIds]).toEqual([
 									ejercicio.id,
 									[],
 								]);
+							} else if (ejercicio.templateId === "build") {
+								// build arma sus piezas aparte: sin rango declarado ni respuesta
+								// correcta marcada, pero sin piezas repetidas.
+								expect(ejercicio.correctOptionId).toBeNull();
+								expect([
+									ejercicio.id,
+									new Set(ejercicio.optionIds).size,
+								]).toEqual([ejercicio.id, ejercicio.optionIds.length]);
 							} else {
 								expect(ejercicio.optionIds).toContain(
 									ejercicio.correctOptionId,
@@ -654,9 +666,10 @@ describe("plantillas y opciones", () => {
 		expect(dificiles).toBeGreaterThan(0);
 	});
 
-	it("las plantillas sin opciones no traen ninguna", () => {
+	it("las plantillas sin opciones no traen ninguna, salvo build, que arma sus piezas aparte", () => {
 		for (const ejercicio of plan(presented("phase2:m"), "phase2:m", 6)) {
 			if (templates[ejercicio.templateId].options !== undefined) continue;
+			if (ejercicio.templateId === "build") continue;
 			expect(ejercicio.optionIds).toEqual([]);
 			expect(ejercicio.correctOptionId).toBeNull();
 		}
@@ -997,5 +1010,218 @@ describe("sesión de solo repaso (activeUnitId null)", () => {
 		expect(() => plan(emptyProgressState(), "no-existe")).toThrow(
 			/Unidad desconocida/,
 		);
+	});
+});
+
+describe("plantilla build: piezas para arrastrar", () => {
+	function presentedIn(
+		content: CurriculumIndex,
+		unitId: string,
+	): ProgressState {
+		const unit = content.units.get(unitId);
+		const state = emptyProgressState();
+		for (const id of unit?.introduces ?? []) {
+			state.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				box: 1,
+				firstTryCorrect: 1,
+				lastSessionIndex: 0,
+			};
+		}
+		return state;
+	}
+
+	it("M6: en phase2:m, las piezas son las 5 vocales más letter:m, sin correcta marcada", () => {
+		let vistos = 0;
+		for (let seed = 1; seed <= 20; seed += 1) {
+			for (const ejercicio of plan(
+				presented("phase2:m"),
+				"phase2:m",
+				6,
+				seed,
+			)) {
+				if (ejercicio.templateId !== "build") continue;
+				vistos += 1;
+				expect(ejercicio.correctOptionId).toBeNull();
+				expect([...ejercicio.optionIds].sort()).toEqual(
+					[
+						"letter:a",
+						"letter:e",
+						"letter:i",
+						"letter:m",
+						"letter:o",
+						"letter:u",
+					].sort(),
+				);
+			}
+		}
+		expect(vistos).toBeGreaterThan(0);
+	});
+
+	it("mata la mutación 2: la propia consonante del ítem entra aunque no esté entre las vistas", () => {
+		const contenido = buildCurriculum({
+			items: [
+				...["a", "e", "i", "o", "u"].map((v) => ({
+					id: `letter:${v}`,
+					kind: "letter" as const,
+					text: v,
+					phonemes: [v],
+					audioKey: `phoneme:${v}`,
+					display: { upper: v.toUpperCase(), lower: v },
+				})),
+				{
+					id: "letter:z",
+					kind: "letter" as const,
+					text: "z",
+					phonemes: ["z"],
+					audioKey: "phoneme:z",
+					display: { upper: "Z", lower: "z" },
+				},
+				{
+					id: "syllable:za",
+					kind: "syllable" as const,
+					text: "za",
+					phonemes: ["z", "a"],
+					audioKey: "syllable:za",
+				},
+			],
+			units: [
+				{
+					id: "vocales",
+					phase: 1 as const,
+					title: "Vocales",
+					audioKey: "unit:vocales",
+					requires: [],
+					introduces: [
+						"letter:a",
+						"letter:e",
+						"letter:i",
+						"letter:o",
+						"letter:u",
+					],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "silaba-z",
+					phase: 2 as const,
+					title: "La z",
+					audioKey: "unit:silaba-z",
+					requires: ["vocales"],
+					// Deliberado: esta unidad no introduce letter:z, así que nunca entra en
+					// "seen". Solo la propia consonante del ítem debe entrar de todos modos.
+					introduces: ["syllable:za"],
+					exercises: [{ templateId: "build" as const, weight: 1 }],
+				},
+			],
+		});
+		const sesion = planSession({
+			content: contenido,
+			state: presentedIn(contenido, "silaba-z"),
+			activeUnitId: "silaba-z",
+			sessionLength: 5,
+			seed: 1,
+		});
+		const construir = sesion.find(
+			(e) => e.templateId === "build" && e.kind === "evaluation",
+		);
+		expect(construir).toBeDefined();
+		expect(construir?.correctOptionId).toBeNull();
+		expect([...(construir?.optionIds ?? [])].sort()).toEqual(
+			[
+				"letter:a",
+				"letter:e",
+				"letter:i",
+				"letter:o",
+				"letter:u",
+				"letter:z",
+			].sort(),
+		);
+	});
+
+	it("nunca junta b, d, p o q entre las piezas (isForbiddenDistractor)", () => {
+		const contenido = buildCurriculum({
+			items: [
+				...["a", "e", "i", "o", "u"].map((v) => ({
+					id: `letter:${v}`,
+					kind: "letter" as const,
+					text: v,
+					phonemes: [v],
+					audioKey: `phoneme:${v}`,
+					display: { upper: v.toUpperCase(), lower: v },
+				})),
+				{
+					id: "letter:d",
+					kind: "letter" as const,
+					text: "d",
+					phonemes: ["d"],
+					audioKey: "phoneme:d",
+					display: { upper: "D", lower: "d" },
+				},
+				{
+					id: "letter:b",
+					kind: "letter" as const,
+					text: "b",
+					phonemes: ["b"],
+					audioKey: "phoneme:b",
+					display: { upper: "B", lower: "b" },
+				},
+				{
+					id: "syllable:ba",
+					kind: "syllable" as const,
+					text: "ba",
+					phonemes: ["b", "a"],
+					audioKey: "syllable:ba",
+				},
+			],
+			units: [
+				{
+					id: "vocales",
+					phase: 1 as const,
+					title: "Vocales",
+					audioKey: "unit:vocales",
+					requires: [],
+					introduces: [
+						"letter:a",
+						"letter:e",
+						"letter:i",
+						"letter:o",
+						"letter:u",
+					],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "silaba-d",
+					phase: 2 as const,
+					title: "La d",
+					audioKey: "unit:silaba-d",
+					requires: ["vocales"],
+					introduces: ["letter:d"],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "silaba-b",
+					phase: 2 as const,
+					title: "La b",
+					audioKey: "unit:silaba-b",
+					requires: ["silaba-d"],
+					introduces: ["syllable:ba"],
+					exercises: [{ templateId: "build" as const, weight: 1 }],
+				},
+			],
+		});
+		const sesion = planSession({
+			content: contenido,
+			state: emptyProgressState(),
+			activeUnitId: "silaba-b",
+			sessionLength: 5,
+			seed: 1,
+		});
+		const construir = sesion.find(
+			(e) => e.templateId === "build" && e.kind === "evaluation",
+		);
+		expect(construir).toBeDefined();
+		expect(construir?.optionIds).toContain("letter:b");
+		expect(construir?.optionIds).not.toContain("letter:d");
 	});
 });

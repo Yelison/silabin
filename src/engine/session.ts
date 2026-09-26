@@ -1,6 +1,7 @@
 import type { CurriculumIndex } from "@/content/index";
 import type { HintStep } from "@/content/templates";
 import type { Item } from "@/content/types";
+import { expectedAnswer } from "@/engine/answers";
 import {
 	applyPresentation,
 	applyResolution,
@@ -116,16 +117,17 @@ export function completePresentation(run: SessionRun): SessionRun {
 
 /**
  * Compara la respuesta con la esperada tal cual, sin normalizar: `"2"` y `" 2"` son distintas.
- * Las plantillas de trazo y de voz tendrán su propio evaluador; hasta entonces, un ítem sin
- * respuesta esperable lanza en vez de dar por buena o mala una respuesta a ciegas.
+ * `expectedAnswer` es la única fuente de esa respuesta. Las plantillas de trazo y de voz
+ * todavía no tienen evaluador propio y siguen dando `null`; un ítem sin respuesta esperable
+ * lanza en vez de dar por buena o mala una respuesta a ciegas.
  */
 export function checkAnswer(
 	exercise: PlannedExercise,
 	item: Item,
 	answer: string,
 ): AttemptOutcome {
-	const expected = exercise.correctOptionId ?? item.task?.answer;
-	if (expected === undefined)
+	const expected = expectedAnswer(exercise, item);
+	if (expected === null)
 		throw new Error(
 			`El ejercicio ${exercise.id} (${exercise.templateId}) no tiene respuesta que comparar`,
 		);
