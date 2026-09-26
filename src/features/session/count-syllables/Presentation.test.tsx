@@ -97,6 +97,10 @@ describe("count-syllables / Presentation", () => {
 		await terminar(0);
 		const luces = () => container.querySelectorAll("[data-light]").length;
 		expect(luces()).toBe(0);
+		// I2: con 0 luces el hueco sigue reservado y la primera luz no empuja nada.
+		const hueco = container.querySelector("[data-lights]");
+		expect(hueco).not.toBeNull();
+		expect(hueco?.className).toContain("min-h-8");
 		act(() => pendientes[1]?.req.onSegment?.(0));
 		expect(luces()).toBe(1);
 		act(() => pendientes[1]?.req.onSegment?.(2));

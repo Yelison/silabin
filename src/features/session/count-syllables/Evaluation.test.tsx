@@ -130,6 +130,14 @@ describe("count-syllables / Evaluation", () => {
 		expect(m.audio.play).not.toHaveBeenCalled();
 	});
 
+	it("I2: sin luces el hueco de las luces sigue reservado, para que el tambor no salte", () => {
+		const m = montar({ feedback: conPista("reduce") });
+		const hueco = m.container.querySelector("[data-lights]");
+		expect(hueco).not.toBeNull();
+		expect(hueco?.className).toContain("min-h-8");
+		expect(m.luces()).toBe(0);
+	});
+
 	it("el altavoz vuelve a decir la palabra, y con locked no", () => {
 		const m = montar();
 		fireEvent.click(screen.getByRole("button", { name: "Oír otra vez" }));

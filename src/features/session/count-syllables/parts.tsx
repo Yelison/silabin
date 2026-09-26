@@ -20,9 +20,13 @@ export function Imagen(props: { imageKey: string | undefined }) {
  * luces como sílabas diría el número, y la pista tiene que ser el sonido, no la cifra.
  */
 export function Luces(props: { count: number }) {
-	if (props.count <= 0) return null;
+	// El hueco se reserva siempre: si la primera luz lo creara, empujaría el tambor.
 	return (
-		<div aria-hidden="true" className="flex h-8 items-center gap-3">
+		<div
+			aria-hidden="true"
+			data-lights
+			className="flex min-h-8 items-center gap-3"
+		>
 			{Array.from({ length: props.count }, (_, i) => (
 				<span
 					// biome-ignore lint/suspicious/noArrayIndexKey: las luces no tienen identidad propia
