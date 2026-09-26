@@ -143,7 +143,8 @@ src/
 ## Tarea 1: Base visual mínima
 
 **Riesgo:** estilos y configuración. Revisión de cumplimiento, sin mutación, salvo el test de
-estados de `OptionCard`.
+estados de `OptionCard` y la elección de voz (lógica de `audio/`, con mutaciones; ver el final
+de la tarea).
 
 **Files:**
 - Create: `docs/diseno-visual.md`, `src/components/OptionCard.tsx` (+ test),
@@ -214,6 +215,42 @@ de los tests; los tests existentes siguen en verde sin tocar sus aserciones de
 comportamiento; `pnpm build` en verde.
 
 **Commit:** `feat(ui): tokens y componentes base pensados para niños de 3 a 6 años`.
+
+### Elección de la voz más natural del dispositivo (añadido el 2026-09-26 a petición del autor)
+
+**Files:** Modify `src/audio/speech-player.ts` (`pickVoice`, exportada para test) y
+`src/audio/speech-player.test.ts`.
+
+Hoy `pickVoice` coge la primera voz del idioma del acento y, si no hay, la primera en español.
+Los dispositivos traen voces mucho mejores que la primera de la lista: en iOS, las
+«mejoradas» o «premium»; en Edge, las de Microsoft «Natural», que van por la red. Hasta que
+lleguen los audios pregrabados, elegir bien es la mejora de voz más barata.
+
+**Contrato:** el orden sigue siendo **primero el acento, después la calidad**. Una voz
+estándar `es-MX` gana a una «Natural» `es-US` con el acento `mx`, porque el acento que oye el
+niño importa más que la calidad (Ruling previsto R19). Dentro de cada grupo (idioma exacto; luego
+cualquier `es`), gana la de mayor puntuación, y en empate, la primera de la lista:
+
+- +2 si el nombre casa con `/natural|neural|premium|enhanced|mejorad/i`;
+- −2 si es una voz de fantasía de Apple (`/\b(eddy|flo|grandma|grandpa|abuel[oa]|reed|rocko|sandy|shelley)\b/i`),
+  que suenan raras para enseñar sonidos.
+
+**Casos de test:**
+
+| Id | Voces (en este orden), acento | Esperado |
+|---|---|---|
+| A8 | `es-MX "Paulina"`, `es-MX "Paulina (Mejorada)"`; `mx` | la mejorada |
+| A9 | `es-MX "Microsoft Dalia Online (Natural)"` tras `es-MX "Microsoft Sabina"`; `mx` | Dalia |
+| A10 | `es-US "Paloma (Natural)"`, `es-MX "Paulina"`; `mx` | Paulina (el acento manda) |
+| A11 | `es-MX "Eddy"`, `es-MX "Paulina"`; `mx` | Paulina |
+| A12 | solo `es-ES "Mónica (Premium)"` y `es-ES "Jorge"`; `do` | Mónica (grupo `es`, gana la calidad) |
+| A13 | solo `es-MX "Grandma"`; `mx` | Grandma (penalizar no es excluir: mejor una voz que ninguna) |
+| A14 | los casos A1-A7 actuales | siguen en verde sin cambios |
+
+**Mutaciones:** (1) ordenar por calidad antes que por acento; (2) excluir las voces de fantasía
+en vez de penalizarlas; (3) romper el empate por la última y no por la primera.
+
+**Commit aparte:** `feat(audio): la voz del dispositivo más natural del acento, mientras no haya audios grabados`.
 
 ---
 
@@ -544,4 +581,8 @@ con `NODE_ENV=production` debe fallar).
 - Briefs con `sed -n` sobre este fichero (`grep -n '^## Tarea' <plan>`).
 - Rulings previstos para el ledger: R15 (`build` acepta tocar y arrastrar), R16 (tema claro
   fijo), R17 (se atenúa el primer distractor en el orden del motor), R18 (`listen-tap` pinta
-  el par minúscula-mayúscula en cada opción de letra).
+  el par minúscula-mayúscula en cada opción de letra), R19 (en `pickVoice`, el acento pesa
+  más que la calidad).
+- README (Tarea 6): en «Después», la voz. Prueba de Azure con unos 10 audios en `do` y `mx`
+  antes del lote, y **los fonemas sueltos («mmm», «sss», «p») grabados con voz humana**:
+  ninguna voz sintética los dice bien.
