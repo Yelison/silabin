@@ -219,7 +219,7 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 						set({ saveFailed: true });
 						return;
 					}
-					set({ readFailed: false });
+					set({ readFailed: false, recovered: false });
 				}
 				await guardar(get().doc);
 			},

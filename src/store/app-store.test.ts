@@ -437,6 +437,56 @@ describe("I3: un fallo de lectura no permite sobrescribir el progreso guardado",
 		expect(store.getState().saveFailed).toBe(true);
 	});
 
+	it("retrySave que desbloquea deja recovered y readFailed en false; con un documento real leído deja readFailed en true", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		expect(store.getState().recovered).toBe(true);
+		expect(store.getState().readFailed).toBe(true);
+
+		// Con un documento real en el disco no se desbloquea: la marca se queda.
+		estado.lectura = documentoReal();
+		await store.getState().retrySave();
+		expect(store.getState().readFailed).toBe(true);
+		expect(store.getState().recovered).toBe(true);
+
+		// Sin nada guardado sí: la lectura no falló por daño, así que tampoco hay "recuperado".
+		estado.lectura = null;
+		await store.getState().retrySave();
+		expect(store.getState().readFailed).toBe(false);
+		expect(store.getState().recovered).toBe(false);
+	});
+
+	it("un segundo load correcto reinicia la marca y vuelve a escribir", async () => {
+		for (const segunda of [null, documentoReal()]) {
+			const { adapter, estado } = adaptadorConLectura("lanza");
+			const { store } = crear(adapter);
+			await store.getState().load();
+			expect(store.getState().readFailed).toBe(true);
+
+			estado.lectura = segunda;
+			await store.getState().load();
+			expect(store.getState().readFailed).toBe(false);
+			expect(store.getState().recovered).toBe(false);
+
+			store.getState().beginSession();
+			await hastaPrimeraEvaluacion(store);
+			expect(estado.escrituras.length).toBeGreaterThan(0);
+			expect(store.getState().saveFailed).toBe(false);
+		}
+	});
+
+	it("abandonSession no borra la marca: sigue sin escribirse nada", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		await hastaPrimeraEvaluacion(store);
+		store.getState().abandonSession();
+		expect(store.getState().readFailed).toBe(true);
+		expect(estado.escrituras).toHaveLength(0);
+	});
+
 	it("un documento guardado inválido (recovered por migrate) no bloquea: se guarda como siempre", async () => {
 		const { adapter, estado } = adaptadorConLectura({
 			version: 1,

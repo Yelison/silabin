@@ -7,6 +7,8 @@ const SIN_GUARDAR =
 	"El progreso no se está guardando en este dispositivo. Suele pasar en navegación privada o sin espacio libre. Exporta el progreso para no perderlo.";
 const RECUPERADO =
 	"Una parte del progreso guardado estaba dañada y se ha recuperado lo que se pudo.";
+const SIN_LEER =
+	"No se ha podido leer el progreso guardado en este dispositivo. Por ahora no se guarda nada nuevo, para no borrar lo que haya. Pulsa Reintentar o vuelve a abrir la aplicación. Exporta el progreso para no perderlo.";
 
 /**
  * Aviso para el adulto, no para el niño: un icono pequeño y gris en una esquina, sin rojo ni
@@ -15,10 +17,11 @@ const RECUPERADO =
 export function SaveWarning() {
 	const saveFailed = useApp((s) => s.saveFailed);
 	const recovered = useApp((s) => s.recovered);
+	const readFailed = useApp((s) => s.readFailed);
 	const retrySave = useApp((s) => s.retrySave);
 	const [open, setOpen] = useState(false);
 
-	if (!saveFailed && !recovered) {
+	if (!saveFailed && !recovered && !readFailed) {
 		// Sin nada que contar, el panel vuelve cerrado: si el guardado falla otra vez, sale el
 		// icono y no un diálogo a pantalla completa encima del niño. Se reajusta durante el
 		// render (patrón de React para estado derivado), sin efecto ni parpadeo.
@@ -56,8 +59,16 @@ export function SaveWarning() {
 					className="fixed inset-0 z-20 flex items-center justify-center bg-gray-900/40 p-4"
 				>
 					<div className="max-w-md space-y-4 rounded-2xl bg-white p-6 text-gray-800 shadow-lg">
-						{saveFailed && <p>{SIN_GUARDAR}</p>}
-						{recovered && <p>{RECUPERADO}</p>}
+						{/* Con la lectura fallida `recovered` también es true, pero no hay nada dañado:
+						    no se leyó. Sale solo el texto de lectura, no los dos. */}
+						{readFailed ? (
+							<p>{SIN_LEER}</p>
+						) : (
+							<>
+								{saveFailed && <p>{SIN_GUARDAR}</p>}
+								{recovered && <p>{RECUPERADO}</p>}
+							</>
+						)}
 						<div className="flex gap-3">
 							<button
 								type="button"

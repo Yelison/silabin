@@ -17,6 +17,9 @@ const TEXTO_SIN_GUARDAR =
 const TEXTO_RECUPERADO =
 	"Una parte del progreso guardado estaba dañada y se ha recuperado lo que se pudo.";
 
+const TEXTO_SIN_LEER =
+	"No se ha podido leer el progreso guardado en este dispositivo. Por ahora no se guarda nada nuevo, para no borrar lo que haya. Pulsa Reintentar o vuelve a abrir la aplicación. Exporta el progreso para no perderlo.";
+
 function aviso() {
 	return screen.queryByRole("button", { name: /progreso/i });
 }
@@ -97,6 +100,30 @@ describe("SaveWarning", () => {
 		await user.click(screen.getByRole("button", { name: /progreso/i }));
 		expect(screen.getByText(TEXTO_RECUPERADO)).toBeDefined();
 		expect(screen.queryByText(TEXTO_SIN_GUARDAR)).toBeNull();
+	});
+
+	it("con la lectura fallida se avisa aunque saveFailed aún sea false, con su texto y sin el de recuperado", async () => {
+		const store = crearStore();
+		await store.getState().load();
+		store.setState({ readFailed: true, recovered: true, saveFailed: false });
+		render(conProveedores(store, fakeAudio(), <SaveWarning />));
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /progreso/i }));
+		expect(screen.getByText(TEXTO_SIN_LEER)).toBeDefined();
+		expect(screen.queryByText(TEXTO_RECUPERADO)).toBeNull();
+		expect(screen.queryByText(TEXTO_SIN_GUARDAR)).toBeNull();
+		expect(screen.getByRole("button", { name: "Reintentar" })).toBeDefined();
+	});
+
+	it("con recovered y sin la marca de lectura fallida sigue mostrando el texto de recuperado", async () => {
+		const store = crearStore();
+		await store.getState().load();
+		store.setState({ recovered: true, readFailed: false });
+		render(conProveedores(store, fakeAudio(), <SaveWarning />));
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /progreso/i }));
+		expect(screen.getByText(TEXTO_RECUPERADO)).toBeDefined();
+		expect(screen.queryByText(TEXTO_SIN_LEER)).toBeNull();
 	});
 
 	it("el icono es gris: ni rojo ni aspa", async () => {
