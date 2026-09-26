@@ -43,8 +43,14 @@ export type AppState = {
 	progress: ProgressState;
 	/** `loadState` tuvo que rescatar algo. */
 	recovered: boolean;
-	/** El último guardado devolvió `saved: false`. */
+	/** El último guardado devolvió `saved: false`, o no se intentó por `readFailed`. */
 	saveFailed: boolean;
+	/**
+	 * La lectura inicial lanzó: puede haber un documento bueno en el disco que no se pudo leer.
+	 * Mientras esté activa no se escribe nada, para no pisarlo con el documento vacío de la
+	 * memoria. Solo `retrySave` la quita, y solo si ahora confirma que no hay nada guardado.
+	 */
+	readFailed: boolean;
 	run: SessionRun | null;
 	/** La última sesión terminada, para la pantalla de fin. */
 	summary: SessionSummary | null;
@@ -85,6 +91,12 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 			aparte: Partial<AppState> = {},
 		): Promise<void> {
 			set({ ...aparte, doc });
+			if (get().readFailed) {
+				// El disco puede tener un documento bueno que no se pudo leer: escribir el de la
+				// memoria lo destruiría. El niño sigue en memoria y el adulto ve el aviso.
+				set({ saveFailed: true });
+				return;
+			}
 			const { saved } = await saveState(adapter, doc);
 			set({ saveFailed: !saved });
 		}
@@ -101,16 +113,18 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 			progress: toProgress(initialDoc, content),
 			recovered: false,
 			saveFailed: false,
+			readFailed: false,
 			run: null,
 			summary: null,
 
 			async load() {
-				const { state, recovered } = await loadState(adapter);
+				const { state, recovered, readFailed } = await loadState(adapter);
 				set({
 					status: "ready",
 					doc: state,
 					progress: toProgress(state, content),
 					recovered,
+					readFailed,
 				});
 			},
 
@@ -191,6 +205,22 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 			},
 
 			async retrySave() {
+				if (get().readFailed) {
+					let leido: unknown;
+					try {
+						leido = await adapter.read();
+					} catch {
+						set({ saveFailed: true });
+						return;
+					}
+					if (leido !== null && leido !== undefined) {
+						// Hay un documento real en el disco y en este plan no se fusiona con el de la
+						// memoria: se deja tal cual, sin adoptarlo a mitad de sesión.
+						set({ saveFailed: true });
+						return;
+					}
+					set({ readFailed: false });
+				}
 				await guardar(get().doc);
 			},
 

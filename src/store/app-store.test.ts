@@ -315,6 +315,143 @@ describe("S6 y S7: fallos de guardado", () => {
 	});
 });
 
+/**
+ * Un adaptador cuya lectura se controla desde el test (`lectura`) y que cuenta las escrituras.
+ * `"lanza"` simula IndexedDB inaccesible; cualquier otro valor es lo que devuelve `read()`.
+ */
+function adaptadorConLectura(lectura: unknown) {
+	const estado: { lectura: unknown; escrituras: unknown[] } = {
+		lectura,
+		escrituras: [],
+	};
+	const adapter: StorageAdapter = {
+		read: () =>
+			estado.lectura === "lanza"
+				? Promise.reject(
+						new Error("Connection to Indexed Database server lost"),
+					)
+				: Promise.resolve(estado.lectura),
+		write: (value) => {
+			estado.escrituras.push(value);
+			return Promise.resolve();
+		},
+		clear: () => Promise.resolve(),
+	};
+	return { adapter, estado };
+}
+
+function documentoReal(): PersistedState {
+	const doc = emptyPersistedState();
+	doc.units["phase1:vowel-a"] = { status: "done", bestStars: 3 };
+	return doc;
+}
+
+describe("I3: un fallo de lectura no permite sobrescribir el progreso guardado", () => {
+	it("con la lectura rota no se escribe nunca, se avisa con saveFailed y el niño sigue jugando", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		await hastaPrimeraEvaluacion(store);
+		expect(store.getState().saveFailed).toBe(true);
+		const feedback = await store.getState().answer(respuestaCorrecta(store));
+		expect(feedback.resolution).not.toBeNull();
+		expect(estado.escrituras).toHaveLength(0);
+		expect(store.getState().saveFailed).toBe(true);
+		expect(store.getState().run).not.toBeNull();
+		store.getState().next();
+	});
+
+	it("endSession con la lectura rota no lanza y llega al resumen", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		await jugarSesionCompleta(store);
+		const s = store.getState();
+		expect(estado.escrituras).toHaveLength(0);
+		expect(s.saveFailed).toBe(true);
+		expect(s.run).toBeNull();
+		expect(s.summary).not.toBeNull();
+	});
+
+	it("retrySave con la lectura ya sin nada guardado escribe el documento en memoria una vez y desbloquea", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		await hastaPrimeraEvaluacion(store);
+		await store.getState().answer(respuestaCorrecta(store));
+		expect(estado.escrituras).toHaveLength(0);
+
+		estado.lectura = null;
+		const enMemoria = store.getState().doc;
+		await store.getState().retrySave();
+		expect(estado.escrituras).toEqual([enMemoria]);
+		expect(store.getState().saveFailed).toBe(false);
+
+		// Desbloqueado: a partir de aquí se guarda como siempre.
+		store.getState().next();
+		await jugarHastaElFinal(store);
+		expect(estado.escrituras.length).toBeGreaterThan(1);
+		expect(store.getState().saveFailed).toBe(false);
+	});
+
+	it("retrySave con la lectura ya sin nada (undefined) también desbloquea", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		estado.lectura = undefined;
+		await store.getState().retrySave();
+		expect(estado.escrituras).toHaveLength(1);
+		expect(store.getState().saveFailed).toBe(false);
+	});
+
+	it("retrySave que ahora lee un documento real no lo pisa ni lo adopta", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		await hastaPrimeraEvaluacion(store);
+		await store.getState().answer(respuestaCorrecta(store));
+
+		estado.lectura = documentoReal();
+		const antes = store.getState().doc;
+		await store.getState().retrySave();
+		expect(estado.escrituras).toHaveLength(0);
+		expect(store.getState().saveFailed).toBe(true);
+		expect(store.getState().doc).toBe(antes);
+
+		// Sigue bloqueado: un paso posterior tampoco escribe.
+		store.getState().next();
+		await jugarHastaElFinal(store);
+		expect(estado.escrituras).toHaveLength(0);
+		expect(store.getState().saveFailed).toBe(true);
+	});
+
+	it("retrySave con la lectura rota otra vez no escribe y sigue avisando", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		await store.getState().retrySave();
+		expect(estado.escrituras).toHaveLength(0);
+		expect(store.getState().saveFailed).toBe(true);
+	});
+
+	it("un documento guardado inválido (recovered por migrate) no bloquea: se guarda como siempre", async () => {
+		const { adapter, estado } = adaptadorConLectura({
+			version: 1,
+			basura: true,
+		});
+		const { store } = crear(adapter);
+		await store.getState().load();
+		expect(store.getState().recovered).toBe(true);
+		store.getState().beginSession();
+		await hastaPrimeraEvaluacion(store);
+		expect(estado.escrituras.length).toBeGreaterThan(0);
+		expect(store.getState().saveFailed).toBe(false);
+	});
+});
+
 describe("S8: endSession con la sesión a medias", () => {
 	it("lanza y deja el estado como estaba", async () => {
 		const { store, adapter } = crear();

@@ -68,6 +68,32 @@ describe("loadState", () => {
 		expect(state).toEqual(emptyPersistedState());
 		expect(recovered).toBe(true);
 	});
+
+	it("marca readFailed solo cuando la lectura lanza, no cuando el documento es inválido ni cuando no hay nada", async () => {
+		const roto: StorageAdapter = {
+			read: () =>
+				Promise.reject(new Error("Connection to Indexed Database server lost")),
+			write: () => Promise.resolve(),
+			clear: () => Promise.resolve(),
+		};
+		const lanza = await loadState(roto);
+		expect(lanza.state).toEqual(emptyPersistedState());
+		expect(lanza.recovered).toBe(true);
+		expect(lanza.readFailed).toBe(true);
+
+		const vacio = await loadState(createMemoryAdapter());
+		expect(vacio.readFailed).toBe(false);
+
+		// Un documento inválido no deja en el disco nada bueno que proteger: se puede escribir.
+		const invalido = await loadState(
+			createMemoryAdapter({ version: 1, basura: true }),
+		);
+		expect(invalido.recovered).toBe(true);
+		expect(invalido.readFailed).toBe(false);
+
+		const valido = await loadState(createMemoryAdapter(emptyPersistedState()));
+		expect(valido.readFailed).toBe(false);
+	});
 });
 
 describe("saveState", () => {
