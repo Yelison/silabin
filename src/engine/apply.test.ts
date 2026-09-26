@@ -385,4 +385,38 @@ describe("applySessionEnd", () => {
 		});
 		expect(state.units["phase2:m"]?.status).toBe("active");
 	});
+
+	it("T2.6: sin unidad (sesión de solo repaso) cuenta la sesión y no toca ninguna mejor marca", () => {
+		const conMarca = applySessionEnd({
+			content,
+			state: emptyProgressState(),
+			unitId: "phase2:m",
+			stars: 2,
+		});
+		const state = applySessionEnd({
+			content,
+			state: conMarca,
+			unitId: null,
+			stars: 3,
+		});
+		expect(state.sessionCounter).toBe(conMarca.sessionCounter + 1);
+		expect(state.counters.sessions).toBe(conMarca.counters.sessions + 1);
+		expect(state.units["phase2:m"]?.bestStars).toBe(2);
+		for (const [id, unit] of Object.entries(state.units)) {
+			expect(unit.bestStars).toBe(conMarca.units[id]?.bestStars);
+		}
+	});
+
+	it("T2.6: sin unidad, sobre un estado vacío, ninguna unidad recibe estrellas", () => {
+		const state = applySessionEnd({
+			content,
+			state: emptyProgressState(),
+			unitId: null,
+			stars: 3,
+		});
+		expect(state.sessionCounter).toBe(1);
+		for (const unit of Object.values(state.units)) {
+			expect(unit.bestStars).toBe(0);
+		}
+	});
 });

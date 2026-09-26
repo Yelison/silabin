@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { Counters, ItemProgress, UnitProgress } from "@/engine/types";
+import type {
+	Counters,
+	ItemProgress,
+	SessionLogEntry,
+	UnitProgress,
+} from "@/engine/types";
 import { emptyProgressState } from "@/engine/types";
 
 export const CURRENT_VERSION = 1;
@@ -44,12 +49,14 @@ const unitProgressSchema = z.object({
 	bestStars: starsSchema,
 }) satisfies z.ZodType<UnitProgress>;
 
+// unitId es null en una sesión de solo repaso. Ensanchar el campo no invalida documentos v1
+// (todos traen un id), así que no hay migración. Misma ata que itemProgressSchema.
 export const sessionRecordSchema = z.object({
 	index: z.number().int().min(0),
-	unitId: z.string().min(1),
+	unitId: z.string().min(1).nullable(),
 	stars: starsSchema,
 	endedAt: z.string().min(1),
-});
+}) satisfies z.ZodType<SessionLogEntry>;
 export type SessionRecord = z.infer<typeof sessionRecordSchema>;
 
 export const rewardStateSchema = z.object({

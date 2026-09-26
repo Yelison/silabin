@@ -39,21 +39,37 @@ export function createIdbAdapter(): StorageAdapter {
 	};
 }
 
-export async function loadState(
-	adapter: StorageAdapter,
-): Promise<{ state: PersistedState; recovered: boolean }> {
+/**
+ * Lee el documento guardado. `readFailed` distingue "la lectura lanzó" de "no había nada" o
+ * "lo guardado estaba dañado": en el primer caso el disco puede tener un documento bueno que
+ * simplemente no se pudo leer ahora, y quien guarde encima lo destruiría. En los otros dos no
+ * hay nada bueno que proteger. El estado devuelto es el vacío en ambos, para poder jugar.
+ */
+export async function loadState(adapter: StorageAdapter): Promise<{
+	state: PersistedState;
+	recovered: boolean;
+	readFailed: boolean;
+}> {
 	let raw: unknown;
 	try {
 		raw = await adapter.read();
 	} catch {
 		// Ventana privada, almacenamiento bloqueado o base de datos inaccesible.
-		return { state: emptyPersistedState(), recovered: true };
+		return {
+			state: emptyPersistedState(),
+			recovered: true,
+			readFailed: true,
+		};
 	}
 
 	if (raw === null || raw === undefined) {
-		return { state: emptyPersistedState(), recovered: false };
+		return {
+			state: emptyPersistedState(),
+			recovered: false,
+			readFailed: false,
+		};
 	}
-	return migrate(raw);
+	return { ...migrate(raw), readFailed: false };
 }
 
 /**

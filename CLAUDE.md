@@ -40,8 +40,13 @@ completo dentro, y rondas de corrección de hasta 5 vueltas. Reglas:
 **Modelos, según lo que pide cada trabajo**
 - La sesión principal (el coordinador) corre en el modelo que elige el usuario con `/model`,
   no en el que diga este fichero. Lo recomendado es `/model opus` para escribir el plan y
-  `/model sonnet` para ejecutarlo. Si al empezar a ejecutar un plan la sesión está en Opus,
-  recuérdaselo al usuario.
+  `/model sonnet` para ejecutarlo.
+- **Puerta de modelo (obligatoria).** Antes de despachar el primer subagente de una sesión
+  de ejecución, o de cualquier trabajo de implementación, comprueba en qué modelo corres. Si
+  no es Sonnet, **para sin despachar nada** y di: «Esta sesión está en <modelo>. Para
+  ejecutar, cambia con `/model sonnet` y dime cuando esté». Lo mismo al revés: si el usuario
+  pide escribir un plan y la sesión no está en Opus, sugiere `/model opus` antes de empezar.
+  El usuario teme olvidarlo y gastar tokens de más: esta puerta no se salta.
 - Subagentes implementadores y revisores de tarea: `model: "sonnet"` en el Agent tool.
 - Revisión final de la rama: `model: "opus"`. Encontró el único defecto crítico del Plan 1;
   no se recorta.
@@ -53,6 +58,15 @@ completo dentro, y rondas de corrección de hasta 5 vueltas. Reglas:
 - Subagentes en secuencia, nunca en paralelo. Sin workflows ni fan-out.
 - **Sesión nueva cada 2-3 tareas.** El ledger es la memoria: al empezar se lee el ledger y
   no se reconstruye la historia. Antes de cortar, deja el ledger al día y haz commit de él.
+- **Aviso de corte (obligatorio).** Al cerrar cada tarea, di cuántas lleva esta sesión. Al
+  llegar a 2, o antes si la conversación ya es larga (muchas vueltas de corrección, diffs
+  grandes o un resumen automático de contexto), no empieces la siguiente: deja el ledger al
+  día, haz commit y di: «Buen momento para cortar: ejecuta `/clear` y empieza con
+  "Retoma el Plan N desde el ledger"». Con `/clear` se sigue en el mismo modelo, así que
+  recuerda también cuál debe ser. **Siempre que recomiendes `/clear`, incluye en el mismo
+  mensaje, en un bloque de código copiable, el primer mensaje exacto que el usuario debe
+  escribir después:** plan y ruta, rama, ledger (`grep -n` y tramo final), tareas
+  completas, siguiente tarea con su brief y rango de líneas, y los Rulings que le afectan.
 
 **Planes más cortos**
 - Por tarea, el plan fija el contrato (tipos, firmas, qué ficheros toca), la lista de casos

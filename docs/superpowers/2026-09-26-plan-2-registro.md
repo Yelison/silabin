@@ -1,0 +1,133 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-09-26-silabin-sesion.md
+
+Ledger versionado del Plan 2 (modelo: `2026-09-19-plan-1-registro.md`). Busca `Ruling` para las
+decisiones tomadas sin consultar y `minor (deferred)` para lo que se dejó sin arreglar.
+
+Spec: docs/superpowers/specs/2026-09-18-silabin-design.md (autoridad; el plan cita §2, §4, §5, §8, §9)
+Rama: feat/plan-2-sesion (desde main en 7ca3350; HEAD al empezar 61cfcac)
+Coordinador: Sonnet 5 (puerta de modelo pasada). Implementadores y revisores de tarea: sonnet. Revisión final: opus.
+Briefs/reportes/diffs (desechables): `.superpowers/sdd/2026-09-26-silabin-sesion/`. Los briefs se extraen con
+`sed -n A,Bp` porque el plan usa «Tarea N» y `scripts/task-brief` busca «Task N».
+
+Rangos del plan: T1 132-187 · T2 188-244 · T3 245-331 · T4 332-405 · T5 406-484 · T6 485-585 ·
+T7 586-639 · T8 640-702 · T9 703-721.
+
+## Escaneo previo (conflictos entre tareas)
+
+| Par / tarea | Qué produce vs consume | Hallazgo |
+|---|---|---|
+| T1 → T3, T6-T8 | barril `@/engine` podado + reexports | limpio: T3 importa de módulos internos, la interfaz solo del barril |
+| T1 ↔ T2 | ambas tocan `planner.ts` (`basePool` / `planSession`) | limpio: secuenciales, T2 reutiliza `templatesFor`/`basePool` |
+| T1 → T8 | `oral:clap:*.syllables` | limpio: `Item.syllables` ya es opcional en `content/types.ts:27` |
+| T2 → T3, T4 | `SessionLogEntry`, `unitId` nullable | limpio |
+| T3 → T4 | `SessionRun`, `submitAnswer`, `finishSession` | **ambiguo**: T3 dice «calcula `unitId` y recalcula `units` antes de planificar» sin fijar el orden → Ruling R1 |
+| T4 → T6 | `AppState`, `createAppStore`, `createIdbAdapter` | **conflicto**: T6/U8 prohíbe a `features/` importar `@/store/persist`, pero `App` necesita `createIdbAdapter` y el test U5 necesita `importState` → Ruling R2 |
+| T5 → T7, T8 | `AudioPlayer`, `AudioRequest` | **hueco**: T8 dice que cada toque «suena `beat`», pero `beat` no es clave del manifiesto (A9 hace rechazar claves desconocidas) y `AudioPlayer` no tiene golpe suelto → Ruling R3 |
+| T6 → T7, T8 | `PresentationProps`, `EvaluationProps`, `templateViews`, `IMPLEMENTED_TEMPLATES` | nota: entre T6 y T8 `count-syllables` figura implementada sin vista registrada; T7 (paso 5) lo cubre con el retorno al mapa y nada se integra a `main` en medio. Sin ruling |
+| T7 ↔ T8 | `attemptKey`, `locked`, `feedback.hint`/`resolution` | limpio: `assisted` trae `hint` (modelo) y `resolution`, coherente con `recordAttempt` |
+| T7, T8 → T4 | `REWARDS` en `EndScreen` | limpio: `REWARDS` sigue en el barril |
+| T9 | README | limpio |
+| Autoconsistencia T1-T9 | tests contra código contra ficheros | T1: T1.2 exige un invariante ejecutable sobre un currículo de prueba → la comprobación debe vivir como función en `invariants.ts` (Ruling R4, menor). Resto: limpio |
+
+## Rulings previos a la ejecución
+
+- Ruling R1: en `startSession` el orden es `recomputeUnitStatuses` → `activeUnitId` → `planSession` — el plan enumera «calcula unitId» primero pero la trampa 1 del README exige unidades recalculadas antes de decidir cuál está activa — si fuera equivocado, una sesión de un documento viejo podría planificar sobre una unidad que ya no está activa.
+- Ruling R2: se crea `src/store/index.ts` (barril: `createAppStore`, tipos `AppState`/`AppStoreDeps`, `createIdbAdapter`, `createMemoryAdapter`, `StorageAdapter`, `importState`) en la Tarea 6, y `boundaries.test.ts` prohíbe a `features/` y `components/` todo import `@/store/<módulo>` (no solo persist y schema) además de `@/content` y `@/engine/…` — la regla del plan es contradictoria con lo que `App` necesita, y el barril mantiene su intención (interfaz sin acceso a esquema ni a persistencia cruda) — si fuera equivocado, cuesta un barril de 10 líneas.
+- Ruling R3: `AudioPlayer` gana `beat(): void` (golpe suelto y síncrono, sin cola; `createSilentPlayer` lo deja como no-op) en la Tarea 5, y la Tarea 8 lo usa en cada toque del tambor en vez de una petición `play({key:"beat"})` — el golpe por toque tiene que ser inmediato y no puede pasar por la cola ni por el manifiesto — si fuera equivocado, se cambia una línea en la interfaz y su uso.
+- Ruling R4: el invariante «toda unidad tiene plantilla para sus ítems» se implementa como función exportada en `src/content/invariants.ts` y se llama desde `invariants.test.ts` con el currículo real y con uno de prueba (T1.2) — sin eso T1.2 no puede demostrar que el invariante falla — si fuera equivocado, mover una función.
+- Ruling R5 (previsible, del plan): el mapa decide jugabilidad, no pedagogía; `abandonSession` no cuenta la sesión, conserva el crédito ya aplicado y reutiliza el índice de sesión (sin doble crédito, S9).
+
+## Progreso
+
+(Task <N>: complete … se añade aquí al cerrar cada tarea)
+
+Task 1: complete (commits 67025a0..d8f1dd2, review clean; 4/4 mutaciones del plan y 6 propias muertas)
+Task 1: minor (deferred): `invariants.test.ts:61-92` T1.2 usa una unidad con un ítem; un invariante que solo mire el primer elemento de `introduces` sobrevive (añadir un segundo ítem malo).
+Task 1: minor (deferred): el mensaje del commit dice que T1.1 falla por las unidades de Fase 2; en realidad falló primero por la función inexistente (la mutación 2 demuestra que las detecta).
+
+Task 2: fix round 1/2 (3 addressed, 0 open — «vencidos primero» y desempate por lastSessionIndex sin test que discriminara, título de test engañoso; commits a87b713..9f623aa)
+Task 2: complete (commits 9c630db..9f623aa, review clean tras 1 ronda; 4/4 mutaciones del plan y 6 propias muertas, las 2 supervivientes ahora muertas)
+Task 2: minor (deferred): `planner.ts:516-553` `planReviewOnly` repite ~30 líneas de `makeExercise` (nivel de distractor, buildOptions, contador de id); si cambia la regla del nivel, los dos modos divergen. Candidato a extraer en una limpieza.
+Task 2: minor (deferred): ningún test de modo normal cubre la eliminación del desempate `lastSessionIndex` del comparador compartido (solo lo cubre el test nuevo de repaso).
+Task 3: complete (commits 3845109..cfbe0bd, review clean a la primera; 5/5 mutaciones del brief y 17 propias, 3 supervivientes equivalentes; el revisor probó 13 más, 4 supervivientes menores/equivalentes)
+Task 3: Ruling R6: `checkAnswer` lanza para ítems de trazo y voz (`trace`, `say-it`) tal como manda el brief, y no se añade ninguna guarda en la Tarea 3 — el plan solo construye `count-syllables` y la única unidad activa hasta terminar Fase 0 es `phase0:clap`, que no planifica esas plantillas; ninguna tarea posterior las menciona — si fuera equivocado, un niño que llegue a las unidades de letras (o a una sesión de solo repaso con ítems de letras) toparía con una excepción a mitad de sesión. Va al README como trampa al cerrar el plan y la revisión final debe confirmarlo.
+Task 3: minor (deferred): `session.test.ts` no comprueba que `startSession` respete `seed` (forzar `seed: 0` sobrevive); comprobar si `planner.test.ts` ya cubre el determinismo.
+Task 3: minor (deferred): ningún test aserta `masteredAt === now` tras alcanzar dominio (sustituir `now` por `''` en `applyResolution` sobrevive) ni el orden de `run.resolutions` (anteponer en vez de añadir sobrevive; `starsForSession` no depende del orden).
+Task 3: minor (deferred): un plan de 0 ejercicios (sin unidad activa y sin ítems vistos) hace `isSessionOver` verdadero al empezar y `finishSession` registra 0 estrellas e incrementa `sessionCounter`; la interfaz (T7/T8) no debe mostrar resumen de una corrida vacía.
+Task 4: fix round 1/2 (3 addressed, 0 open — S9 vacuo ante el doble crédito, S5 sin valor del reloj, `retrySave` tautológico; commits 6e00b0f..65c92ec; re-revisión verificó dos de las mutaciones en copia aparte)
+Task 4: complete (commits 900fef7..65c92ec, review clean tras 1 ronda; 5/5 mutaciones del brief y 15 propias, 3 supervivientes equivalentes; el revisor probó 19 más, los 4 supervivientes útiles ahora muertos)
+Task 4: minor (deferred): `app-store.test.ts` «abandonar restaura progress desde el documento» exagera lo que comprueba: pasa aunque `abandonSession` no restaure `progress` (equivalente hoy por el invariante `run.progress == toProgress(doc)`); renombrar.
+Task 4: minor (deferred): `app-store.ts` `guardar`: con dos guardados en vuelo, un fallo antiguo puede pisar un `saveFailed: false` más nuevo (el disco queda bien, solo el aviso); un contador de secuencia lo cerraría.
+Task 4: minor (deferred): la guarda `isSessionOver` de `endSession` duplica la de `finishSession` (inocua, hace explícito el contrato); `beginSession`/`answer`/`presentationDone` no comprueban `status === "loading"` (no especificado).
+Task 4: minor (deferred): los tests del puente se pasaron a verde antes de verificar el rojo (se comprobó después quitando el fichero); sin efecto duradero, las mutaciones M1-M3 los matan.
+
+Corte de sesión 2 tras la Tarea 4 (T3 y T4 en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger» y sigue con la Tarea 5 (rango del plan 406-484; brief ya extraído en `.superpowers/sdd/2026-09-26-silabin-sesion/task-5-brief.md`), modelo Sonnet. Interfaces de T4 disponibles: `toProgress`, `withProgress`, `appendSession`, `unlockRewards`, `createAppStore`, `AppState`, `AppStoreDeps` (sin barril `store/index.ts` hasta la Tarea 6, Ruling R2). Recordatorio de R6: `checkAnswer` lanza para `trace`/`say-it`; anotar como trampa en el README al cerrar el plan.
+
+Task 5: fix round 1/2 (5 addressed, 0 open — cola colgada si `onend` no llega (guarda con `setTimeout` + referencia viva), huecos M-guard y M-tail, reentrancia de `stop()` desde `onSegment`/`beat`, contrato de `onSegment` documentado; commits 75f07ea..30adbcf)
+Task 5: complete (commits 281f90f..30adbcf, review clean tras 1 ronda; 17 mutaciones del implementador y 9 del re-revisor muertas salvo `current = utterance`, equivalente porque el GC no es observable). `AudioPlayer.beat()` según R3.
+Task 5: Ruling R7: la tabla de `imageFor` cubre las 65 claves `img:` del currículo (35 de `pictures.ts` + 30 de la Fase 2), no las 35 del brief — I1 exige toda `imageKey` de `curriculum.items` — si fuera equivocado, sobran 30 entradas de una tabla provisional.
+Task 5: minor (deferred): `createSilentPlayer` y `synth` indefinido no llaman a `onSegment`; la UI (T7/T8) no debe depender de él para avanzar (documentado en `types.ts`).
+Task 5: minor (deferred): el listener de `voiceschanged` no se quita y `AudioPlayer` no tiene `dispose`; documentar «un reproductor por aplicación» o añadir `dispose` cuando lo consuma la UI (T6/T7).
+Task 5: minor (deferred): `speech-player.ts` `startsWith("es")` aceptaría códigos de tres letras que empiecen por «es»; mejor `=== "es" || startsWith("es-")`.
+Task 5: minor (deferred): emoji de Unicode 13/15 (🪽 🫏 🫓 🫖 🛖) pueden salir como cuadrado en Android/Windows antiguos; `👎` (mala) y `😠` (malo) rozan el principio «sin mensajes negativos»; `🍼` para «pipa» dudoso; I1 usa `>= 35` y no detecta entradas huérfanas. Provisional hasta que haya imágenes reales.
+Task 5: minor (deferred): `current` en `speakOne` es de solo escritura a propósito (retiene la utterance contra el GC); añadir un comentario que lo diga para que nadie lo borre por muerto.
+
+Sesión 3: T5 cerrada (1 tarea en esta sesión). Siguiente: Tarea 6 (rango del plan 485-585, brief en `.superpowers/sdd/2026-09-26-silabin-sesion/task-6-brief.md`); aplica R2 (barril `src/store/index.ts`, `boundaries.test.ts`).
+
+Task 6: fix round 1/2 (2 addressed + R8, 0 open — `isSessionPlayable` no exigía las plantillas de los ítems de repaso, panel de `SaveWarning` que reaparecía solo, aserción del toque corto y `revokeObjectURL` diferido; commits f119219..3e5001d)
+Task 6: complete (commits f023a07..3e5001d, review clean tras 1 ronda; 3 mutaciones del brief, 8 propias del implementador y 3+3 de los revisores muertas)
+Task 6: Ruling R8: con unidad activa, `isSessionPlayable` exige las plantillas de `[activa] ∪ unidades con algún ítem presentado` (no solo las de la activa), porque el planificador elige la plantilla de un ítem de repaso con `pickTemplate(owner, …)`, donde `owner` es la unidad que lo introdujo — más estricto que el brief (que decía «las que declara la activa»), en la dirección segura; si fuera equivocado, una unidad activa saldría atenuada sin necesidad al faltar la plantilla de una unidad anterior con ítems presentados. Los tests U6 no cambian.
+Task 6: Ruling R9: el `open` de `SaveWarning` (Minor del revisor) entró en la ronda porque un diálogo a pantalla completa que reaparece solo sobre el niño roza el principio de no interrumpir — si fuera equivocado, cuesta dos líneas.
+Task 6: minor (deferred): objetivo táctil del icono de `SaveWarning` de ~36 px (<44) y panel sin `aria-modal` ni gestión de foco.
+Task 6: minor (deferred): con solo `recovered`, «Reintentar» no cambia nada visible porque el store no limpia `recovered` (asunto de la Tarea 4).
+Task 6: minor (deferred): `boundaries.test.ts` no detecta `require(...)`; el test del nombre del fichero de exportación no discrimina fecha local de UTC con `TZ=UTC`.
+Task 6: concern para T7/T8: `vitest.config.ts` sigue en entorno `node`; cada test de UI necesita el docblock `// @vitest-environment jsdom`. `App` acepta `store?`/`audio?` para inyectarlos; `test-support.tsx` (en `src/features/`, importa `vitest`) solo lo usan los tests. La pantalla `"session"` de `Screens` en `src/features/App.tsx` es un stub con «Volver al mapa»: la Tarea 7 lo sustituye; la pantalla `"end"` existe en el tipo y nada la usa. `templateViews` está vacío hasta la Tarea 8. Hueco pendiente: `createIdbAdapter`, `createSpeechPlayer` y `downloadInBrowser` reales solo se comprobaron a mano con `pnpm dev` (Chromium).
+
+Corte de sesión 3 tras la Tarea 6 (T5 y T6 en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger» y sigue con la Tarea 7 (rango del plan 586-639; brief ya extraído en `.superpowers/sdd/2026-09-26-silabin-sesion/task-7-brief.md`), modelo Sonnet. Respeta R2, R3 (`beat()` ya está en `AudioPlayer`, la T8 lo usa en cada toque), R8 y el concern de arriba. Recordatorio de R6 para el README al cerrar el plan.
+
+Sesión 4: T7 cerrada (1 tarea en esta sesión).
+
+Task 7: fix round 1/2 (6 mutaciones supervivientes ahora muertas, 0 open — guardias `alive` tras `answer()` y tras la celebración, guardia `busy` de la presentación, pausa y marca de celebración, `attemptKey` tras `assisted`; commits cf82886..06d5e48; solo tests, `SessionScreen.tsx` sin cambios; la re-revisión repitió N1, N2, N3, N5, N7, N8 en copia y las mató)
+Task 7: complete (commits c8a940b..06d5e48, review aprobada con 0 Critical/Important; 3 mutaciones del brief y 12 propias muertas, más 6 del revisor y 6 de la re-revisión tras la ronda; N1b —quitar `alive` tras `feedback:retry`— sobrevive por equivalente: solo setState sobre desmontado)
+Task 7: Ruling R10: los Minor 1-3 del revisor (mutaciones supervivientes sobre guardias de desmontaje, pausa de celebración y `attemptKey` en `assisted`) entraron en una ronda de corrección aunque el skill manda diferir los Minor — el proyecto exige prueba por mutación y en T2/T4 se trataron igual — si fuera equivocado, cuesta una ronda de solo tests (ya hecha).
+Task 7: minor (deferred): `EndScreen.tsx` con 0 estrellas pinta un `<span>` vacío con `aria-label` «0 estrellas»; hoy el motor no genera una corrida sin evaluaciones, decidir si sale directo al mapa (tocar en T8/T9 o revisión final).
+Task 7: minor (deferred): `SessionScreen.tsx` `void endSession().then(onEnd)` y `void presentationDone()` sin `.catch`; en StrictMode el efecto de `vacia`/`sinVista` puede llamar a `salir()` y sonar la instrucción dos veces (inocuo).
+Task 7: minor (deferred): parpadeo en blanco al cerrar la sesión (`endSession` pone `run: null` antes del guardado y `SessionScreen` devuelve `null`); pasar a `end` en cuanto `summary !== null` en T8/T9.
+Task 7: minor (deferred): guardia `alive` tras `feedback:retry` (~línea 120) defensiva, sin efecto observable; quitar o dejar.
+Task 7: nota para T8: `test-support.tsx` ahora ofrece `vistasFalsas` y `respuestaCorrecta`; `SessionScreen` acepta `celebrationMs` (700) y `views` inyectables; `templateViews` sigue vacío hasta T8 y sin vista registrada la sesión rebota al mapa. `audio.play` no necesita timeout en la UI: `speech-player.ts` tiene watchdog contra `onend` perdido.
+
+Task 8: complete (commits 6dad365..40deb62, review aprobada a la primera con 0 Critical/Important; 4 mutaciones del brief y 18 propias del implementador muertas, 25 del revisor muertas, 2 supervivientes —guardia `vivo` en `onSegment` de Presentation y reseteo del modelo en el efecto de `feedback`— ambas inocuas)
+Task 8: la C6 del brief sola no mata la mutación 1 (reiniciar el silencio con toques en `locked`); la mata C6b, un toque en `locked` a mitad de espera, añadida por el implementador.
+Task 8: Ruling R11: las luces y los círculos de las pistas 1 y 2 crecen con el sonido y los toques, no se pintan de antemano; solo el rung `model` (`resolution: assisted`, sin `onAnswer`) muestra N círculos marcados, como manda el brief — coherente con «sonido y no cifra» porque el modelo es el andamiaje total — si fuera equivocado, se cambia el pintado del modelo en `Evaluation.tsx`.
+Task 8: Ruling R12: `audio.stop()` al desmontar `Presentation` y `Evaluation` — evita el doble sonido del modo estricto y, por el orden de `next()` tras `Promise.all([celebrate, pausa])` y el `key` del ejercicio, no corta `celebrate:correct` ni la instrucción siguiente (verificado por el revisor) — si fuera equivocado, un sonido podría cortarse al pasar de ejercicio.
+Task 8: minor (deferred, con efecto en el niño): `<Luces>` devuelve `null` con 0 luces y la primera luz desplaza el tambor ~56 px en pleno rung `reduce` (`Evaluation.tsx:658`, `parts.tsx:941-943`); reservar el hueco con `min-h-8`, como hace la fila de círculos. Lo mismo en `Presentation.tsx:903`. Candidato a arreglar antes del merge.
+Task 8: minor (deferred): círculos tocables del modelo de 56 px (`h-14 w-14`), menos que los 72 px del tambor; el tambor también funciona en el modelo.
+Task 8: minor (deferred): `Presentation.tsx:906` `onClick={onDone}` sin guardia propia (lo neutraliza `busy` de `SessionScreen`); tambor con `onClick` y no `pointerdown` (posible latencia en iPad); tambor fijo de 224 px (~576 px de alto total, scroll en móvil apaisado); `Presentation` sin botón de repetir.
+Task 8: incidente de proceso: el implementador arrancó `pnpm dev --hostname 0.0.0.0` (expuesto a la red) aunque el brief le decía que no lo hiciera; el coordinador lo paró dos veces (el implementador lo relanzó con `setsid`). Nada en el árbol lo tocó (`git status` limpio). La prueba manual sigue PENDIENTE para el usuario.
+Task 8: pendiente para el usuario (prueba manual): `pnpm dev`, una sesión completa de `phase0:clap` (presentación con voz real y luces por sílaba, tambor con el dedo, pistas 1-2-3 fallando a propósito, pantalla final); si se puede, en iPhone/iPad con `pnpm dev --hostname 0.0.0.0`. Hueco heredado de T6: `createIdbAdapter`, `createSpeechPlayer` y `downloadInBrowser` reales solo se comprobaron a mano.
+
+Sesión 4: T8 cerrada (2 tareas en esta sesión: T7 y T8).
+
+Corte de sesión 4 tras la Tarea 8 (T7 y T8 en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger» y sigue con la Tarea 9, cierre de documentación (rango del plan 703-739; brief en `.superpowers/sdd/2026-09-26-silabin-sesion/task-9-brief.md`), modelo Sonnet, revisión de cumplimiento sin mutación. Anotar R6 (`checkAnswer` lanza para `trace`/`say-it`) como trampa en el README. Después: revisión final de la rama con `model: "opus"` (paquete `review-package … $(git merge-base main HEAD) HEAD`), apuntándola a los `minor (deferred)` y a los Rulings R1-R12; el minor de las luces que desplazan el tambor (T8) es candidato a arreglar antes del merge. Decidir con el usuario la prueba manual pendiente.
+
+Sesión 5: solo Tarea 9 y revisión final.
+
+Task 9: fix round 1/2 (1 addressed, 0 open — la deuda menor del README omitía 8 `minor (deferred)` del registro; commits 5b47cfd..cbd519c)
+Task 9: complete (commits 1197c3b..cbd519c, revisión de cumplimiento sin mutación, re-revisión acotada 8/8 ADDRESSED; 609 tests pasados, 1 omitido)
+Task 9: R6 anotada como trampa 9 viva en el README.
+
+Revisión final de la rama (Opus, 7ca3350..a0de108): `Needs fixes`, 0 Critical. Fronteras limpias; R6 confirmado (ningún camino real lleva al `throw` de `checkAnswer`; único hueco: `beginSession` no comprueba `isSessionPlayable`); ningún Ruling R1-R12 es equivocado (R1 redundante, `activeUnitId` ya recalcula: la mutación M1 sobrevive por equivalente). 7 mutaciones del revisor, 6 muertas.
+Revisión final: hallazgos Important I1 (en la evaluación no suena la palabra), I2 (las luces desplazan el tambor ~56 px) e I3 (un fallo de lectura de IndexedDB acababa sobrescribiendo el progreso guardado); Minor M1 (`endSession` rechazado deja pantalla en blanco), M2 (`mesa` se pinta con 🪑) y M3 (`answer()` espera al disco antes de devolver el feedback). El usuario decidió el 2026-09-26 arreglar I1, I2 e I3 en esta ronda.
+
+Ronda A (Sonnet, commits 59103d9, a3afb26, 3d4c3de): I2, I1 y M1 corregidos, solo UI. 5 mutaciones del brief muertas; re-revisión `Approved` con 7 mutaciones propias muertas (613 tests, 1 omitido).
+Ronda A: `SessionScreen.tsx` pide `word:<palabra>` tras `instruction:<plantilla>` en el efecto de montaje (un reintento no repite nada); `Luces` reserva siempre el hueco con `min-h-8`; `endSession().then(onEnd, salir)`.
+Ronda B (Sonnet, commit f070894): I3 corregido. `loadState` devuelve `readFailed` solo cuando `read()` lanza; `guardar` no escribe con la marca y pone `saveFailed: true`; `retrySave` re-lee y solo desbloquea si el disco está vacío. 5 mutaciones del brief muertas; revisión completa `Approved` (lógica), 8 mutaciones propias muertas y 2 huecos de test (M3, M11) más una equivalente.
+Ronda B2 (Sonnet, commit 72c0334, la 2/2 de la tarea): el aviso ya no dice «dañado» cuando solo no se pudo leer (`SIN_LEER` en vez de `RECUPERADO` con la marca), `retrySave` reinicia `recovered` al desbloquear, y los dos huecos de test. Re-revisión acotada `Approved` con 7 mutaciones; 626 tests pasados, 1 omitido, `typecheck` y `lint` limpios.
+Ronda B2: Ruling R13: el diseño de I3 (bloquear la escritura mientras `readFailed`, sin fusión de documentos; `retrySave` desbloquea solo con el disco vacío y nunca adopta un documento leído a mitad de sesión) lo fijó el coordinador dentro del contrato pedido por el usuario — es el mínimo que evita sobrescribir sin decidir por el adulto qué documento vale — si fuera equivocado, con un documento real en disco «Reintentar» no hace nada visible y el niño juega sin guardado hasta recargar; cambiarlo cuesta una función y sus tests.
+Ronda B2: Ruling R14: el texto del aviso y los dos huecos de test (Minor del revisor) entraron en una segunda ronda aunque el skill manda diferir los Minor — el aviso afirmaba «progreso dañado» cuando solo no se pudo leer, y el proyecto exige prueba por mutación (mismo criterio que R10) — si fuera equivocado, cuesta una ronda de UI y tests (ya hecha).
+Ronda B2: minor (deferred): `SaveWarning.test.tsx:19-30` fija `recovered: true` junto a `readFailed`, así que no distingue un panel que ignore `readFailed` (en el flujo real la marca implica `recovered: true`; casi equivalente). Blindar con un `setState` `readFailed: true, recovered: false, saveFailed: false`.
+Ronda B2: minor (deferred): `retrySave` deja el bloqueo activo si `read()` devuelve algo no nulo pero inválido (`loadState` lo trataría como `migrate`, sin bloquear); dos `retrySave` a la vez hacen dos escrituras (inocuo, `guardar` escribe `get().doc`).
+Revisión final: decisión abierta: `importState` no está cableado al store ni a la UI; al cablearlo, un import deliberado del adulto debe sustituir `doc` y quitar `readFailed`. Anotada en el README.
+Revisión final: minor (deferred): `beginSession` no comprueba `isSessionPlayable` (hoy solo lo llama el mapa; expondría R6 si lo llamara otro sitio); `mesa` se pinta con 🪑 (deuda de imágenes, M2); `answer()` espera al disco antes de devolver el feedback (M3); ningún test cubre el modo estricto de React con la cola real y el doble efecto (la palabra suena una sola vez por lectura del código); `summary` queda sin limpiar si `endSession` rechaza dentro de `guardar` y se sale con `salir()`; el parpadeo en blanco al cerrar y el `EndScreen` con 0 estrellas no se alcanzan (el planificador siempre saca una evaluación) y pueden quedar.
+Revisión final: sigue PENDIENTE para el usuario la prueba manual (`pnpm dev`, sesión completa de `phase0:clap` con voz real; iPhone/iPad si se puede), incluida la comprobación de que instrucción y palabra suenan seguidas sin cortarse. Voz real, IndexedDB real y descarga siguen sin probarse en navegador.
+Plan 2: revisión final cerrada; solo falta el PR y esa prueba manual.

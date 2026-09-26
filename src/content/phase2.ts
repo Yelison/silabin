@@ -118,6 +118,7 @@ export const phase2Units: Unit[] = CONSONANT_ORDER.map((consonant, index) => {
 			{ templateId: "trace", weight: 1 },
 			{ templateId: "say-it", weight: 3 },
 			{ templateId: "read-word", weight: 2 },
+			{ templateId: "initial-sound", weight: 1 },
 		],
 	};
 });

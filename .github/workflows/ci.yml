@@ -1,0 +1,46 @@
+name: CI
+
+# Las tres puertas del proyecto (CLAUDE.md): lint, typecheck y tests. `vitest` no comprueba
+# tipos, por eso el typecheck es un paso aparte y obligatorio.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Un push nuevo a la misma rama cancela la ejecución anterior de ese PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  puertas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # La versión de pnpm sale del campo `packageManager` de package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Cada puerta en su paso, y las tres corren aunque una falle: así un PR muestra
+      # de una vez todo lo que hay que arreglar y no solo el primer error.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: pnpm typecheck
+
+      - name: Tests
+        if: ${{ !cancelled() }}
+        run: pnpm test

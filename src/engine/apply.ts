@@ -87,7 +87,8 @@ export function applyResolution(input: {
 export function applySessionEnd(input: {
 	content: CurriculumIndex;
 	state: ProgressState;
-	unitId: string;
+	/** Null en una sesión de solo repaso: cuenta la sesión pero no toca ninguna mejor marca. */
+	unitId: string | null;
 	stars: Stars;
 }): ProgressState {
 	const { content, state, unitId, stars } = input;
@@ -99,8 +100,8 @@ export function applySessionEnd(input: {
 	};
 
 	const units = recomputeUnitStatuses(content, withSession);
-	const previous = units[unitId];
-	if (previous !== undefined) {
+	const previous = unitId === null ? undefined : units[unitId];
+	if (unitId !== null && previous !== undefined) {
 		units[unitId] = {
 			status: previous.status,
 			bestStars: Math.max(previous.bestStars, stars) as Stars,

@@ -4,6 +4,7 @@ import {
 	emptyPersistedState,
 	migrate,
 	persistedStateSchema,
+	sessionRecordSchema,
 } from "@/store/schema";
 
 describe("estado vacío", () => {
@@ -286,5 +287,25 @@ describe("migrate", () => {
 		expect(resultado.recovered).toBe(true);
 		expect(resultado.state.version).toBe(CURRENT_VERSION);
 		expect(resultado.state.units["phase0:clap"]?.bestStars).toBe(3);
+	});
+});
+
+describe("sessionRecordSchema", () => {
+	const base = { index: 0, stars: 3, endedAt: "2026-09-26T12:00:00.000Z" };
+
+	it("T2.7: acepta unitId null (sesión de solo repaso) y un id de unidad", () => {
+		expect(
+			sessionRecordSchema.safeParse({ ...base, unitId: null }).success,
+		).toBe(true);
+		expect(
+			sessionRecordSchema.safeParse({ ...base, unitId: "phase0:clap" }).success,
+		).toBe(true);
+	});
+
+	it("T2.7: rechaza un unitId vacío y uno ausente", () => {
+		expect(sessionRecordSchema.safeParse({ ...base, unitId: "" }).success).toBe(
+			false,
+		);
+		expect(sessionRecordSchema.safeParse(base).success).toBe(false);
 	});
 });

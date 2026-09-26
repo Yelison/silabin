@@ -58,6 +58,14 @@ export type PlannedExercise = {
 	source: "active-unit" | "review";
 };
 
+/** Una sesión terminada. `unitId` es null en una sesión de solo repaso, sin unidad activa. */
+export type SessionLogEntry = {
+	index: number;
+	unitId: string | null;
+	stars: Stars;
+	endedAt: string;
+};
+
 export function emptyItemProgress(): ItemProgress {
 	return {
 		box: 0,
