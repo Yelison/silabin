@@ -182,8 +182,9 @@ Refinamientos del spec que introdujo el Plan 1 (documentados en el plan):
 ## Lo que ya está hecho: Plan 2
 
 Plan 2 = **primera sesión jugable de `count-syllables`**, en la rama `feat/plan-2-sesion`
-(9 tareas, ledger en `docs/superpowers/2026-09-26-plan-2-registro.md`). Su revisión final de
-rama y el PR están pendientes.
+(9 tareas, ledger en `docs/superpowers/2026-09-26-plan-2-registro.md`). La revisión final de
+rama (Opus) ya está hecha y sus hallazgos corregidos (I1-I3, M1; ver el ledger); el PR y la
+prueba manual siguen pendientes.
 
 - **Motor:** `engine/session.ts` (corrida de sesión pura: plan, intentos, resoluciones y
   cierre); sesión de solo repaso cuando se agota el currículo (`planReviewOnly`); `basePool`
@@ -324,10 +325,17 @@ Nada de esto bloquea, salvo lo que se marca como pendiente. Detalle en los regis
   `createSpeechPlayer` y `downloadInBrowser` reales solo se han comprobado a mano
   (Chromium), y ningún test las cubre en un navegador de verdad. Queda por probar en
   iPhone/iPad.
-- **Las luces desplazan el tambor unos 56 px** en pleno rung `reduce` (T8): `<Luces>` devuelve
-  `null` con 0 luces y la primera luz empuja el tambor (`Evaluation.tsx`, `parts.tsx`,
-  `Presentation.tsx`). Con efecto visible en el niño; candidato a arreglar antes del merge
-  reservando el hueco con `min-h-8`.
+- **Comprobar en navegador que instrucción y palabra suenan seguidas sin cortarse** al empezar
+  una evaluación (la palabra suena sola desde la revisión final, I1). Solo se probó con audio
+  falso y por lectura del código.
+- **Decisión abierta: `importState`.** Existe en `persist.ts` pero no está cableado al store ni
+  a la interfaz. Al cablearlo hay que decidir que un import deliberado del adulto sustituya el
+  documento y quite la marca `readFailed`; si no, quedaría bloqueado sin escribir.
+- **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): `guardar` no escribe
+  mientras `readFailed`, para no pisar un documento bueno que solo no se pudo leer. «Reintentar»
+  solo desbloquea si el disco está vacío; con un documento real no hace nada visible (no hay
+  fusión de documentos) y hay que recargar la app. El niño sigue jugando en memoria y el
+  adulto puede exportar desde `SaveWarning`.
 
 **Plan 2, interfaz y accesibilidad**
 
