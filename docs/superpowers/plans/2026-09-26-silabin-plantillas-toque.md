@@ -252,6 +252,44 @@ en vez de penalizarlas; (3) romper el empate por la última y no por la primera.
 
 **Commit aparte:** `feat(audio): la voz del dispositivo más natural del acento, mientras no haya audios grabados`.
 
+### Pausa entre sílabas con voces de red (añadido el 2026-09-26, lo vio el autor en Edge)
+
+**Por qué:** en Edge las voces «Natural» se generan en la red y cada sílaba (`by-syllable` y
+`beats` en `perform`) espera su propia respuesta. A la pausa de `SYLLABLE_GAP_MS` (350 ms) se
+le suma esa espera, y el autor oye «ga ····· to» (en Chrome no pasa). Con la elección de voz
+de arriba, que prefiere las «Natural», iría a peor. Además, la luz (`onSegment`) y el golpe
+(`beat`) salen antes de pedir la sílaba, así que en Edge se adelantan a la voz.
+
+**Contrato:**
+- `speakOne` mide la **latencia de arranque**: el tiempo entre `synth.speak` y el primer
+  `onstart` de esa utterance. Si `onstart` no llega, la latencia es 0.
+- La pausa antes de la sílaba `i` es `max(0, SYLLABLE_GAP_MS − latencia de la sílaba i−1)`.
+  Es una estimación: la red tarda parecido en sílabas seguidas.
+- `onSegment(i)` y `beat()` se lanzan en el `onstart` de la sílaba `i`, así que la luz y el
+  golpe coinciden con la voz. Si `onstart` no llega en 250 ms (`SEGMENT_FALLBACK_MS`), se
+  lanzan igual, **una sola vez**. Nunca bloquean la cola (spec: la interfaz no depende de
+  `onSegment`).
+- `style: "normal"` no cambia.
+
+**Casos de test** (el `synth` falso gana un retraso configurable antes de `onstart`):
+
+| Id | Entrada | Esperado |
+|---|---|---|
+| A15 | `by-syllable` `["ga","to"]`, latencia 0 | pausa de 350 ms entre sílabas (como hoy) |
+| A16 | Latencia de 400 ms por sílaba | pausa de 0 ms tras la primera; el total no pasa de 400 + habla + 400 + habla |
+| A17 | Latencia de 200 ms | pausa de 150 ms |
+| A18 | `beats` con latencia de 300 ms | `beat` y `onSegment(0)` en el `onstart`, no antes |
+| A19 | `onstart` que nunca llega | `onSegment` y `beat` a los 250 ms, una vez cada uno; la cola sigue |
+| A20 | `onstart` que llega a los 300 ms (tras el respaldo) | no se repiten `onSegment` ni `beat` |
+| A21 | `stop()` durante la espera de `onstart` | ni `onSegment` ni `beat` tardíos |
+
+**Mutaciones:** (1) restar la latencia de la sílaba actual y no la de la anterior; (2) dejar que
+la pausa sea negativa (`setTimeout` negativo = 0, pero el test de A16 mide el orden); (3)
+lanzar `beat` dos veces cuando `onstart` llega tras el respaldo; (4) no limpiar el respaldo en
+`stop()`.
+
+**Commit aparte:** `fix(audio): la pausa entre sílabas descuenta la espera de las voces de red`.
+
 ---
 
 ## Tarea 2: Motor y contenido para las plantillas nuevas
