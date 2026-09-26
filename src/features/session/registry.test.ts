@@ -64,33 +64,68 @@ describe("isSessionPlayable", () => {
 		expect(isSessionPlayable(curriculum, progreso(), new Set())).toBe(false);
 	});
 
+	it("R8: con unidad activa, exige también las plantillas de las unidades con algo presentado, porque el repaso las usa", () => {
+		// phase0:rhyme activa con su plantilla implementada, pero clap (ya presentada) usa
+		// count-syllables, que aquí no lo está: el repaso podría sacar un ejercicio sin vista.
+		const p = conUnidadesHechasHasta("phase0:clap");
+		expect(p.units["phase0:rhyme"]?.status).toBe("active");
+		expect(
+			isSessionPlayable(curriculum, p, new Set<TemplateId>(["rhyme"])),
+		).toBe(false);
+		expect(
+			isSessionPlayable(
+				curriculum,
+				p,
+				new Set<TemplateId>(["rhyme", "count-syllables"]),
+			),
+		).toBe(true);
+	});
+
+	it("R8: las plantillas de una unidad sin nada presentado no se exigen", () => {
+		// Con clap activa y nada presentado, phase0:rhyme (no presentada) no cuenta.
+		expect(
+			isSessionPlayable(
+				curriculum,
+				progreso(),
+				new Set<TemplateId>(["count-syllables"]),
+			),
+		).toBe(true);
+	});
+
 	it("exige TODAS las plantillas de la unidad activa, no alguna", () => {
-		const unit = curriculum.units.get("phase0:hear-it");
-		const plantillas = [...new Set(unit?.exercises.map((e) => e.templateId))];
 		// La premisa del test: hay una unidad con más de una plantilla distinta.
 		const multi = [...curriculum.units.values()].find(
 			(u) => new Set(u.exercises.map((e) => e.templateId)).size > 1,
 		);
 		expect(multi).toBeDefined();
-		expect(plantillas.length).toBeGreaterThan(0);
-		const p = conUnidadesHechasHasta(
-			curriculum.unitOrder[curriculum.unitOrder.indexOf(multi?.id ?? "") - 1] ??
-				"",
-		);
+		const posicion = curriculum.unitOrder.indexOf(multi?.id ?? "");
+		const anteriores = curriculum.unitOrder.slice(0, posicion);
+		const p = conUnidadesHechasHasta(anteriores.at(-1) ?? "");
 		expect(p.units[multi?.id ?? ""]?.status).toBe("active");
-		const ids = [...new Set(multi?.exercises.map((e) => e.templateId))];
-		const [primera, ...resto] = ids;
+		// Lo que exigen las unidades anteriores (presentadas) ya está cubierto.
+		const previas = anteriores.flatMap((id) =>
+			(curriculum.units.get(id)?.exercises ?? []).map((e) => e.templateId),
+		);
+		const propias = [...new Set(multi?.exercises.map((e) => e.templateId))];
+		const [primera, ...resto] = propias;
 		expect(resto.length).toBeGreaterThan(0);
 		expect(
 			isSessionPlayable(
 				curriculum,
 				p,
-				new Set<TemplateId>(primera === undefined ? [] : [primera]),
+				new Set<TemplateId>([
+					...previas,
+					...(primera === undefined ? [] : [primera]),
+				]),
 			),
 		).toBe(false);
-		expect(isSessionPlayable(curriculum, p, new Set<TemplateId>(ids))).toBe(
-			true,
-		);
+		expect(
+			isSessionPlayable(
+				curriculum,
+				p,
+				new Set<TemplateId>([...previas, ...propias]),
+			),
+		).toBe(true);
 	});
 
 	it("sin unidad activa (repaso), exige las plantillas de las unidades con algo presentado", () => {

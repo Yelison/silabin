@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { SaveWarning } from "@/features/adult/SaveWarning";
@@ -68,6 +68,24 @@ describe("SaveWarning", () => {
 		expect(screen.queryByText(TEXTO_SIN_GUARDAR)).toBeNull();
 		// Cerrar el panel no quita el aviso: el problema sigue ahí.
 		expect(aviso()).not.toBeNull();
+	});
+
+	it("si el guardado se recupera con el panel abierto y falla otra vez, vuelve solo el icono, no el panel", async () => {
+		const store = crearStore();
+		await store.getState().load();
+		store.setState({ saveFailed: true });
+		render(conProveedores(store, fakeAudio(), <SaveWarning />));
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /progreso/i }));
+		expect(screen.getByRole("dialog")).toBeDefined();
+
+		act(() => store.setState({ saveFailed: false }));
+		expect(aviso()).toBeNull();
+		expect(screen.queryByRole("dialog")).toBeNull();
+
+		act(() => store.setState({ saveFailed: true }));
+		expect(aviso()).not.toBeNull();
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
 	it("con recovered muestra su propio texto, sin el del guardado", async () => {

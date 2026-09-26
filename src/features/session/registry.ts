@@ -7,6 +7,7 @@ import {
 	type PlannedExercise,
 	type ProgressState,
 	type TemplateId,
+	type Unit,
 } from "@/engine";
 
 /** Lo que recibe la vista de presentación de una plantilla: enseña el ítem y avisa al terminar. */
@@ -44,10 +45,13 @@ export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
 	new Set<TemplateId>(["count-syllables"]);
 
 /**
- * ¿Puede la interfaz jugar hoy una sesión con este progreso? Con unidad activa, todas las
- * plantillas que declara deben estar implementadas. En repaso (sin unidad activa), todas las de
- * las unidades con algún ítem ya presentado. Si falta una, no se ofrece sesión: es mejor no
- * dejar jugar que dejar al niño ante un ejercicio que no se sabe pintar.
+ * ¿Puede la interfaz jugar hoy una sesión con este progreso? Hay que saber pintar todas las
+ * plantillas que la sesión puede sacar:
+ * - las de la unidad activa, si la hay;
+ * - las de toda unidad con algún ítem ya presentado, porque el planificador mezcla ítems de
+ *   repaso y elige su plantilla entre las de la unidad que los introduce, no las de la activa.
+ * En repaso (sin unidad activa) solo cuenta lo segundo. Si falta una, no se ofrece sesión: es
+ * mejor atenuar una unidad de más que dejar al niño ante un ejercicio que no se sabe pintar.
  */
 export function isSessionPlayable(
 	content: CurriculumIndex,
@@ -55,16 +59,18 @@ export function isSessionPlayable(
 	implemented: ReadonlySet<TemplateId>,
 ): boolean {
 	const activa = activeUnitId(content, progress);
-	const unidades =
-		activa !== null
-			? [content.units.get(activa)]
-			: [...content.units.values()].filter((u) =>
-					u.introduces.some((id) => progress.items[id]?.presented === true),
-				);
-	const declaradas = unidades.flatMap((u) =>
-		(u?.exercises ?? []).map((e) => e.templateId),
+	const unidades = new Set<Unit>();
+	if (activa !== null) {
+		const unit = content.units.get(activa);
+		if (unit === undefined) return false;
+		unidades.add(unit);
+	}
+	for (const unit of content.units.values()) {
+		if (unit.introduces.some((id) => progress.items[id]?.presented === true))
+			unidades.add(unit);
+	}
+	const declaradas = [...unidades].flatMap((u) =>
+		u.exercises.map((e) => e.templateId),
 	);
-	if (unidades.length === 0 || unidades.some((u) => u === undefined))
-		return false;
 	return declaradas.length > 0 && declaradas.every((t) => implemented.has(t));
 }

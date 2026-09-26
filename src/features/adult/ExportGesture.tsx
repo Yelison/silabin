@@ -26,7 +26,8 @@ export const downloadInBrowser: Download = (filename, contents) => {
 	document.body.appendChild(link);
 	link.click();
 	link.remove();
-	URL.revokeObjectURL(url);
+	// Safari y Firefox pueden cancelar la descarga si se revoca justo tras el clic.
+	setTimeout(() => URL.revokeObjectURL(url), 30_000);
 };
 
 /**
