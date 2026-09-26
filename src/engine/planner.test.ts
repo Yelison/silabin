@@ -1224,4 +1224,114 @@ describe("plantilla build: piezas para arrastrar", () => {
 		expect(construir?.optionIds).toContain("letter:b");
 		expect(construir?.optionIds).not.toContain("letter:d");
 	});
+
+	it("dos consonantes vistas que chocan entre sí se excluyen aunque ninguna choque con la propia del ítem (ronda 1, hallazgo 1)", () => {
+		// Aquí la propia consonante del ítem es "m", que no forma pareja prohibida ni con "b"
+		// ni con "d". Si el choque solo se mirara contra la propia consonante (en vez de
+		// contra todas las ya incluidas), "b" y "d" entrarían las dos. Por Ruling 2, entra la
+		// primera en el orden de "seen" (b) y se descarta la segunda (d), que choca con ella.
+		const contenido = buildCurriculum({
+			items: [
+				...["a", "e", "i", "o", "u"].map((v) => ({
+					id: `letter:${v}`,
+					kind: "letter" as const,
+					text: v,
+					phonemes: [v],
+					audioKey: `phoneme:${v}`,
+					display: { upper: v.toUpperCase(), lower: v },
+				})),
+				{
+					id: "letter:b",
+					kind: "letter" as const,
+					text: "b",
+					phonemes: ["b"],
+					audioKey: "phoneme:b",
+					display: { upper: "B", lower: "b" },
+				},
+				{
+					id: "letter:d",
+					kind: "letter" as const,
+					text: "d",
+					phonemes: ["d"],
+					audioKey: "phoneme:d",
+					display: { upper: "D", lower: "d" },
+				},
+				{
+					id: "letter:m",
+					kind: "letter" as const,
+					text: "m",
+					phonemes: ["m"],
+					audioKey: "phoneme:m",
+					display: { upper: "M", lower: "m" },
+				},
+				{
+					id: "syllable:ma",
+					kind: "syllable" as const,
+					text: "ma",
+					phonemes: ["m", "a"],
+					audioKey: "syllable:ma",
+				},
+			],
+			units: [
+				{
+					id: "vocales",
+					phase: 1 as const,
+					title: "Vocales",
+					audioKey: "unit:vocales",
+					requires: [],
+					introduces: [
+						"letter:a",
+						"letter:e",
+						"letter:i",
+						"letter:o",
+						"letter:u",
+					],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "letra-b",
+					phase: 2 as const,
+					title: "La b",
+					audioKey: "unit:letra-b",
+					requires: ["vocales"],
+					introduces: ["letter:b"],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "letra-d",
+					phase: 2 as const,
+					title: "La d",
+					audioKey: "unit:letra-d",
+					requires: ["letra-b"],
+					introduces: ["letter:d"],
+					exercises: [{ templateId: "listen-tap" as const, weight: 1 }],
+				},
+				{
+					id: "silaba-m",
+					phase: 2 as const,
+					title: "La m",
+					audioKey: "unit:silaba-m",
+					requires: ["letra-d"],
+					// letter:m no entra por "seen" en ningún momento anterior: la propia
+					// consonante del ítem se busca directamente, no a través de seenConsonants.
+					introduces: ["syllable:ma"],
+					exercises: [{ templateId: "build" as const, weight: 1 }],
+				},
+			],
+		});
+		const sesion = planSession({
+			content: contenido,
+			state: presentedIn(contenido, "silaba-m"),
+			activeUnitId: "silaba-m",
+			sessionLength: 5,
+			seed: 1,
+		});
+		const construir = sesion.find(
+			(e) => e.templateId === "build" && e.kind === "evaluation",
+		);
+		expect(construir).toBeDefined();
+		expect(construir?.optionIds).toContain("letter:m");
+		expect(construir?.optionIds).toContain("letter:b");
+		expect(construir?.optionIds).not.toContain("letter:d");
+	});
 });

@@ -29,6 +29,15 @@ describe("rimeOf", () => {
 		expect(rimeOf("ratón")).toBe("ón");
 		expect(rimeOf("limón")).toBe("ón");
 	});
+
+	it("ronda 1, hallazgo 2: la palabra que termina en s también usa la penúltima vocal, con y sin tilde", () => {
+		// Sin tilde: la terminación en "s" activa la regla de la penúltima vocal, igual que
+		// vocal o "n". Si se quitara esa rama, "lunas" caería al respaldo de la última vocal y
+		// daría "as" en vez de "unas".
+		expect(rimeOf("lunas")).toBe("unas");
+		// Con tilde: la tilde manda primero, aunque la palabra también termine en s.
+		expect(rimeOf("compás")).toBe("ás");
+	});
 });
 
 describe("endingKey", () => {
