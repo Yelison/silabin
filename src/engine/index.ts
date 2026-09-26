@@ -41,6 +41,7 @@ export type {
 	ItemProgress,
 	PlannedExercise,
 	ProgressState,
+	SessionLogEntry,
 	Stars,
 	UnitProgress,
 	UnitStatus,

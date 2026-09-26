@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildCurriculum, curriculum } from "@/content/index";
 import { templates } from "@/content/templates";
+import { applyResolution, applySessionEnd } from "@/engine/apply";
 import { MAX_PRESENTATIONS, owningUnits, planSession } from "@/engine/planner";
 import {
 	emptyItemProgress,
@@ -729,5 +730,235 @@ describe("sin respaldo global de plantillas", () => {
 		for (const ejercicio of delFonema) {
 			expect(ejercicio.templateId).toBe("initial-sound");
 		}
+	});
+});
+
+describe("sesión de solo repaso (activeUnitId null)", () => {
+	const NOW = "2026-09-26T12:00:00.000Z";
+
+	/** Domina todo el currículo por el camino real: tres sesiones con crédito por ítem. */
+	function dominadoConApply(): ProgressState {
+		let state = emptyProgressState();
+		for (let sesion = 0; sesion < 3; sesion += 1) {
+			for (const itemId of curriculum.items.keys()) {
+				state = applyResolution({
+					content: curriculum,
+					state,
+					itemId,
+					templateId: "listen-tap",
+					resolution: { status: "mastery-credit" },
+					sessionIndex: sesion,
+					now: NOW,
+				});
+			}
+			state = applySessionEnd({
+				content: curriculum,
+				state,
+				unitId: null,
+				stars: 3,
+			});
+		}
+		return state;
+	}
+
+	function repaso(state: ProgressState, length: 5 | 6 = 5, seed = 1) {
+		return planSession({
+			content: curriculum,
+			state,
+			activeUnitId: null,
+			sessionLength: length,
+			seed,
+		});
+	}
+
+	/** Todo presentado en caja 3 y vencido, para que solo el orden por caja decida. */
+	function todoVencido(): ProgressState {
+		const state = todoDominado();
+		state.sessionCounter = 100;
+		return state;
+	}
+
+	it("T2.1: con todo dominado, devuelve la longitud pedida, todo evaluación y repaso", () => {
+		const state = dominadoConApply();
+		expect(
+			curriculum.unitOrder.every(
+				(id) =>
+					(curriculum.units.get(id)?.introduces.length ?? 0) === 0 ||
+					state.units[id]?.status === "done",
+			),
+		).toBe(true);
+		for (const length of [5, 6] as const) {
+			const sesion = repaso(state, length);
+			expect(sesion).toHaveLength(length);
+			for (const ejercicio of sesion) {
+				expect(ejercicio.kind).toBe("evaluation");
+				expect(ejercicio.source).toBe("review");
+			}
+			expect(new Set(sesion.map((e) => e.id)).size).toBe(length);
+		}
+	});
+
+	it("T2.1: usa la plantilla de la unidad dueña del ítem y trae opciones coherentes", () => {
+		const owners = owningUnits(curriculum);
+		for (let seed = 1; seed <= 10; seed += 1) {
+			for (const ejercicio of repaso(dominadoConApply(), 6, seed)) {
+				const dueña = curriculum.units.get(owners.get(ejercicio.itemId) ?? "");
+				const declaradas = dueña?.exercises.map((e) => e.templateId) ?? [];
+				expect(declaradas).toContain(ejercicio.templateId);
+				if (ejercicio.correctOptionId !== null) {
+					expect(ejercicio.optionIds).toContain(ejercicio.correctOptionId);
+				}
+			}
+		}
+	});
+
+	it("T2.2: un ítem en caja 1 entre otros en caja 3 aparece en la sesión", () => {
+		const state = dominadoConApply();
+		const debil = "letter:m";
+		state.items[debil] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 1,
+			firstTryCorrect: 1,
+			lastSessionIndex: 2,
+		};
+		for (let seed = 1; seed <= 10; seed += 1) {
+			expect(repaso(state, 5, seed).map((e) => e.itemId)).toContain(debil);
+		}
+	});
+
+	it("los ítems de caja más baja van antes que los de caja más alta cuando todo está vencido", () => {
+		const state = todoVencido();
+		const baja = ["letter:m", "syllable:ma"];
+		for (const id of baja) {
+			state.items[id] = { ...emptyItemProgress(), presented: true, box: 1 };
+		}
+		state.items["word:mapa"] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 2,
+		};
+		// Los tres primeros por (caja, sesión, id) son estos; los dos huecos restantes los
+		// llenan los de caja 3 con el id menor.
+		const restantes = [...curriculum.items.keys()]
+			.filter((id) => !baja.includes(id) && id !== "word:mapa")
+			.sort((a, b) => a.localeCompare(b))
+			.slice(0, 2);
+		const esperado = [...baja, "word:mapa", ...restantes].sort();
+		for (let seed = 1; seed <= 5; seed += 1) {
+			expect(
+				repaso(state, 5, seed)
+					.map((e) => e.itemId)
+					.sort(),
+			).toEqual(esperado);
+		}
+	});
+
+	it("los vencidos van antes que los que aún no les toca, aunque tengan caja más alta", () => {
+		const state = todoDominado();
+		state.sessionCounter = 1;
+		// En caja 3 con intervalo 7 y lastSessionIndex 0, nada está vencido; este sí.
+		const vencido = "letter:m";
+		state.items[vencido] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 3,
+			firstTryCorrect: 3,
+			lastSessionIndex: -10,
+		};
+		// Y este no lo está, aunque su caja es menor que la del vencido.
+		const alDia = "syllable:ma";
+		state.items[alDia] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 1,
+			firstTryCorrect: 1,
+			lastSessionIndex: 1,
+		};
+		for (let seed = 1; seed <= 5; seed += 1) {
+			expect(repaso(state, 5, seed).map((e) => e.itemId)).toContain(vencido);
+		}
+	});
+
+	it("solo repasa ítems presentados", () => {
+		const state = presented("phase2:m");
+		const vistos = new Set(
+			Object.entries(state.items)
+				.filter(([, p]) => p.presented)
+				.map(([id]) => id),
+		);
+		expect(vistos.size).toBeGreaterThan(0);
+		expect(vistos.size).toBeLessThan(curriculum.items.size);
+		for (let seed = 1; seed <= 10; seed += 1) {
+			for (const ejercicio of repaso(state, 6, seed)) {
+				expect(vistos.has(ejercicio.itemId)).toBe(true);
+			}
+		}
+	});
+
+	it("con menos candidatos que huecos, cicla sobre ellos", () => {
+		const state = emptyProgressState();
+		state.items["letter:m"] = {
+			...emptyItemProgress(),
+			presented: true,
+			box: 1,
+			lastSessionIndex: 0,
+		};
+		const sesion = repaso(state, 5);
+		expect(sesion).toHaveLength(5);
+		expect(new Set(sesion.map((e) => e.itemId))).toEqual(new Set(["letter:m"]));
+	});
+
+	it("T2.3: misma semilla, mismo resultado; otra semilla, algo distinto", () => {
+		const state = dominadoConApply();
+		expect(repaso(state, 6, 42)).toEqual(repaso(state, 6, 42));
+		const firmas = new Set(
+			[1, 2, 3, 4, 5, 6, 7, 8].map((seed) =>
+				repaso(state, 6, seed)
+					.map((e) => `${e.templateId}:${e.itemId}:${e.optionIds.join(",")}`)
+					.join("|"),
+			),
+		);
+		expect(firmas.size).toBeGreaterThan(1);
+	});
+
+	it("T2.4: cierra con la plantilla más fácil y casi nunca repite plantilla seguida", () => {
+		let conVarias = 0;
+		let pares = 0;
+		let sesiones = 0;
+		for (let seed = 1; seed <= 100; seed += 1) {
+			for (const length of [5, 6] as const) {
+				const sesion = repaso(todoVencido(), length, seed);
+				const minima = Math.min(
+					...sesion.map((e) => templates[e.templateId].difficulty),
+				);
+				const ultima = sesion.at(-1);
+				if (ultima === undefined) throw new Error("sesión vacía");
+				expect(templates[ultima.templateId].difficulty).toBe(minima);
+				sesiones += 1;
+				if (new Set(sesion.map((e) => e.templateId)).size > 1) conVarias += 1;
+				let paresSesion = 0;
+				for (let i = 1; i < sesion.length; i += 1) {
+					if (sesion[i]?.templateId === sesion[i - 1]?.templateId)
+						paresSesion += 1;
+				}
+				expect(paresSesion).toBeLessThanOrEqual(1);
+				pares += paresSesion;
+			}
+		}
+		expect(conVarias).toBeGreaterThan(0);
+		expect(pares).toBeLessThan(sesiones);
+	});
+
+	it("T2.5: sin ningún ítem presentado lanza un aviso claro", () => {
+		expect(() => repaso(emptyProgressState())).toThrow(
+			"No hay nada que repasar: ningún ítem se ha presentado",
+		);
+	});
+
+	it("una unidad activa desconocida sigue lanzando, y null no la confunde", () => {
+		expect(() => plan(emptyProgressState(), "no-existe")).toThrow(
+			/Unidad desconocida/,
+		);
 	});
 });

@@ -10,7 +10,11 @@ import {
 import { isDue } from "@/engine/leitner";
 import { itemProgressOf } from "@/engine/mastery";
 import { createRng, type Rng } from "@/engine/random";
-import type { PlannedExercise, ProgressState } from "@/engine/types";
+import type {
+	ItemProgress,
+	PlannedExercise,
+	ProgressState,
+} from "@/engine/types";
 
 export const MAX_PRESENTATIONS = 2;
 export const REVIEW_SHARE = 0.3;
@@ -298,15 +302,145 @@ function reduceAdjacency(list: PlannedExercise[]): PlannedExercise[] {
 	return out;
 }
 
+/**
+ * Cierra con el más fácil y evita dos plantillas iguales seguidas. Es la ordenación final de
+ * toda sesión, la normal y la de solo repaso: vive aquí para que las dos usen la misma.
+ */
+function closeSession(
+	evaluations: PlannedExercise[],
+	rng: Rng,
+): PlannedExercise[] {
+	const easiest = evaluations.reduce((best, current) =>
+		templates[current.templateId].difficulty <
+		templates[best.templateId].difficulty
+			? current
+			: best,
+	);
+	const rest = evaluations.filter((e) => e.id !== easiest.id);
+	const arranged = arrangeNoAdjacent(rest, rng, easiest.templateId);
+	return reduceAdjacency([...arranged, easiest]);
+}
+
+/**
+ * Entra en el repaso un ítem vencido según su caja, o presentado que nunca llegó a acertarse
+ * (caja 0). Sin esa segunda condición, un ítem de una unidad que se completó con el 80 % y que
+ * el niño nunca acertó quedaría abandonado para siempre: isDue devuelve false para la caja 0, y
+ * su unidad ya no es la activa. Sería justo la letra que más le cuesta la que dejaría de
+ * aparecer.
+ */
+function isReviewDue(progress: ItemProgress, sessionIndex: number): boolean {
+	return (
+		isDue(progress, sessionIndex) || (progress.presented && progress.box === 0)
+	);
+}
+
+function byBoxThenAge(state: ProgressState) {
+	return (a: string, b: string): number => {
+		const pa = itemProgressOf(state, a);
+		const pb = itemProgressOf(state, b);
+		return (
+			pa.box - pb.box ||
+			pa.lastSessionIndex - pb.lastSessionIndex ||
+			a.localeCompare(b)
+		);
+	};
+}
+
+/**
+ * Sesión de solo repaso, cuando el currículo se ha agotado y no queda unidad activa: solo
+ * evaluaciones de lo ya presentado, sin presentaciones. Primero lo vencido, luego de la caja
+ * más baja a la más alta; cicla si hay menos ítems que huecos.
+ */
+function planReviewOnly(input: {
+	content: CurriculumIndex;
+	state: ProgressState;
+	sessionLength: 5 | 6;
+	rng: Rng;
+}): PlannedExercise[] {
+	const { content, state, sessionLength, rng } = input;
+	const sessionIndex = state.sessionCounter;
+	const owners = owningUnits(content);
+	// Todo lo que cualquier unidad introduce cuenta como visto: no hay unidad activa que lo acote.
+	const seen = new Set(owners.keys());
+	const samePhase = new Set<string>();
+
+	const ordenar = byBoxThenAge(state);
+	const candidates = [...content.items.keys()]
+		.filter((id) => itemProgressOf(state, id).presented)
+		.sort((a, b) => {
+			const dueA = isReviewDue(itemProgressOf(state, a), sessionIndex);
+			const dueB = isReviewDue(itemProgressOf(state, b), sessionIndex);
+			return Number(dueB) - Number(dueA) || ordenar(a, b);
+		});
+	if (candidates.length === 0)
+		throw new Error("No hay nada que repasar: ningún ítem se ha presentado");
+
+	const ids: string[] = [];
+	for (let i = 0; i < sessionLength; i += 1) {
+		const id = candidates[i % candidates.length];
+		if (id !== undefined) ids.push(id);
+	}
+
+	const templateCounts = new Map<TemplateId, number>();
+	const templateCap = Math.max(1, Math.floor(ids.length / 2));
+
+	let counter = 0;
+	const evaluations = ids.map((itemId): PlannedExercise => {
+		const item = content.items.get(itemId);
+		if (item === undefined) throw new Error(`Ítem desconocido: ${itemId}`);
+		const ownerId = owners.get(itemId);
+		const owner =
+			ownerId === undefined ? undefined : content.units.get(ownerId);
+		if (owner === undefined)
+			throw new Error(`Ninguna unidad introduce el ítem ${itemId}`);
+		const templateId = pickTemplate(
+			owner,
+			item,
+			rng,
+			templateCounts,
+			templateCap,
+		);
+		templateCounts.set(templateId, (templateCounts.get(templateId) ?? 0) + 1);
+		const level: DistractorLevel =
+			itemProgressOf(state, itemId).firstTryCorrect >= 1 ? "hard" : "easy";
+		const { optionIds, correctOptionId } = buildOptions({
+			content,
+			item,
+			templateId,
+			level,
+			rng,
+			seen,
+			samePhase,
+		});
+		counter += 1;
+		return {
+			id: `ex-${counter}`,
+			kind: "evaluation",
+			templateId,
+			itemId,
+			optionIds,
+			correctOptionId,
+			source: "review",
+		};
+	});
+
+	return closeSession(evaluations, rng);
+}
+
+/**
+ * Con `activeUnitId` null no hay unidad que enseñar: sesión de solo repaso de lo presentado.
+ */
 export function planSession(input: {
 	content: CurriculumIndex;
 	state: ProgressState;
-	activeUnitId: string;
+	activeUnitId: string | null;
 	sessionLength: 5 | 6;
 	seed: number;
 }): PlannedExercise[] {
 	const { content, state, activeUnitId, sessionLength, seed } = input;
 	const rng = createRng(seed);
+	if (activeUnitId === null)
+		return planReviewOnly({ content, state, sessionLength, rng });
 	const unit = content.units.get(activeUnitId);
 	if (unit === undefined)
 		throw new Error(`Unidad desconocida: ${activeUnitId}`);
@@ -381,29 +515,10 @@ export function planSession(input: {
 	if (budget <= 0) return presentations;
 
 	// 2. Repaso de otras unidades, de la caja más baja a la más alta.
-	// Entra un ítem si está vencido según su caja, o si se presentó y nunca llegó a
-	// acertarse (caja 0). Sin esa segunda condición, un ítem de una unidad que se completó
-	// con el 80 % y que el niño nunca acertó quedaría abandonado para siempre: isDue
-	// devuelve false para la caja 0, y su unidad ya no es la activa. Sería justo la letra
-	// que más le cuesta la que dejaría de aparecer.
 	const reviewPool = [...content.items.keys()]
 		.filter((id) => owners.get(id) !== activeUnitId)
-		.filter((id) => {
-			const progress = itemProgressOf(state, id);
-			return (
-				isDue(progress, sessionIndex) ||
-				(progress.presented && progress.box === 0)
-			);
-		})
-		.sort((a, b) => {
-			const pa = itemProgressOf(state, a);
-			const pb = itemProgressOf(state, b);
-			return (
-				pa.box - pb.box ||
-				pa.lastSessionIndex - pb.lastSessionIndex ||
-				a.localeCompare(b)
-			);
-		});
+		.filter((id) => isReviewDue(itemProgressOf(state, id), sessionIndex))
+		.sort(byBoxThenAge(state));
 
 	const reviewCount = Math.min(
 		Math.round(REVIEW_SHARE * budget),
@@ -445,15 +560,5 @@ export function planSession(input: {
 	if (evaluations.length === 0) return presentations;
 
 	// 4. Cerrar con el más fácil y evitar dos plantillas iguales seguidas.
-	const easiest = evaluations.reduce((best, current) =>
-		templates[current.templateId].difficulty <
-		templates[best.templateId].difficulty
-			? current
-			: best,
-	);
-	const rest = evaluations.filter((e) => e.id !== easiest.id);
-	const arranged = arrangeNoAdjacent(rest, rng, easiest.templateId);
-	const mejorado = reduceAdjacency([...arranged, easiest]);
-
-	return [...presentations, ...mejorado];
+	return [...presentations, ...closeSession(evaluations, rng)];
 }
