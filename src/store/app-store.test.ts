@@ -226,6 +226,10 @@ describe("S5: fechas de los logros", () => {
 		const primera = store.getState().doc.rewards.unlockedAt["first-session"];
 		expect(primera).toBeDefined();
 		expect(store.getState().summary?.newRewardIds).toContain("first-session");
+		// La fecha es la del reloj inyectado en el momento de cerrar la sesión: la misma
+		// lectura de now() que la entrada del historial, no otra ni un valor cualquiera.
+		expect(primera).toBe(store.getState().doc.sessions[0]?.endedAt);
+		expect(primera).toMatch(/^2026-09-26T12:00:\d\d\.000Z$/);
 
 		await jugarSesionCompleta(store);
 		const s = store.getState();
@@ -279,10 +283,13 @@ describe("S6 y S7: fallos de guardado", () => {
 		// El disco se quedó con el último guardado bueno, distinto del documento en memoria.
 		expect(await adapter.read()).not.toEqual(store.getState().doc);
 
+		const antes = store.getState().doc;
 		fallo.activo = false;
 		await store.getState().retrySave();
 		expect(store.getState().saveFailed).toBe(false);
-		expect(await adapter.read()).toEqual(store.getState().doc);
+		// Reenvía el mismo documento que tenía en memoria, sin cambiarlo.
+		expect(await adapter.read()).toEqual(antes);
+		expect(store.getState().doc).toEqual(antes);
 	});
 
 	it("retrySave que vuelve a fallar deja saveFailed en true sin lanzar", async () => {
@@ -374,9 +381,15 @@ describe("S9: abandonar no cuenta la sesión ni duplica el crédito", () => {
 		const { store } = crear();
 		await store.getState().load();
 		store.getState().beginSession();
-		const itemId = await hastaPrimeraEvaluacion(store);
+		// Se acierta el primer ítem evaluado y también el segundo: el segundo (sol) es de los
+		// que la sesión siguiente, con la misma semilla, vuelve a planificar.
+		const primero = await hastaPrimeraEvaluacion(store);
 		await store.getState().answer(respuestaCorrecta(store));
-		expect(store.getState().progress.items[itemId]?.firstTryCorrect).toBe(1);
+		store.getState().next();
+		const segundo = await hastaPrimeraEvaluacion(store);
+		await store.getState().answer(respuestaCorrecta(store));
+		expect(store.getState().progress.items[primero]?.firstTryCorrect).toBe(1);
+		expect(store.getState().progress.items[segundo]?.firstTryCorrect).toBe(1);
 
 		store.getState().abandonSession();
 		let s = store.getState();
@@ -385,20 +398,31 @@ describe("S9: abandonar no cuenta la sesión ni duplica el crédito", () => {
 		expect(s.progress.sessionCounter).toBe(0);
 		expect(s.doc.sessions).toHaveLength(0);
 		// Lo ya guardado se conserva.
-		expect(s.progress.items[itemId]?.firstTryCorrect).toBe(1);
+		expect(s.progress.items[primero]?.firstTryCorrect).toBe(1);
+		expect(s.progress.items[segundo]?.firstTryCorrect).toBe(1);
 
-		// La sesión siguiente reutiliza el índice 0. Con el contenido y la semilla actuales el
-		// planificador no vuelve a sacar el ítem ya acertado (está en la caja 1 y no toca),
-		// así que la protección contra el doble crédito es la del motor (lastCreditSession);
-		// aquí se comprueba que el almacén no la rompe: ni el contador ni el índice avanzan.
+		// La sesión siguiente reutiliza el índice 0 y vuelve a plantear un ítem que ya tiene
+		// crédito de ese mismo índice. Se busca en lo planificado, y se exige que exista, para
+		// que el test no pueda volver a ser vacuo si cambia el planificador.
 		store.getState().beginSession();
-		expect(store.getState().run?.sessionIndex).toBe(0);
+		const run = store.getState().run;
+		expect(run?.sessionIndex).toBe(0);
+		const repetidos = (run?.exercises ?? [])
+			.filter(
+				(e) =>
+					e.kind === "evaluation" &&
+					(s.progress.items[e.itemId]?.firstTryCorrect ?? 0) >= 1,
+			)
+			.map((e) => e.itemId);
+		expect(repetidos.length).toBeGreaterThan(0);
+
 		await jugarHastaElFinal(store);
 		await store.getState().endSession();
 		s = store.getState();
 		expect(s.doc.sessions.map((e) => e.index)).toEqual([0]);
 		expect(s.doc.sessionCounter).toBe(1);
-		expect(s.doc.items[itemId]?.firstTryCorrect).toBe(1);
+		for (const id of repetidos)
+			expect(s.doc.items[id]?.firstTryCorrect).toBe(1);
 	});
 
 	it("abandonar restaura progress desde el documento y no desde la corrida", async () => {
