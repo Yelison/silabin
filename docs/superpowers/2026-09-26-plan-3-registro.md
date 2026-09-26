@@ -21,4 +21,7 @@ D11 la prueba manual del Plan 2 (`pnpm dev`) la hace el autor ANTES de despachar
 
 ## Estado
 
-Plan escrito; ninguna tarea despachada. Pendiente: confirmación de la prueba manual del Plan 2 (D11).
+Plan escrito; ninguna tarea despachada.
+D11 cumplida (2026-09-26): el autor probó con `pnpm dev` en Edge y Chrome (Windows, WSL2): sesiones, pistas y guardado bien (lo comprobó con la exportación o IndexedDB, porque el mapa no enseña nada hasta completar la unidad). Única incidencia: en Edge la pausa entre sílabas es mucho más larga («ga ····· to») por la latencia de las voces «Natural» de red; en Chrome no pasa. Añadida a la Tarea 1 (casos A15-A21). No probado en iPhone/iPad.
+Tras la prueba, la Tarea 1 lleva tres partes con commits separados: base visual, elección de voz (A8-A14) y pausa entre sílabas (A15-A21). El coordinador puede despachar las dos de audio como un segundo implementador dentro de la misma tarea, con su propia revisión completa.
+minor (deferred) para el Plan 6: el mapa no enseña ningún avance hasta completar una unidad (5-6 sesiones en `phase0:clap`); ni el niño ni el adulto ven que se guarda.
