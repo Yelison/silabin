@@ -62,3 +62,14 @@ Task 4: minor (deferred): la guarda `isSessionOver` de `endSession` duplica la d
 Task 4: minor (deferred): los tests del puente se pasaron a verde antes de verificar el rojo (se comprobó después quitando el fichero); sin efecto duradero, las mutaciones M1-M3 los matan.
 
 Corte de sesión 2 tras la Tarea 4 (T3 y T4 en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger» y sigue con la Tarea 5 (rango del plan 406-484; brief ya extraído en `.superpowers/sdd/2026-09-26-silabin-sesion/task-5-brief.md`), modelo Sonnet. Interfaces de T4 disponibles: `toProgress`, `withProgress`, `appendSession`, `unlockRewards`, `createAppStore`, `AppState`, `AppStoreDeps` (sin barril `store/index.ts` hasta la Tarea 6, Ruling R2). Recordatorio de R6: `checkAnswer` lanza para `trace`/`say-it`; anotar como trampa en el README al cerrar el plan.
+
+Task 5: fix round 1/2 (5 addressed, 0 open — cola colgada si `onend` no llega (guarda con `setTimeout` + referencia viva), huecos M-guard y M-tail, reentrancia de `stop()` desde `onSegment`/`beat`, contrato de `onSegment` documentado; commits 75f07ea..30adbcf)
+Task 5: complete (commits 281f90f..30adbcf, review clean tras 1 ronda; 17 mutaciones del implementador y 9 del re-revisor muertas salvo `current = utterance`, equivalente porque el GC no es observable). `AudioPlayer.beat()` según R3.
+Task 5: Ruling R7: la tabla de `imageFor` cubre las 65 claves `img:` del currículo (35 de `pictures.ts` + 30 de la Fase 2), no las 35 del brief — I1 exige toda `imageKey` de `curriculum.items` — si fuera equivocado, sobran 30 entradas de una tabla provisional.
+Task 5: minor (deferred): `createSilentPlayer` y `synth` indefinido no llaman a `onSegment`; la UI (T7/T8) no debe depender de él para avanzar (documentado en `types.ts`).
+Task 5: minor (deferred): el listener de `voiceschanged` no se quita y `AudioPlayer` no tiene `dispose`; documentar «un reproductor por aplicación» o añadir `dispose` cuando lo consuma la UI (T6/T7).
+Task 5: minor (deferred): `speech-player.ts` `startsWith("es")` aceptaría códigos de tres letras que empiecen por «es»; mejor `=== "es" || startsWith("es-")`.
+Task 5: minor (deferred): emoji de Unicode 13/15 (🪽 🫏 🫓 🫖 🛖) pueden salir como cuadrado en Android/Windows antiguos; `👎` (mala) y `😠` (malo) rozan el principio «sin mensajes negativos»; `🍼` para «pipa» dudoso; I1 usa `>= 35` y no detecta entradas huérfanas. Provisional hasta que haya imágenes reales.
+Task 5: minor (deferred): `current` en `speakOne` es de solo escritura a propósito (retiene la utterance contra el GC); añadir un comentario que lo diga para que nadie lo borre por muerto.
+
+Sesión 3: T5 cerrada (1 tarea en esta sesión). Siguiente: Tarea 6 (rango del plan 485-585, brief en `.superpowers/sdd/2026-09-26-silabin-sesion/task-6-brief.md`); aplica R2 (barril `src/store/index.ts`, `boundaries.test.ts`).
