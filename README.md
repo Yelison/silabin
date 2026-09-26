@@ -362,6 +362,23 @@ Nada de esto bloquea, salvo lo que se marca como pendiente. Detalle en los regis
   modo normal, y un invariante que solo mire el primer elemento de `introduces`.
   `boundaries.test.ts` no detecta `require(...)`.
 
+**Plan 2, tests y limpieza**
+
+- T4: el test de `app-store.test.ts` «abandonar restaura progress desde el documento»
+  exagera lo que comprueba (renombrarlo); la guarda `isSessionOver` de `endSession` duplica
+  la de `finishSession`, y `beginSession`, `answer` y `presentationDone` no comprueban
+  `status === "loading"`; los tests del puente se pasaron a verde antes de verificar el rojo
+  (sin efecto duradero).
+- T5: `current` en `speakOne` es de solo escritura a propósito (retiene la utterance contra
+  el GC) y falta un comentario que lo diga para que nadie lo borre por muerto.
+- T6: el test del nombre del fichero de exportación no discrimina fecha local de UTC con
+  `TZ=UTC`.
+- T7: la guarda `alive` tras `feedback:retry` es defensiva y sin efecto observable.
+- T8: `Presentation.tsx:906` `onClick={onDone}` sin guardia propia, neutralizada por `busy`
+  de `SessionScreen`.
+- T1 (proceso, trivial): el mensaje del commit sobre T1.1 es inexacto: el test falló primero
+  por la función inexistente, no por las unidades de Fase 2.
+
 **Plan 1**
 
 - Aviso de peer dependency: vitest 5 pide `@types/node@^22` y está instalado `^20`.
