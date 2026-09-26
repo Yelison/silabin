@@ -5,7 +5,8 @@ decisiones tomadas sin consultar y `minor (deferred)` para lo que se dejó sin a
 
 Spec: docs/superpowers/specs/2026-09-18-silabin-design.md (autoridad; el plan cita §2, §4, §5, §9)
 Rama: feat/plan-3-plantillas-toque (desde main en e1b5af9)
-Plan escrito con Opus 5.5 el 2026-09-26. Ejecución: coordinador Sonnet (puerta de modelo), implementadores y revisores de tarea sonnet, revisión final opus.
+Plan escrito con Opus 5.5 el 2026-09-26. Ejecución: **coordinador en Opus por decisión del autor (2026-09-26), como experimento para medir tokens; la puerta de modelo del CLAUDE.md queda exenta en este plan y no debe parar la sesión.** Implementadores y revisores de tarea: `model: "sonnet"`. Revisión final: opus.
+Medición: al cerrar cada sesión de ejecución, el autor apunta el uso que marca Claude Code; el coordinador lo registra aquí como `Tokens sesión N:` junto a las tareas hechas en ella.
 Briefs/reportes/diffs (desechables): `.superpowers/sdd/2026-09-26-silabin-plantillas-toque/`. Briefs con `sed -n A,Bp` (el plan usa «Tarea N»).
 
 ## Decisiones con el autor (2026-09-26)
