@@ -44,3 +44,11 @@ T7 586-639 · T8 640-702 · T9 703-721.
 Task 1: complete (commits 67025a0..d8f1dd2, review clean; 4/4 mutaciones del plan y 6 propias muertas)
 Task 1: minor (deferred): `invariants.test.ts:61-92` T1.2 usa una unidad con un ítem; un invariante que solo mire el primer elemento de `introduces` sobrevive (añadir un segundo ítem malo).
 Task 1: minor (deferred): el mensaje del commit dice que T1.1 falla por las unidades de Fase 2; en realidad falló primero por la función inexistente (la mutación 2 demuestra que las detecta).
+
+Task 2: fix round 1/2 (3 addressed, 0 open — «vencidos primero» y desempate por lastSessionIndex sin test que discriminara, título de test engañoso; commits a87b713..9f623aa)
+Task 2: complete (commits 9c630db..9f623aa, review clean tras 1 ronda; 4/4 mutaciones del plan y 6 propias muertas, las 2 supervivientes ahora muertas)
+Task 2: minor (deferred): `planner.ts:516-553` `planReviewOnly` repite ~30 líneas de `makeExercise` (nivel de distractor, buildOptions, contador de id); si cambia la regla del nivel, los dos modos divergen. Candidato a extraer en una limpieza.
+Task 2: minor (deferred): ningún test de modo normal cubre la eliminación del desempate `lastSessionIndex` del comparador compartido (solo lo cubre el test nuevo de repaso).
+Task 3 (siguiente): dispatch con Ruling R1 (orden `recomputeUnitStatuses` → `activeUnitId` → `planSession`). Interfaces de T2 ya disponibles: `planSession` acepta `activeUnitId: null`, `applySessionEnd` acepta `unitId: null`, `SessionLogEntry` exportado del barril.
+
+Corte de sesión 1 tras la Tarea 2 (2 tareas en la sesión). Siguiente sesión: «Retoma el Plan 2 desde el ledger», modelo Sonnet.
