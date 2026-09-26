@@ -13,9 +13,11 @@
 	--color-action: #f5b83d;
 	--color-action-ink: #3a2a00;
 	--color-calm: #dcebfa;
-	--color-calm-border: #7fa7d6;
+	/* Oscurecido desde #7FA7D6 (mismo tono azul) para llegar a 3:1 contra surface/card/calm. */
+	--color-calm-border: #5187c7;
 	--color-mark: #ffe27a;
-	--color-mark-border: #c98a00;
+	/* Oscurecido desde #C98A00 (mismo tono ámbar) para llegar a 3:1 contra surface/card/mark. */
+	--color-mark-border: #ac7600;
 	--color-celebrate: #ff9f1c;
 	--radius-card: 1.5rem;
 	--spacing-target: 8rem;

@@ -40,9 +40,9 @@ tipografía definitivas, y no hay ilustraciones ni compañero (mascota) todavía
 | `--color-action` | lo que se toca: tambor, botón siguiente | `#F5B83D` |
 | `--color-action-ink` | contenido sobre `action` | `#3A2A00` |
 | `--color-calm` | fondo de opciones en reposo | `#DCEBFA` |
-| `--color-calm-border` | borde de opciones en reposo | `#7FA7D6` |
+| `--color-calm-border` | borde de opciones en reposo | `#5187C7` |
 | `--color-mark` | fondo de la opción marcada por el modelo | `#FFE27A` |
-| `--color-mark-border` | borde de la opción marcada por el modelo | `#C98A00` |
+| `--color-mark-border` | borde de la opción marcada por el modelo | `#AC7600` |
 | `--color-celebrate` | solo celebraciones y estrellas | `#FF9F1C` |
 | `--radius-card` | tarjetas y botones | `1.5rem` |
 | `--spacing-target` | lado mínimo de una opción | `8rem` (128 px) |
@@ -64,19 +64,19 @@ Calculado con la fórmula de contraste relativo de WCAG 2.x sobre los valores de
 | `ink-soft` sobre `surface` | 5.22 : 1 | Sí |
 | `ink-soft` sobre `card` | 5.51 : 1 | Sí |
 | `action-ink` sobre `action` | 7.81 : 1 | Sí |
-| `calm-border` sobre `surface` | 2.37 : 1 | **No** (objetivo ≥ 3 : 1) |
-| `calm-border` sobre `calm` | 2.06 : 1 | **No** |
-| `mark-border` sobre `surface` | 2.79 : 1 | **No** |
-| `mark-border` sobre `mark` | 2.31 : 1 | **No** |
+| `calm-border` sobre `surface` | 3.53 : 1 | Sí (≥ 3 : 1) |
+| `calm-border` sobre `card` | 3.72 : 1 | Sí |
+| `calm-border` sobre `calm` | 3.07 : 1 | Sí |
+| `mark-border` sobre `surface` | 3.72 : 1 | Sí |
+| `mark-border` sobre `card` | 3.93 : 1 | Sí |
+| `mark-border` sobre `mark` | 3.07 : 1 | Sí |
 
-El texto (`ink`, `ink-soft`, `action-ink`) cumple AA con holgura. **Los bordes de estado
-(`calm-border`, `mark-border`) no llegan al 3 : 1** que pide esta misma tarea para bordes.
-Como los valores de la tabla son la propuesta inicial explícita del plan y hay que usarlos tal
-cual, este documento dejа constancia del hallazgo en vez de cambiarlos por su cuenta: es un
-`minor (deferred)` a resolver cuando llegue la paleta definitiva. Mientras tanto, los estados
-no dependen solo del borde: `pulsing` y `marked` también cambian el grosor del borde y añaden
-movimiento o un icono, así que la distinción no depende únicamente de un contraste de color
-insuficiente.
+El texto (`ink`, `ink-soft`, `action-ink`) cumple AA con holgura. Los bordes de estado
+(`calm-border`, `mark-border`) se oscurecieron manteniendo su tono (azul suave y ámbar,
+respectivamente; ningún rojo ni verde) hasta llegar a ≥ 3 : 1 contra `surface`, `card` y su
+propio fondo (`calm` / `mark`), que son los tres sitios donde puede aparecer un borde de
+estado. Además, ningún estado depende solo del color: `pulsing` también anima y `marked`
+también engrosa el borde a 8 px y añade el icono de mano.
 
 ## Reglas
 
@@ -92,8 +92,8 @@ insuficiente.
 
 ## Pendiente (fuera de esta tarea)
 
-- Paleta definitiva: la de esta tabla es una propuesta inicial; en particular, los bordes de
-  estado no llegan al contraste AA de 3 : 1 (ver arriba).
+- Paleta definitiva: la de esta tabla es una propuesta inicial (color e identidad visual
+  finales, más allá del contraste ya verificado).
 - Ilustraciones en lugar de emoji para las 35 palabras de `pictures.ts` (y las de fase 2):
   sigue sin haber arte propio.
 - Compañero (mascota): el spec lo prevé; no existe todavía ni como concepto visual.
