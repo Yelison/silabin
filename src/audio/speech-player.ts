@@ -4,6 +4,18 @@ import { type Accent, audioManifest } from "@/content/audio-manifest";
 /** Pausa entre sílabas en `by-syllable` y `beats`. */
 export const SYLLABLE_GAP_MS = 350;
 
+/** Mínimo que se espera a un `onend` antes de darlo por perdido (iOS lo pierde a veces). */
+export const SPEECH_GUARD_MIN_MS = 3000;
+const SPEECH_GUARD_PER_CHAR_MS = 250;
+const SPEECH_GUARD_MARGIN_MS = 1000;
+
+function speechGuardMs(text: string): number {
+	return Math.max(
+		SPEECH_GUARD_MIN_MS,
+		SPEECH_GUARD_PER_CHAR_MS * text.length + SPEECH_GUARD_MARGIN_MS,
+	);
+}
+
 const ACCENT_LANG: Record<Accent, string> = {
 	do: "es-DO",
 	mx: "es-MX",
@@ -116,9 +128,19 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 		});
 	}
 
+	/**
+	 * Referencia viva a la utterance en curso: Chrome recolecta las que nadie referencia
+	 * y entonces nunca dispara `onend`.
+	 */
+	let current: SpeechSynthesisUtterance | null = null;
+
 	function speakOne(text: string): Promise<void> {
 		return new Promise<void>((resolve) => {
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			let mine: SpeechSynthesisUtterance | undefined;
 			const finish = () => {
+				clearTimeout(timer);
+				if (current === mine) current = null;
 				if (interrupt === finish) interrupt = null;
 				resolve();
 			};
@@ -126,10 +148,14 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 			if (synth === undefined) return finish();
 			try {
 				const utterance = new SpeechSynthesisUtterance(text);
+				mine = utterance;
 				utterance.lang = voice?.lang ?? ACCENT_LANG[accent];
 				if (voice !== null) utterance.voice = voice;
 				utterance.onend = finish;
 				utterance.onerror = finish;
+				current = utterance;
+				// Si `onend` no llega nunca, el audio no debe bloquear la cola.
+				timer = setTimeout(finish, speechGuardMs(text));
 				synth.speak(utterance);
 			} catch {
 				finish();
@@ -167,7 +193,9 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 				if (gen !== generation) return;
 			}
 			request.onSegment?.(i);
+			if (gen !== generation) return;
 			if (style === "beats") beat();
+			if (gen !== generation) return;
 			await speakOne(syllables[i] ?? "");
 		}
 	}

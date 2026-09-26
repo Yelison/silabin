@@ -7,7 +7,11 @@ export type AudioRequest = {
 	style?: PlayStyle;
 	/** Obligatorio en `by-syllable` y `beats`. */
 	syllables?: readonly string[];
-	/** Se llama al empezar cada sílaba. */
+	/**
+	 * Se llama al empezar cada sílaba, pero solo se garantiza cuando suena: no se llama con
+	 * `synth` indefinido, antes de `unlock` ni en el reproductor silencioso. La interfaz no
+	 * debe depender de él para avanzar.
+	 */
 	onSegment?: (index: number) => void;
 };
 

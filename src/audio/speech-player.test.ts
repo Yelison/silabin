@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSilentPlayer } from "@/audio/silent-player";
-import { createSpeechPlayer, SYLLABLE_GAP_MS } from "@/audio/speech-player";
+import {
+	createSpeechPlayer,
+	SPEECH_GUARD_MIN_MS,
+	SYLLABLE_GAP_MS,
+} from "@/audio/speech-player";
 
 class FakeUtterance {
 	text: string;
@@ -347,6 +351,145 @@ describe("stop", () => {
 		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS);
 		synth.endLast();
 		await fresh;
+	});
+});
+
+describe("guarda contra onend que no llega", () => {
+	it("si onend nunca llega, la primera resuelve y la cola avanza tras la guarda", async () => {
+		const player = await unlockedPlayer();
+		const first = player.play({ key: "word:mesa" });
+		const second = player.play({ key: "word:casa" });
+		await settle();
+		await vi.advanceTimersByTimeAsync(SPEECH_GUARD_MIN_MS - 1);
+		expect(synth.texts()).toEqual(["mesa"]);
+		await vi.advanceTimersByTimeAsync(1);
+		await expect(first).resolves.toBeUndefined();
+		expect(synth.texts()).toEqual(["mesa", "casa"]);
+		await vi.advanceTimersByTimeAsync(SPEECH_GUARD_MIN_MS);
+		await expect(second).resolves.toBeUndefined();
+	});
+
+	it("un texto largo tiene una guarda proporcional, no la mínima", async () => {
+		const long = "a".repeat(40);
+		const player = await unlockedPlayer({ textFor: () => long });
+		const done = player.play({ key: "x" });
+		let resolved = false;
+		void done.then(() => {
+			resolved = true;
+		});
+		await settle();
+		await vi.advanceTimersByTimeAsync(SPEECH_GUARD_MIN_MS * 2);
+		expect(resolved).toBe(false);
+		await vi.advanceTimersByTimeAsync(40 * 250 + 2000);
+		expect(resolved).toBe(true);
+	});
+
+	it("cada sílaba tiene su propia guarda: sin onend, by-syllable sigue con la pausa", async () => {
+		const player = await unlockedPlayer();
+		const done = player.play({
+			key: "word:mesa",
+			style: "by-syllable",
+			syllables: ["me", "sa"],
+		});
+		await settle();
+		await vi.advanceTimersByTimeAsync(SPEECH_GUARD_MIN_MS + SYLLABLE_GAP_MS);
+		expect(synth.texts()).toEqual(["me", "sa"]);
+		await vi.advanceTimersByTimeAsync(SPEECH_GUARD_MIN_MS);
+		await done;
+	});
+
+	it("con onend normal el temporizador se limpia y no queda nada pendiente", async () => {
+		const player = await unlockedPlayer();
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		expect(vi.getTimerCount()).toBe(1);
+		synth.endLast();
+		await done;
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it("stop también limpia el temporizador de la guarda", async () => {
+		const player = await unlockedPlayer();
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		player.stop();
+		await done;
+		expect(vi.getTimerCount()).toBe(0);
+	});
+});
+
+describe("robustez de la cola", () => {
+	it("el onend tardío de una utterance cancelada no impide que un stop posterior resuelva la petición nueva", async () => {
+		const player = await unlockedPlayer();
+		const old = player.play({ key: "word:mesa" });
+		await settle();
+		const cancelled = synth.spoken[synth.spoken.length - 1];
+		player.stop();
+		await old;
+		const fresh = player.play({ key: "word:casa" });
+		await settle();
+		cancelled?.onend?.();
+		player.stop();
+		await expect(fresh).resolves.toBeUndefined();
+	});
+
+	it("si onSegment lanza, play rechaza y la siguiente petición sigue funcionando", async () => {
+		const player = await unlockedPlayer();
+		const boom = new Error("boom");
+		const failing = player.play({
+			key: "word:mesa",
+			style: "by-syllable",
+			syllables: ["me", "sa"],
+			onSegment: () => {
+				throw boom;
+			},
+		});
+		await expect(failing).rejects.toBe(boom);
+		const next = player.play({ key: "word:casa" });
+		await settle();
+		expect(synth.texts()).toEqual(["casa"]);
+		synth.endLast();
+		await expect(next).resolves.toBeUndefined();
+	});
+
+	it("si onSegment llama a stop, esa sílaba no se dice y la petición resuelve", async () => {
+		const player = await unlockedPlayer();
+		const done = player.play({
+			key: "word:mesa",
+			style: "by-syllable",
+			syllables: ["me", "sa"],
+			onSegment: () => player.stop(),
+		});
+		await expect(done).resolves.toBeUndefined();
+		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS * 3);
+		expect(synth.texts()).toEqual([]);
+	});
+
+	it("si onSegment llama a stop en beats, tampoco suena el golpe", async () => {
+		const beat = vi.fn();
+		const player = await unlockedPlayer({ beat });
+		const done = player.play({
+			key: "word:mesa",
+			style: "beats",
+			syllables: ["me", "sa"],
+			onSegment: () => player.stop(),
+		});
+		await expect(done).resolves.toBeUndefined();
+		expect(beat).not.toHaveBeenCalled();
+		expect(synth.texts()).toEqual([]);
+	});
+
+	it("si beat llama a stop, la sílaba no se dice", async () => {
+		let player: ReturnType<typeof createSpeechPlayer> | undefined;
+		player = await unlockedPlayer({ beat: () => player?.stop() });
+		const done = player.play({
+			key: "word:mesa",
+			style: "beats",
+			syllables: ["me", "sa"],
+		});
+		await expect(done).resolves.toBeUndefined();
+		await vi.advanceTimersByTimeAsync(SYLLABLE_GAP_MS * 3);
+		expect(synth.texts()).toEqual([]);
 	});
 });
 
