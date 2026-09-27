@@ -21,12 +21,6 @@ const SIN_PIEZAS: readonly string[] = [];
 const UMBRAL_ARRASTRE_PX = 10;
 
 /**
- * Lo que espera el `click` que sigue a un toque resuelto en `pointerup`. Pasado ese tiempo, un
- * clic (teclado, lector de pantalla) vuelve a ser un toque de verdad.
- */
-const VENTANA_CLIC_MS = 400;
-
-/**
  * Formar la sílaba que suena con dos casillas y una bandeja de piezas. La respuesta es el texto
  * de las dos piezas en el orden de las casillas; qué pieza es la correcta y las pistas las decide
  * el motor (`expectedPieces`, `reducedPieces`), aquí solo se pinta y se coloca.
@@ -71,20 +65,8 @@ export function Evaluation(props: EvaluationProps) {
 	} | null>(null);
 	/** El clic que el navegador manda tras soltar un arrastre no es un toque. */
 	const clicDeArrastre = useRef(false);
-	/**
-	 * Con el dedo el toque se resuelve al soltar (Chromium deja de mandar `click` con unos 6 px
-	 * de movimiento, y un dedo de 3 años se mueve eso). El clic que sí llegue no es otro toque.
-	 */
-	const clicDeToque = useRef(false);
-	const ventanaClic = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	useEffect(
-		() => () => {
-			audio.stop();
-			if (ventanaClic.current !== null) clearTimeout(ventanaClic.current);
-		},
-		[audio],
-	);
+	useEffect(() => () => audio.stop(), [audio]);
 
 	// Intento nuevo: las casillas se vacían y lo que pulsaba se apaga. Las atenuadas y el modelo
 	// se conservan: la pista 1 sigue valiendo en los intentos siguientes.
@@ -174,18 +156,11 @@ export function Evaluation(props: EvaluationProps) {
 
 	function alPulsar(id: string) {
 		if (clicDeArrastre.current) return;
-		if (clicDeToque.current) {
-			clicDeToque.current = false;
-			return;
-		}
 		if (casillas.includes(id)) devolver(id);
 		else colocar(id);
 	}
 
 	function alBajar(e: ReactPointerEvent<HTMLElement>, id: string) {
-		// El clic del toque anterior ya llegó o no va a llegar (la pieza pudo cambiar de sitio y
-		// con ella el destino del clic): no debe comerse este toque.
-		clicDeToque.current = false;
 		if (!interactiva(id)) return;
 		gesto.current = { id, x0: e.clientX, y0: e.clientY, movido: false };
 	}
@@ -208,21 +183,7 @@ export function Evaluation(props: EvaluationProps) {
 		const g = gesto.current;
 		gesto.current = null;
 		setArrastre(null);
-		if (g === null) return;
-		if (!g.movido) {
-			// Un toque. Con ratón lo resuelve el clic; con el dedo, aquí, porque el clic puede no
-			// llegar. El que llegue se descarta para no colocar y devolver la pieza a la vez.
-			if (e.pointerType === "touch" || e.pointerType === "pen") {
-				alPulsar(g.id);
-				clicDeToque.current = true;
-				if (ventanaClic.current !== null) clearTimeout(ventanaClic.current);
-				ventanaClic.current = setTimeout(() => {
-					clicDeToque.current = false;
-					ventanaClic.current = null;
-				}, VENTANA_CLIC_MS);
-			}
-			return;
-		}
+		if (g === null || !g.movido) return; // un toque: lo resuelve el clic
 		clicDeArrastre.current = true;
 		setTimeout(() => {
 			clicDeArrastre.current = false;
