@@ -46,6 +46,22 @@ O sobre U, U sobre O**. Quedan cerca del umbral, pero fallan: E sobre O, L sobre
 P sobre S. Con tolerancia 0.10 solo pasaba U sobre O. Se acepta como precio de D12, y la prueba
 manual de la Tarea 5 decide si las constantes se mueven.
 
+Márgenes medidos con las constantes exactas, para distinguir «números algo distintos» de
+«algoritmo equivocado» al revisar la Tarea 1:
+
+| Caso | Cobertura mínima | Precisión | Resultado |
+|---|---|---|---|
+| Las 9 letras con el temblor de G2 | 1.000 | 1.000 | valen todas, con margen total |
+| L sobre I | 1.000 | **0.780** | falla por solo 0.02: **el par más frágil** |
+| E sobre O | 0.720 | 0.784 | falla |
+| P sobre S | 0.700 | 0.849 | falla |
+| E sobre L | 1.000 | 0.705 | falla |
+| S sobre P | 0.804 | 0.700 | falla |
+
+Si G15 da L sobre I como aprobado, lo primero es comparar el remuestreo con la definición
+de la Tarea 1 (arrastre del sobrante entre segmentos, primer y último punto incluidos),
+antes de pensar en constantes.
+
 ## Global Constraints
 
 - Principios del spec §2, sin excepción: sonido y no nombre (la letra suena con su
@@ -251,7 +267,10 @@ answerTrace(strokes: readonly TraceStroke[]): Promise<AttemptFeedback>;
   presentación → «no es una evaluación»; plantilla distinta de `trace` → mensaje que nombra
   `submitAnswer`; ya resuelto → «ya está resuelto». Ítem desconocido → lanza como hoy.
 - `submitAnswer` lanza ante un ejercicio `trace` **antes** de llamar a `checkAnswer`, con un
-  mensaje que nombra `submitTrace`.
+  mensaje que nombra `submitTrace`. `checkAnswer` no cambia y conserva su mensaje («no tiene
+  respuesta que comparar»): el test M4 de `answers.test.ts` lo llama directamente y sigue
+  igual. C5 comprueba el mensaje nuevo a propósito; no se debilita la guarda para conservar
+  el viejo.
 - `traceGuide`: lanza si no hay ejercicio en curso o si no es una evaluación `trace`.
   `glyph = glyphFor(item, "upper")` (D16: `lowercaseTracing` se ignora hasta el Plan 6) y
   `level = guideLevel(itemProgressOf(run.progress, itemId).box, run.attempt.hintsShown)`.
@@ -473,7 +492,7 @@ R29.
 | D2 | Un trazo sintético sobre A y 1500 ms | el marcador enseña los números de `scoreTrace` y «vale» |
 | X1 | `listen-tap` con 2 opciones, pista 1 | `{ kind: "replay", request: { key: item.audioKey } }` |
 | X2 | `initial-sound` con ítem `phoneme` y 2 opciones, pista 1 | `replay` con `item.audioKey` |
-| X3 | Las mismas con 3 opciones | `dim` de un distractor, nunca de la correcta (los tests de hoy siguen en verde) |
+| X3 | Las mismas con 3 opciones, **y un ítem oral de `phase0:initial`** (sus 3 opciones vienen del dato y `buildOptions` las pasa todas a `exercise.optionIds`) | `dim` de un distractor, nunca de la correcta; en `phase0:initial` nunca `replay`, porque es la única unidad que un niño puede jugar hoy (los tests de hoy siguen en verde) |
 | X4 | `ChoiceEvaluation` con 2 opciones tras la pista 1 | las dos opciones siguen activas y tocables |
 
 **Mutación:** quitar la guarda de R29 (X1 y X4 deben fallar).
@@ -489,8 +508,9 @@ R29.
 
 **Files:**
 - Create: `src/features/Trace.integration.test.tsx`
-- Modify: `README.md`; `src/engine/trace.ts` y `glyphs.test.ts` solo si la prueba manual
-  mueve constantes o la lista de pares
+- Modify: `README.md`, `next.config.ts` (`allowedDevOrigins` desde `DEV_ORIGINS`);
+  `src/engine/trace.ts` y `glyphs.test.ts` solo si la prueba manual mueve constantes o la
+  lista de pares
 
 **Integración** (modelo: `src/features/Phase0.integration.test.tsx`): vistas, motor y store
 reales con adaptador en memoria y relojes falsos, sobre un **currículo de prueba** con los
@@ -505,9 +525,21 @@ trazos de A, convertidos a coordenadas de pantalla con el mismo rect simulado.
 | I3 | Fin de la sesión | `counters.traces` igual al número de evaluaciones `trace`; `assisted` 1 en `letter:a` |
 
 **Prueba manual (el autor, antes de cerrar la tarea).** El coordinador para y se la pide.
-- Arranque: `pnpm dev -H 0.0.0.0` y `/dev/plantillas` desde un dispositivo táctil real. Desde
-  WSL2 puede hacer falta la red en modo *mirrored* o un `netsh interface portproxy`; si no hay
-  dispositivo táctil, la emulación táctil de Chrome y se anota en el registro.
+- **Acceso desde otro dispositivo (delicado: si falla, parece un lienzo muerto).** Next 16
+  bloquea en desarrollo las peticiones de origen cruzado a sus recursos de desarrollo
+  (`node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/allowedDevOrigins.md`):
+  solo permite `localhost`, sus subdominios y el host con el que arrancó. Desde el móvil, el
+  origen es la IP de la red local, y sin permiso la página se pinta pero **no se hidrata**:
+  el lienzo no respondería, un artefacto del arnés como el de R28 que haría dudar de las
+  constantes. Por eso esta tarea añade en `next.config.ts`
+  `allowedDevOrigins: process.env.DEV_ORIGINS?.split(",").filter(Boolean) ?? []` (solo
+  afecta a `next dev`) y una línea en «Cómo ejecutarlo» del README.
+- Arranque: `DEV_ORIGINS=<ip-lan> pnpm dev -H 0.0.0.0` y `/dev/plantillas` desde un
+  dispositivo táctil real. La entrada es la IP sola, sin esquema ni puerto. Desde WSL2 puede
+  hacer falta la red en modo *mirrored* o un `netsh interface portproxy`. Antes de trazar,
+  comprobar que la página responde: por ejemplo, que cambiar de letra en el selector cambia la
+  guía. Si no hay dispositivo táctil, se usa la emulación táctil de Chrome y se anota en el
+  registro.
 - Por cada letra, en los niveles 1 y 3: repasarla con cuidado (debe valer), repasarla torpe
   pero reconocible (debe valer), garabatear (no debe valer) y dibujar otra letra encima
   (anotar qué pasa). Anotar también si 1.5 s de espera se sienten bien.

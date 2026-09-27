@@ -22,6 +22,12 @@ D17 el trazo entra por `submitTrace` y lo puntúa el motor; SVG con eventos `poi
 
 Prototipo desechable de la puntuación con los trazos de la Tarea 1 y las constantes de partida (0.15 / 0.75 / 0.8): las 9 letras pasan con sus trazos y con temblor ±0.08; pasan también 5 pares cruzados (E sobre S, E sobre P, S sobre E, O sobre U, U sobre O). Con tolerancia 0.10 solo U sobre O. Cerca del umbral, pero fallan: E sobre O, L sobre I, S sobre O, P sobre S. El plan los fija en `CONFUSABLE_PAIRS` (G15) y la prueba manual de la Tarea 5 decide si se mueven las constantes.
 
+Márgenes medidos a 0.15 / 0.75 / 0.8 (cobertura mínima / precisión): las 9 letras con temblor ±0.08, 1.000 / 1.000 todas. Pares fuera de la lista más cerca de pasar: L sobre I 1.000 / **0.780** (el más frágil, a 0.02); E sobre O 0.720 / 0.784; P sobre S 0.700 / 0.849; E sobre L 1.000 / 0.705; S sobre P 0.804 / 0.700. Si la implementación da L sobre I como aprobado, primero se compara el remuestreo con el del plan.
+
+## Revisión del plan por el advisor (Opus, 2026-09-27)
+
+Plan sólido; cuatro ajustes aplicados antes de ejecutar: (1) los márgenes de arriba, que se habrían perdido con el scratchpad; (2) X3 de R29 incluye un ítem oral de `phase0:initial` (3 opciones del dato, verificado en `phase0.ts:82` y en `buildOptions`), la única unidad jugable hoy; (3) la prueba manual de la Tarea 5 añade `allowedDevOrigins` desde `DEV_ORIGINS` en `next.config.ts`, porque Next 16 bloquea en desarrollo los orígenes de la red local y la página no se hidrataría en el móvil; (4) Tarea 2: M4 de `answers.test.ts` llama a `checkAnswer` directamente y no cambia; C5 exige el mensaje nuevo de `submitAnswer` a propósito.
+
 ## Estado
 
 Plan escrito, committeado y aprobado por el autor (2026-09-27). Siguiente: Tarea 1, en una sesión nueva con `/model sonnet`.
