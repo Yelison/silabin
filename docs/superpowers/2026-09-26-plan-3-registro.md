@@ -144,3 +144,14 @@ Task 5b: minor (deferred): ⚠️ sin verificar en navegador el aspecto de los i
 Task 5b: cerrado el minor de la Tarea 4: `hear-it/Evaluation.test.tsx` asserta ui-replay, ui-yes y ui-no y la ausencia de 👍✋🔊.
 Task 5b: complete (commits c75d6a4..b03e501, review clean)
 Sesión 4: Tareas 5 y 5b hechas (2 implementadores, 3 revisiones, 1 ronda de corrección). Tokens sesión 4: sin medir. Siguiente: Tarea 6 (`sed -n 665,726p` del plan): la Fase 0 de punta a punta, ruta de desarrollo y cierre; incluye la prueba manual. Después, revisión final de la rama con Opus y PR (pregunta al autor antes del push).
+
+## Tarea 6 (la Fase 0 de punta a punta y `/dev/plantillas`)
+
+Sesión 5 (2026-09-26). BASE 2f26d1e. Coordinador en Sonnet 5 (puerta de modelo cumplida).
+Ruling: R24 — no se toca el planificador del motor para que `build` salga en `phase2:m`; `build/SessionFlow.test.tsx` conserva su inyección con `store.setState` — no está en el alcance de la Tarea 6 y `engine/` decide pedagogía (cambiarlo pide su propio plan) — si fuera equivocado, se abre una tarea en el Plan 4 para sustituir la inyección.
+Task 6 (código): implementada en eac18ca (7 tests de integración con vistas, motor y store reales: rhyme, initial y hear-it hasta `EndScreen`, y fallo a propósito en cada rung hasta el modelo en las cuatro unidades de la Fase 0; cada sesión queda guardada en el adaptador) y c346303 (`/dev/plantillas` con `notFound()` en producción, 2 tests de la guarda y 7 del componente `PlantillasDev`) por 1 implementador Sonnet. Puertas: 817 tests (1 skipped), typecheck, lint y `pnpm build` en verde; con `next start` la ruta da 404 y `/` da 200.
+Revisión (Sonnet, 8 mutaciones: guarda borrada, guarda con `VERCEL_ENV`, `assisted` sin incrementar, `appendSession` sin añadir, `endSession` quitado, `saveState` simulado, rung 3 con un solo fallo, `locked={false}`; 7 muertas): Approved, cumplimiento y calidad ✅, sin Critical ni Important, 0 rondas de corrección. Sobrevivió una: rung 2 con un solo fallo en `PlantillasDev`.
+Task 6: minor (deferred): `PlantillasDev.test.tsx` (~l.77-95) no pulsa «Rung 2»: su feedback puede romperse sin que falle nada (herramienta de desarrollo, no llega a producción).
+Task 6: minor (deferred): `jugarSesion` en `Phase0.integration.test.tsx` solo exige `evaluaciones > 0`, no un número de ejercicios contestados; `planSession` e `isSessionOver` ya tienen sus tests.
+Task 6: minor (deferred): el implementador y el revisor hicieron `pkill` de procesos `next` en el puerto 3000; si el autor tenía un `pnpm dev` en marcha, hay que relanzarlo.
+Task 6: código completo (commits 2f26d1e..c346303, review clean). Falta el README (dispatch aparte) y la prueba manual del autor con `pnpm dev` (Fase 0 y `/dev/plantillas`; en 360×640: hear-it sin scroll, initial-sound con 3 opciones, bandeja de `build`; la mano de `OptionCard` marcada; iconos en BigButton/ReplayButton).
