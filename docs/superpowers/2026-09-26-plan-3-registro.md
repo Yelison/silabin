@@ -82,3 +82,14 @@ Sesión 2: Tarea 2 hecha (1 implementador, 1 revisión, 1 ronda de corrección, 
 
 Sesión 3 (2026-09-26). BASE 886cc86. Coordinador en Sonnet 5 (puerta de modelo cumplida).
 Ruling: R17 — en `dim` se atenúa el primer id de `exercise.optionIds` que no es la respuesta (el motor ya mezcló, así que es determinista) — el plan lo preveía; el usuario lo confirma al retomar — si fuera equivocado, cambia qué tarjeta se atenúa, no si el niño puede acertar.
+Task 3: implementada en 20ce86d (1 implementador Sonnet). Revisión completa (Sonnet, 14 mutaciones): Approved, sin Critical ni Important. Las 4 mutaciones del brief mueren; 3 sobreviven (2b, 2c equivalentes por la doble guarda `blocked` + `disabled`; E5 y E8, huecos menores).
+Ruling: se acepta `choice/PictureChoice.tsx` (no estaba en el brief) — es el cuerpo común de `rhyme/Evaluation` e `initial-sound/Evaluation`, evita ~45 líneas duplicadas y no toca pedagogía; T4 puede usarlo o no — si fuera equivocado, se inlinea en las dos Evaluation.
+Ruling: el id real del ítem oral es `oral:initial:avión` (con tilde), no `avion` como dice X11 del brief — solo afecta a los tests — coste si fuera equivocado: ninguno.
+Ruling: el RED de la Tarea 3 se simuló quitando la producción y `registry.ts` (el implementador escribió antes el código) — la revisión por mutación (14 mutaciones) da la evidencia que el RED habría dado — si fuera equivocado, algún test podría pasar sin haber fallado nunca; las 4 mutaciones críticas lo descartan.
+Task 3: minor (deferred): `onsetRequest` es privada en `hint-effects.ts` y `initial-sound/Presentation.tsx` reescribe la partición «inicio + resto» en línea; exportarla evita que diverjan.
+Task 3: minor (deferred): `picture:${item.text}` está hardcodeado en `hint-effects.ts` y `rhyme/Presentation.tsx`; `pictureId` de `content/pictures.ts` no sale por `@/engine`.
+Task 3: minor (deferred): `dim` usa `exercise.optionIds` y no el parámetro `optionIds`; igual con R17, pero hear-it (T4) debe tenerlo presente.
+Task 3: minor (deferred): sin test de `layout="grid"`, de la cancelación de la secuencia por `token` (E5) ni de `ReplayButton disabled={locked}` (E8); `rhyme/Presentation` copia estilos de `OptionCard` en una tarjeta propia.
+Task 3: minor (deferred): `ReplayButton` vive fuera de `ChoiceEvaluation`; pulsarlo durante una `sequence` intercala audio (cosmético). T4 puede pasar un `header`.
+Task 3: minor (deferred): ⚠️ sin scroll en 360×640 con 3 imágenes (presentación de `phoneme:a` y evaluación de initial-sound con 3 opciones) solo calculado a mano; confirmar en la prueba manual de la Tarea 5b/6.
+Task 3: complete (commits 886cc86..20ce86d, review clean)
