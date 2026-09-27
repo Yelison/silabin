@@ -75,7 +75,7 @@ export function Presentation(props: PresentationProps) {
 		<div className="flex flex-col items-center gap-8">
 			<div
 				data-joined={juntas}
-				className={`flex min-h-40 items-center justify-center font-reading text-9xl leading-none text-ink ${MOVIMIENTO} ${juntas ? "gap-0" : "gap-12"}`}
+				className={`flex min-h-40 items-center justify-center overflow-x-clip font-reading text-9xl leading-none text-ink ${MOVIMIENTO} ${juntas ? "gap-0" : "gap-12"}`}
 			>
 				<span
 					data-part="consonante"
