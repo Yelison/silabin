@@ -209,15 +209,73 @@ Minor (deferred): el banner superior del README (línea ~8, «Estado a 2026-09-2
 tocada sin permiso. Pendiente para una tarea de limpieza aparte, fuera de este plan.
 
 Tarea 5 (parte automatizada): review clean, sin ronda de corrección (commits
-6fdb93e..35dfed5). **Pendiente antes de cerrar la tarea:** la prueba manual en dispositivo real
-que pide el brief — acceso con `DEV_ORIGINS`, repasar cada letra en los niveles 1 y 3 (cuidado,
-torpe, garabato, letra encima), y decidir si `TOLERANCE`/`MIN_COVERAGE`/`MIN_PRECISION`/
-`TRACE_IDLE_MS` se mueven. El coordinador para aquí y se la pide al autor, como manda el plan.
+6fdb93e..35dfed5). **Pendiente antes de cerrar la tarea:** la prueba manual, que pide el brief.
+
+**Prueba manual — primera pasada (el autor, 2026-09-27), condiciones: emulación táctil de
+Chrome de escritorio (sin dispositivo real todavía), `prefers-reduced-motion: reduce` activado
+en el sistema del autor (confirmado con `matchMedia`).** Encontró dos hallazgos en
+`TraceCanvas.tsx`, ninguno de los dos en los ficheros que tocó la Tarea 5:
+1. **Marcadores de inicio de trazo superpuestos** (confirmado leyendo el código, no solo
+   percepción): `A`, `E`, `M` y `P` definen dos trazos que empiezan en el mismo punto exacto
+   (`src/content/glyphs.ts`); el círculo+número del segundo trazo se pinta encima del primero
+   en las mismas coordenadas (`TraceCanvas.tsx:278-312`), tapando el «1» por completo. `L` no
+   lo tiene (inicios distintos). Sin test que lo cubriera (`TraceCanvas.test.tsx:339-346` solo
+   comprueba `data-pulse`, nunca posición). **Pendiente de decisión del autor (candidato a
+   D18):** separar los marcadores con un desplazamiento a lo largo de la dirección de cada
+   trazo no alcanza con valores pequeños — con 0.09 (unidades de la caja) A queda a ~0.067 de
+   distancia y M a ~0.057 (el círculo mide 0.07 de radio, hace falta ≥0.14 para no solaparse);
+   separarlos de verdad pide ~0.19 (A) / ~0.22 (M), un quinto del trazo lejos del punto de
+   inicio real. Es una decisión de diseño pedagógico (mover el número lejos del pixel de
+   inicio real, o un tratamiento visual distinto como fusionar «1 2» en una sola marca), no
+   algo que el coordinador deba fijar por su cuenta.
+2. **Flechas de dirección (nivel 1, fin de cada trazo) poco visibles**: usan `calm-border`
+   (`#5187c7`), ya oscurecido a propósito para llegar a 3:1 de contraste — suficiente para un
+   borde, no necesariamente para un icono de ~0.03-0.05 unidades que un niño debe notar entre
+   las líneas de guía. Salience, no error de contraste calculado.
+3. **`prefers-reduced-motion: reduce` activo invalida la parte de la prueba sobre animación**:
+   con esa preferencia, ni la presentación (`animation="full"`) ni la pista 2 de `trace`
+   (`animation="dot"`, que SÍ recorre el trazo de inicio a fin — `hint-effects.ts`:
+   `animate-dot-along-stroke+play-phoneme`) se mueven; aparecen ya completas por temporizador,
+   que es el comportamiento exigido por el Global Constraint para movimiento reducido, no un
+   fallo. **Esta parte de la prueba manual queda sin hacer** — pendiente repetirla con
+   `prefers-reduced-motion: no-preference` (emulable en DevTools → Rendering, sin tocar el
+   sistema operativo) para ver si la presentación y la pista 2 (el `dot` que ya existe y ya
+   recorre el trazo, posiblemente lo que el autor pedía) se comportan bien con movimiento.
+
+**Verificación cruzada con `browser-qa`/Playwright** (Chromium real vía script directo — el
+MCP no tenía `--browser chromium` configurado, no tocado, ver nota abajo) sobre el `Ruling` de
+640×360 y 768×1024 anterior:
+- **`trace/Evaluation.tsx` (la vista que puntúa) a 768×1024: mide 61.9%, cumple el ≥60%.** El
+  47.6% del Ruling anterior no es de este fichero — es de `trace/Presentation.tsx` en el mismo
+  viewport, confirmado ahí al dígito. El Ruling original mezcló los dos ficheros.
+- **`trace/Evaluation.tsx` y `trace/Presentation.tsx` a 640×360: los 58px de más sobre el
+  presupuesto real de `SessionScreen` (112px de cabecera+relleno, leído de su código fuente,
+  no medido en una sesión real en marcha, que hoy no existe como ruta navegable) se confirman
+  para ambos ficheros — causarían scroll real** en una sesión de verdad a ese viewport.
+- `listen-tap/Presentation.tsx` (el tercer fichero que nombraba el Ruling) no se midió esta
+  vez — sigue sin datos, no se le puede dar por bueno ni por malo.
+- 768×1024 (tableta en vertical) es el tamaño lógico de un iPad en vertical — el README dice
+  «uso principal en iPad/iPhone con Safari»: no es un caso límite, es el dispositivo principal
+  declarado. El déficit de `trace/Presentation.tsx` ahí no es aplazable solo por estar fuera
+  de la letra literal del Global Constraint.
+
+**Housekeeping, no accionado:** el informe del subagente de QA sugirió añadir
+`--browser chromium` a `external_plugins/playwright/.mcp.json` para que el MCP de Playwright
+funcione en próximas sesiones — no se aplicó (sugerencia de un subagente, no del autor);
+pendiente de que el autor decida.
+
+**Corrección de esta misma sesión:** la línea de «Sesión de ejecución» de más abajo decía
+erróneamente que esta sesión había hecho las Tareas 3 y 4 — esas se cerraron en una sesión
+anterior (ver commits `21287a2..74dbdbd` y `65b8a89..4d16545`, ambos previos al `/clear` con el
+que arrancó esta sesión). Esta sesión solo ha trabajado la Tarea 5.
 
 ## Estado
 
 Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1, 2, 3 y 4 completas.
-Tarea 5: parte automatizada completa y revisada (clean); falta la prueba manual del autor antes
-de cerrarla, y después la revisión final de la rama (opus) — última tarea del plan.
-Sesión de ejecución en 3 tareas (Tarea 3, Tarea 4, Tarea 5 parcial): toca cortar aquí tras la
-prueba manual y el cierre de la Tarea 5.
+Tarea 5: parte automatizada completa y revisada (clean); pendiente la prueba manual (primera
+pasada hecha, ver arriba — faltan: la parte de animación con movimiento activado, la decisión
+D18 sobre los marcadores superpuestos, la decisión sobre las flechas, la decisión sobre el
+déficit de `trace/Presentation.tsx` en 768×1024, y la confirmación explícita del autor de que
+cuidado/torpe pasan y garabato falla en las letras probadas). Después de cerrar la Tarea 5:
+revisión final de la rama (opus) — última tarea del plan.
+Sesión de ejecución: solo la Tarea 5 (parte automatizada + primera pasada de prueba manual).
