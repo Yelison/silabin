@@ -97,3 +97,14 @@ Task 3: complete (commits 886cc86..20ce86d, review clean)
 ## Tarea 4 (hear-it y listen-tap)
 
 Sesión 3 (continúa). BASE 586b1b5.
+Task 4: implementada en b8de3a3 (1 implementador Sonnet, RED real). Revisión completa (Sonnet, 14 mutaciones distintas de las del implementador): Approved, sin Critical ni Important. Las 4 del brief mueren; sobreviven M1b (emoji 👍/✋ sin assert), M14 (`PAUSE_MS = 0`) y dos equivalentes (M11, M12: guarda de `select` y `disabled` redundantes; juntas mueren).
+Ruling: R18 — `listen-tap` pinta el par minúscula grande + mayúscula al lado en cada opción de letra con el componente `Written` (`display`); sílabas y palabras en minúscula — spec §2 «par A/a siempre visible» — si fuera equivocado, se cambia el pintado de una prop y sus tests.
+Ruling: la pista 2 de `hear-it` con respuesta «no» es `pulse` con `optionId: null` y `word:<w>` normal (no `replay`) — suena igual, el tipo `ChoiceEffect` ya admite `null`, y la pista 2 queda siempre como `pulse` sin opción — si fuera equivocado, se cambia el `kind` en un caso y su test.
+Ruling: la pausa entre las dos reproducciones de la presentación de `listen-tap` es `PAUSE_MS = 900` ms, cancelada al desmontar — el brief pide «con pausa» sin valor — si fuera equivocado, se ajusta una constante.
+Task 4: minor (deferred): sin assert del emoji 👍/✋ de hear-it (contenido `aria-hidden`); la 5b los sustituye por iconos y ahí debe quedar un assert del icono.
+Task 4: minor (deferred): `PAUSE_MS` puede bajar a 0 sin que falle ningún test.
+Task 4: minor (deferred): si `audio.play` no resuelve ni rechaza nunca, las presentaciones de hear-it y listen-tap (y la `sequence` de T3) dejan al niño sin avanzar; mismo patrón que rhyme. Comprobar que el `AudioPlayer` real siempre resuelve o rechaza (Tarea 6).
+Task 4: minor (deferred): `hear-it/Evaluation` pasa un `lookup` que no usa (lo exige el tipo) y `word:${item.text}` va hardcodeado (las 8 palabras no llevan tilde); el cableado de `ReplayButton` está repetido en las dos Evaluation.
+Task 4: minor (deferred): ⚠️ objetivos ≥72/128 px, `font-reading` real y ausencia de scroll en 360×640 con la cabecera de hear-it (imagen + altavoz + dos botones 7xl): sin verificar; entra en la prueba manual de la 5b/6.
+Task 4: complete (commits cef36b7..b8de3a3, review clean)
+Sesión 3: Tareas 3 y 4 hechas (2 implementadores, 2 revisiones, 0 rondas de corrección). Tokens sesión 3: sin medir. Siguiente: Tarea 5 (`build`, tocar o arrastrar; R15).
