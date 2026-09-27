@@ -15,6 +15,7 @@ D8 base visual mínima dentro del Plan 3 (tokens + componentes; el autor pidió 
 D9 `importState` al Plan 6: un import deliberado sustituye `doc` y quita `readFailed`/`recovered`.
 D10 las 5 plantillas; tras el plan solo la Fase 0 es jugable (Fase 1 y 2 declaran trace y say-it); `listen-tap` y `build` se ven en `/dev/plantillas`.
 D11 la prueba manual del Plan 2 (`pnpm dev`) la hace el autor ANTES de despachar la Tarea 1.
+D12 (entre sesiones 2 y 3) llegaron las 65 ilustraciones (3D suave tipo juguete) y 6 iconos planos; se integran en una **Tarea 5b** nueva, antes de la 6, para que la prueba manual de la Fase 0 use las imágenes reales. Orden: 3 → 4 → 5 → 5b → 6. Origen de los ficheros y contrato en la Tarea 5b del plan.
 
 ## Hallazgo al escribir el plan
 

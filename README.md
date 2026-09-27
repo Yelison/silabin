@@ -275,7 +275,7 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 
 | # | Decisión |
 |---|---|
-| D1 | Imágenes: **emoji como placeholder** detrás de `src/images/`, clave `img:<palabra>`. Las imágenes reales siguen siendo un hueco de assets sin resolver |
+| D1 | Imágenes: **emoji como placeholder** detrás de `src/images/`, clave `img:<palabra>`. Las 65 ilustraciones reales ya están generadas (2026-09-26, estilo 3D suave tipo juguete; ver `docs/ilustraciones-prompts.md`), pendientes de optimizar e integrar en el código |
 | D2 | `basePool` **lanza error** en vez de caer al respaldo global, y un invariante de contenido lo comprueba en `pnpm test` |
 | D2b | Consecuencia de D2: las 4 unidades de Fase 2 declaran `initial-sound` con peso 1 |
 | D3 | Barril `@/engine`: reexporta `curriculum`, `CurriculumIndex`, `templates`, `TemplateId`, `HintStep`, `Item` y `Unit`; deja de exportar `owningUnits`, `similarity`, `createRng`, `promote`, `demote`, `MASTERY_TARGET`, `REVIEW_SHARE` y `unitMasteryRatio` |

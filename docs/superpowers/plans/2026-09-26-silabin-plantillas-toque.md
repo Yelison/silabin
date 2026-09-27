@@ -100,6 +100,9 @@ donde un detalle es delicado.
    desbloqueada. → Tarea 3, X8.
 5. **`hear-it` cuya respuesta es «no»:** el modelo marca el botón «no». Una vista que
    supusiera «sí» enseñaría lo contrario. → Tarea 4, H5.
+6. **Una ilustración que no carga** (sin red y aún sin service worker, o un fichero que
+   falta): la tarjeta no puede quedarse vacía, porque el niño no sabría qué nombrar. Se ve el
+   emoji de respaldo. → Tarea 5b, I3 e I7.
 
 ---
 
@@ -114,7 +117,10 @@ src/
     BigButton.tsx                    modificar: tokens (T1)
     OptionCard.tsx (+ test)          crear: tarjeta de opción con estados (T1)
     ReplayButton.tsx                 crear: botón de volver a oír (T1)
-    Picture.tsx                      crear: imagen (emoji); sustituye a `Imagen` de parts.tsx (T1)
+    Picture.tsx                      crear: imagen (emoji); sustituye a `Imagen` de parts.tsx (T1);
+                                     ilustración WebP con emoji de respaldo (T5b)
+    Icon.tsx (+ test)                crear: iconos de interfaz (T5b)
+  images/index.ts (+ test)           modificar: src de la ilustración y slugFor (T5b)
   content/
     audio-keys.ts (+ test)           crear: endingKey, stretchKey, stretchInKey, rimeOf, textos (T2)
     audio-manifest.ts                modificar: claves de pistas y ui:hear-yes/no (T2)
@@ -136,6 +142,8 @@ src/
     listen-tap/Presentation.tsx, Evaluation.tsx (+ tests)     (T4)
     build/Presentation.tsx, Evaluation.tsx (+ tests)          (T5)
   features/Phase0.integration.test.tsx   crear: la Fase 0 de punta a punta (T6)
+public/images/palabras/*.webp, public/icons/ui-*.png   crear: assets (T5b)
+scripts/optimizar-ilustraciones.py   crear: PNG → WebP 384 px (T5b)
 ```
 
 ---
@@ -564,6 +572,96 @@ la consonante correcta.
 
 ---
 
+## Tarea 5b: Ilustraciones e iconos reales
+
+**Añadida el 2026-09-26** con el autor, después de escribir el plan: las 65 ilustraciones y los
+iconos ya están generados. Va antes de la Tarea 6 para que la prueba manual de la Fase 0 se
+haga con lo que verá el niño. Estilo decidido: ilustraciones en 3D suave tipo juguete, iconos
+planos (`docs/ilustraciones-prompts.md`).
+
+**Riesgo:** contrato entre `images/` y la interfaz, y assets. Revisión de cumplimiento con dos
+mutaciones (abajo). No decide pedagogía.
+
+**Origen de los ficheros** (fuera del repo; si la sesión no ve estas carpetas, pídeselas al
+autor antes de despachar):
+- Ilustraciones: `/mnt/c/Users/Yelisson/Downloads/ilustraciones_lectura_3d_36-65 (1)/img-<palabra>.png`
+  (65, 1024 × 1024, RGBA, ~750 KB cada una; nombres sin tildes ni ñ). **No** la carpeta sin
+  «(1)»: tiene ficheros truncados.
+- Iconos: `/mnt/c/Users/Yelisson/Downloads/ui-icons/ui-<nombre>.png` (256 × 256, RGBA, ~30 KB).
+  Se ignora `ui-no-viejo.png`.
+
+**Files:**
+- Create: `scripts/optimizar-ilustraciones.py` (Pillow, ya instalado con soporte WebP; sin
+  dependencias nuevas en `package.json`)
+- Create: `public/images/palabras/<slug>.webp` (65), `public/icons/ui-{replay,next,drum,hand,yes,no}.png`
+- Create: `src/components/Icon.tsx` (+ test)
+- Modify: `src/images/index.ts` (+ `index.test.ts`), `src/components/Picture.tsx` (+ test)
+- Modify (sustituir el emoji de interfaz por `Icon`): `ReplayButton.tsx` (🔊 → `replay`),
+  `OptionCard.tsx` (👆 → `hand`), `count-syllables/Evaluation.tsx` (🥁 → `drum`),
+  `count-syllables/Presentation.tsx` y los botones «siguiente» de las Presentaciones de T3-T5
+  (➡️ → `next`), los botones sí/no de `hear-it` (T4) (→ `yes` / `no`).
+
+**Interfaces:**
+- Consume: `imageFor` y `PictureImage` (Plan 2), `Picture` (T1); lo que T3-T5 hayan pintado
+  con emoji de interfaz.
+- Produce:
+
+```ts
+// src/images/index.ts
+export type PictureImage = { src: string; emoji: string; alt: string };
+export function slugFor(word: string): string;       // "ratón" → "raton", "uña" → "una"
+export function imageFor(imageKey: string): PictureImage | null;
+// src = `/images/palabras/${slugFor(palabra)}.webp`; emoji se queda como respaldo; alt sin cambios.
+
+// src/components/Icon.tsx
+export type IconName = "replay" | "next" | "drum" | "hand" | "yes" | "no";
+export function Icon(props: { name: IconName; size?: number /* px, por defecto 48 */ }): JSX.Element;
+// <img src={`/icons/ui-${name}.png`} alt="" aria-hidden width height draggable={false}>
+```
+
+- **Script** (`python3 scripts/optimizar-ilustraciones.py <carpeta-origen>`): por cada
+  `img-<slug>.png`, redimensiona a 384 × 384 (LANCZOS), guarda
+  `public/images/palabras/<slug>.webp` (calidad 80, con alfa) y falla si algún PNG está
+  truncado o si no están los 65. Imprime el tamaño total. Objetivo: < 60 KB por fichero
+  (medido al escribir la tarea, con `method=6`: 1,3 MB en total, el mayor 39 KB, `mimo`).
+  `method=6` es lento sobre `/mnt/c`: más de 2 minutos para las 65, así que conviene lanzarlo
+  en segundo plano.
+  Los iconos se copian tal cual (ya pesan ~30 KB).
+- **`Picture`:** pinta `<img>` con `src`, `alt`, `width`/`height` fijos (`lg` 160 px, `md`
+  96 px), `draggable={false}` y `select-none`. Si el `<img>` dispara `error`, cambia al emoji
+  con `role="img"` y `aria-label`, como hoy. **`<img>` y no `next/image`**: los ficheros ya
+  vienen a su tamaño y la PWA los precacheará tal cual (spec §8); el optimizador de Next no
+  aporta nada y no funciona sin servidor. Si Biome marca `noImgElement`, suprímelo con
+  `biome-ignore` y ese motivo (Ruling previsto R20).
+- **`Icon`** es decorativo: el botón que lo contiene ya lleva `aria-label`. La mano de
+  `OptionCard` (ui-hand señala hacia abajo) va centrada encima de la tarjeta, no en la esquina.
+- `ui-star` no se usa todavía (la celebración es del Plan 6) y no se copia.
+
+**Casos de test:**
+
+| Id | Entrada | Esperado |
+|---|---|---|
+| I1 | (se amplía) todo `imageKey` del currículo | `imageFor` no nulo, `emoji` no vacío, `alt` = palabra y `src` = `/images/palabras/<slug>.webp` |
+| I3 | todo `imageKey` del currículo | existe `public/<src>` en disco (`node:fs`) y pesa < 60 KB |
+| I4 | todas las palabras del currículo | `slugFor` da `[a-z]+` y no hay dos palabras con el mismo slug |
+| I5 | `slugFor("ratón")`, `slugFor("uña")`, `slugFor("árbol")` | `"raton"`, `"una"`, `"arbol"` |
+| I6 | `<Picture imageKey="img:gato" />` | un `img` con `alt="gato"`, `src` que acaba en `/gato.webp`, 160 × 160 |
+| I7 | `<Picture>` y `fireEvent.error` sobre el `img` | desaparece el `img`; queda `role="img"` con `aria-label="gato"` y el emoji |
+| I8 | `<Picture imageKey={undefined} />` o clave desconocida | no pinta nada (como hoy) |
+| I9 | `<Icon name="replay" />` | `img` con `src="/icons/ui-replay.png"`, `alt=""`, `aria-hidden`, 48 × 48 |
+| I10 | todo `IconName` | existe `public/icons/ui-<nombre>.png` en disco |
+| I11 | `ReplayButton`, `OptionCard` marcada, botones sí/no de `hear-it` | pintan su `Icon` y ya no contienen el emoji; los tests existentes de esas vistas siguen en verde |
+
+**Mutaciones:** (1) `slugFor` sin quitar tildes → I3/I5 deben fallar; (2) `Picture` sin el
+respaldo de `onError` → I7 debe fallar.
+
+**Pasos:** script y assets (un commit), luego TDD de `images/` + `Picture` + `Icon` y la
+sustitución de emoji (otro commit). Puertas en verde y `pnpm build`. Commits:
+`chore(assets): ilustraciones en WebP a 384 px, porque los PNG pesaban 49 MB` y
+`feat(ui): ilustraciones e iconos reales, con el emoji de respaldo si la imagen no carga`.
+
+---
+
 ## Tarea 6: La Fase 0 de punta a punta, ruta de desarrollo y cierre
 
 **Riesgo:** integración y documentación. Revisión de cumplimiento, con una mutación sobre la
@@ -584,7 +682,8 @@ guarda de la ruta.
   falso) y `locked`. Sirve para ver `listen-tap` y `build` a mano, porque ninguna unidad las
   ofrece todavía (D10).
 - **README:** estado del Plan 3 (Fase 0 jugable; número de tests); D8-D11 en «Decisiones
-  tomadas»; la hoja de ruta corregida (tras el Plan 3 la Fase 1 y la 2 esperan a `trace` y
+  tomadas»; D1 actualizada (ilustraciones reales integradas, emoji solo de respaldo); la hoja
+  de ruta corregida (tras el Plan 3 la Fase 1 y la 2 esperan a `trace` y
   `say-it`); trampa 9 actualizada (`expectedAnswer` y el invariante M11 la acotan a
   `trace`/`say-it`/`read-word`); en «Deuda menor», `importState` con el contrato de D9 movido al
   Plan 6; enlace a `docs/diseno-visual.md`; la deuda nueva del registro.
@@ -600,8 +699,9 @@ con `NODE_ENV=production` debe fallar).
 
 ## Fuera de alcance de este plan
 
-- La identidad visual final (paleta definitiva, ilustraciones, compañero): D8 la deja para
-  después.
+- La identidad visual final (paleta definitiva, compañero): D8 la deja para después. Las
+  ilustraciones y los iconos sí entran (Tarea 5b); `ui-star` y los emoji de `EndScreen`
+  esperan a la celebración y las recompensas del Plan 6.
 - `trace` (Plan 4), `say-it` y `read-word` (Plan 5): hasta entonces la Fase 1 y la 2 siguen
   atenuadas en el mapa.
 - `importState` en la interfaz: Plan 6 (D9).
@@ -615,12 +715,12 @@ con `NODE_ENV=production` debe fallar).
   `docs/superpowers/2026-09-26-plan-3-registro.md`.
 - **No despaches la Tarea 1 hasta que el autor confirme la prueba manual del Plan 2 (D11).**
   Si encuentra fallos, se arreglan antes, en esta rama y con su propia revisión.
-- Orden estricto 1 → 6. Cortes de sesión naturales tras la 2 y tras la 4.
+- Orden estricto 1 → 5 → 5b → 6. Cortes de sesión naturales tras la 2, tras la 4 y tras la 5b.
 - Briefs con `sed -n` sobre este fichero (`grep -n '^## Tarea' <plan>`).
 - Rulings previstos para el ledger: R15 (`build` acepta tocar y arrastrar), R16 (tema claro
   fijo), R17 (se atenúa el primer distractor en el orden del motor), R18 (`listen-tap` pinta
   el par minúscula-mayúscula en cada opción de letra), R19 (en `pickVoice`, el acento pesa
-  más que la calidad).
+  más que la calidad), R20 (`<img>` y no `next/image` en `Picture` e `Icon`).
 - README (Tarea 6): en «Después», la voz. Prueba de Azure con unos 10 audios en `do` y `mx`
   antes del lote, y **los fonemas sueltos («mmm», «sss», «p») grabados con voz humana**:
   ninguna voz sintética los dice bien.
