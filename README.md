@@ -270,7 +270,7 @@ confirmada con el autor** (D7), ya con los planes 2 y 3 construidos.
 | Plan | Contenido | Resultado visible |
 |---|---|---|
 | ~~2~~ | ~~Capa `audio/`, Zustand sobre `store/`, inicio, mapa, sesión, fin y `count-syllables` de punta a punta~~ **hecho** | Un niño juega una sesión real de `phase0:clap` |
-| ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (falta el PR) | La Fase 0 entera es jugable; `listen-tap` y `build` se ven en `/dev/plantillas` |
+| ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (PR #4 fusionado a `main`) | La Fase 0 entera es jugable; `listen-tap` y `build` se ven en `/dev/plantillas` |
 | 4 | `trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía. Es el componente más difícil del proyecto | Escribir letras con el dedo |
 | 5 | Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word` | Leer en voz alta con validación del adulto |
 | 6 | Recompensas y cosméticos, panel de padres con PIN, importar el progreso (`importState`, con el contrato de D9), PWA y service worker, lista de verificación en iPad | Primera versión completa |
@@ -300,22 +300,20 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-1. **Cerrar el Plan 3:** revisión final de la rama con el modelo más capaz (`model: "opus"`,
-   apuntada a los `minor (deferred)` y a los rulings del registro del Plan 3).
-2. **Prueba manual de la Fase 0 por el autor** con `pnpm dev` (si se puede, en iPhone/iPad con
-   `pnpm dev --hostname 0.0.0.0`), y un vistazo a `/dev/plantillas` para `listen-tap` y
-   `build`. Puntos que el registro dejó sin medir: scroll en 360 × 640 con tres imágenes, la
-   cabecera de `hear-it`, la bandeja de `build` con unas 13 piezas, la mano de `OptionCard`
-   y el aspecto de los iconos dentro de los botones (ver [deuda menor](#deuda-menor-aceptada)).
-3. **Abrir el PR** de `feat/plan-3-plantillas-toque` contra `main` (pregunta al autor antes
-   del push).
-4. **Escribir el Plan 4** (`trace`) con `superpowers:writing-plans`, en
+**Plan 3 cerrado (2026-09-27):** revisión final de la rama (Opus, Approved con Minors, 7
+mutaciones dirigidas todas muertas) y PR #4 fusionado a `main`. Un hallazgo de la revisión
+final quedó como decisión abierta para el Plan 4 (R29 del registro): con nivel `easy` (2
+opciones), la pista 1 dejaría solo la respuesta correcta en `listen-tap`/`initial-sound` con
+ítems `phoneme`; no es alcanzable hoy porque esas unidades siguen bloqueadas, pero hay que
+resolverlo antes de desbloquearlas.
+
+1. **Escribir el Plan 4** (`trace`) con `superpowers:writing-plans`, en
    `docs/superpowers/plans/`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo
    con `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
    [cómo se trabaja](#cómo-se-trabaja-en-este-repo). Antes de escribirlo, revisa las
-   [trampas vivas](#trampas-conocidas), sobre todo la 9. Pregunta al autor las decisiones
-   abiertas que queden.
-5. Llevar el ledger del plan **versionado desde el primer día** en
+   [trampas vivas](#trampas-conocidas), sobre todo la 9, y la decisión R29 de arriba.
+   Pregunta al autor las decisiones abiertas que queden.
+2. Llevar el ledger del plan **versionado desde el primer día** en
    `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
    sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
 
