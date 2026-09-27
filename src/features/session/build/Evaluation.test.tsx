@@ -352,6 +352,112 @@ describe("build / Evaluation", () => {
 		expect(m.onAnswer).toHaveBeenCalledTimes(1);
 	});
 
+	describe("M8: con el dedo, un movimiento menor que el umbral es un toque", () => {
+		/** Un dedo (o un ratón) que baja, se mueve `dx` px y sube; el clic, si lo hay, lo manda el test. */
+		function deslizar(nombre: string, dx: number, pointerType: string) {
+			const pieza = boton(nombre);
+			const base = { pointerId: 1, pointerType, clientY: 10 };
+			fireEvent.pointerDown(pieza, { ...base, clientX: 10 });
+			fireEvent.pointerMove(pieza, { ...base, clientX: 10 + dx });
+			fireEvent.pointerUp(pieza, { ...base, clientX: 10 + dx });
+			return pieza;
+		}
+
+		it.each([0, 3, 6, 8, 9])(
+			"con el dedo, %i px sin clic (Chromium no lo manda) colocan la pieza",
+			(dx) => {
+				montar(MA());
+				deslizar("m", dx, "touch");
+				expect(enCasilla(1)).toEqual(["m"]);
+			},
+		);
+
+		it("con el dedo, el clic que sí llega tras un toque no lo deshace ni lo repite", () => {
+			const m = montar(MA());
+			// La pieza cambia de sitio al colocarla: el clic llega a la que hay ahora.
+			deslizar("m", 2, "touch");
+			fireEvent.click(boton("m"));
+			expect(enCasilla(1)).toEqual(["m"]);
+			deslizar("a", 2, "touch");
+			fireEvent.click(boton("a"));
+			expect(enCasilla(2)).toEqual(["a"]);
+			expect(m.onAnswer).toHaveBeenCalledTimes(1);
+			expect(m.onAnswer).toHaveBeenCalledWith("ma");
+		});
+
+		it("con el dedo, tocar una pieza colocada la devuelve a la bandeja, con clic o sin él", () => {
+			montar(MA());
+			deslizar("m", 8, "touch");
+			expect(enCasilla(1)).toEqual(["m"]);
+			deslizar("m", 1, "touch");
+			fireEvent.click(boton("m"));
+			expect(enCasilla(1)).toEqual([]);
+			deslizar("m", 8, "touch");
+			expect(enCasilla(1)).toEqual(["m"]);
+			deslizar("m", 8, "touch");
+			expect(enCasilla(1)).toEqual([]);
+		});
+
+		it("con el dedo, 10 px o más siguen siendo un arrastre (R22) y no un toque", () => {
+			montar(MA());
+			// Lo que hay bajo el dedo al soltar: la casilla 2.
+			const pieza = boton("m");
+			(
+				document.elementsFromPoint as ReturnType<typeof vi.fn>
+			).mockImplementation(() => [pieza, casilla(2)]);
+			deslizar("m", 10, "touch");
+			expect(enCasilla(1)).toEqual([]);
+			expect(enCasilla(2)).toEqual(["m"]);
+			// Y el clic que Chromium suele omitir tras un arrastre no cambia nada.
+			fireEvent.click(pieza);
+			expect(enCasilla(2)).toEqual(["m"]);
+		});
+
+		it("con el ratón, un movimiento pequeño lo resuelve solo el clic: una vez, no dos", () => {
+			montar(MA());
+			const pieza = deslizar("m", 2, "mouse");
+			expect(enCasilla(1)).toEqual([]);
+			fireEvent.click(pieza);
+			expect(enCasilla(1)).toEqual(["m"]);
+			tocar("m");
+			expect(enCasilla(1)).toEqual([]);
+		});
+
+		it("con el dedo, un clic de teclado o lector de pantalla posterior sí cuenta", async () => {
+			montar(MA());
+			deslizar("m", 8, "touch"); // sin clic: el aviso de «viene un clic» caduca solo
+			expect(enCasilla(1)).toEqual(["m"]);
+			await act(async () => {
+				await new Promise((r) => setTimeout(r, 500));
+			});
+			tocar("m");
+			expect(enCasilla(1)).toEqual([]);
+		});
+
+		it("R20: en el modelo, la pieza fuera de turno no responde al dedo, ni con clic", () => {
+			const m = montar(LO(), { feedback: conPista(3) });
+			deslizar("o", 3, "touch"); // la vocal antes que la consonante
+			fireEvent.click(boton("o"));
+			deslizar("m", 8, "touch"); // una pieza que no es del modelo
+			expect(enCasilla(1)).toEqual([]);
+			expect(enCasilla(2)).toEqual([]);
+			deslizar("l", 8, "touch");
+			expect(enCasilla(1)).toEqual(["l"]);
+			deslizar("o", 8, "touch");
+			expect(m.onModelDone).toHaveBeenCalledTimes(1);
+			expect(m.onAnswer).not.toHaveBeenCalled();
+		});
+
+		it("con locked, el dedo no coloca nada", () => {
+			montar(MA(), { locked: true });
+			deslizar("m", 3, "touch");
+			fireEvent.click(boton("m"));
+			deslizar("a", 8, "touch");
+			expect(enCasilla(1)).toEqual([]);
+			expect(enCasilla(2)).toEqual([]);
+		});
+	});
+
 	it("el clic que llega justo tras un arrastre no vuelve a mover la pieza", async () => {
 		montar(MA());
 		const pieza = boton("m");
