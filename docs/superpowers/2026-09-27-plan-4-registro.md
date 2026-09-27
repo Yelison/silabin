@@ -28,6 +28,68 @@ Márgenes medidos a 0.15 / 0.75 / 0.8 (cobertura mínima / precisión): las 9 le
 
 Plan sólido; cuatro ajustes aplicados antes de ejecutar: (1) los márgenes de arriba, que se habrían perdido con el scratchpad; (2) X3 de R29 incluye un ítem oral de `phase0:initial` (3 opciones del dato, verificado en `phase0.ts:82` y en `buildOptions`), la única unidad jugable hoy; (3) la prueba manual de la Tarea 5 añade `allowedDevOrigins` desde `DEV_ORIGINS` en `next.config.ts`, porque Next 16 bloquea en desarrollo los orígenes de la red local y la página no se hidrataría en el móvil; (4) Tarea 2: M4 de `answers.test.ts` llama a `checkAnswer` directamente y no cambia; C5 exige el mensaje nuevo de `submitAnswer` a propósito.
 
+## Ejecución con Subagent-Driven Development (2026-09-27, coordinador en Sonnet)
+
+Puerta de modelo verificada: sesión en Sonnet. Espacio de trabajo desechable:
+`.superpowers/sdd/2026-09-27-silabin-trazo/` (solo tenía `plan-path` de cuando se escribió el plan).
+
+**Escaneo previo a la Tarea 1** (tabla, no veredicto):
+
+| Par / tarea | Comprobado | Resultado |
+|---|---|---|
+| T1 → T2 (interfaz) | T2 «Consumes (T1)»: `scoreTrace`, `guideLevel`, `glyphFor`, `TraceStroke`, `GuideLevel`, `Glyph` contra lo que T1 «Produces» | coincide exactamente en nombres y firmas |
+| T1 consigo misma (G17) | El invariante habla de «unidad que declara `trace`»; `phase1.ts` (vocales) y `phase2.ts` (m,l,s,p) ya declaran `templateId: "trace"` en sus `exercises` | las 9 letras de la tabla de trazos (A,E,I,O,U,M,L,S,P) son exactamente los `letter:*` que esas unidades introducen; el invariante no es vacío |
+| T1 consigo misma (glyphFor / claves) | `UPPER_GLYPHS` se indexa por `item.text`; `letter:a`…`letter:u` (phase1) y `letter:m/l/s/p` (phase2) tienen `text` en minúscula de una letra | coincide |
+| Usos de `glyphFor`/`scoreTrace`/`guideLevel` en el resto del plan (T2-T4) | `grep` de las tres firmas en todo el plan | ningún uso diverge de la firma de T1 |
+
+Escaneo limpio para la Tarea 1 y su consumidor inmediato (T2). No se leyeron las Tareas 3-5 en profundidad: el advisor ya revisó el plan completo el 2026-09-27 (ver arriba) y esta sesión solo despacha la Tarea 1.
+
+**Tarea 1 — implementación:** commit `1045f20` (feat(engine): puntuar el trazo por forma, con
+tolerancia, para no frustrar a quien empieza). `pnpm test` 844 pasan / 1 skip, typecheck y lint
+limpios. G15 confirma los 5 pares previstos (E→S, E→P, O→U, U→O, S→E) y ninguno nuevo — sin
+`Ruling` R30 necesario, la lista prevista se sostiene tal cual.
+
+**Tarea 1 — revisión (ronda 0, sonnet):** ✅ cumplimiento del spec (geometría, constantes,
+algoritmo, `guideLevel`, G1-G17, G15/`CONFUSABLE_PAIRS` todo verificado con ejecución
+independiente, no solo lectura). **Needs fixes** — 3 Important, 0 Critical:
+1. Duplicación literal de `resampleForTest`/`withTremor` entre `glyphs.test.ts` y
+   `trace.test.ts` (más una tercera versión interna en `trace.ts`) — code quality.
+2. El informe de la mutación 2 (distancia al punto más cercano) subcuenta los tests que
+   rompen: dice 7, el revisor verificó por ejecución que son 8 (faltan G1, G2, G12, G14).
+   Veredicto "detectada" correcto, cifra incorrecta.
+3. El informe de la mutación 3 (sin precisión) subcuenta los pares nuevos en G15: dice 3
+   (s>l, s>p, p>i), el revisor verificó por ejecución que son 12. Veredicto "detectada"
+   correcto, alcance mal representado.
+Minor (deferred): G5 (dedo rápido, solo 2 extremos) es matemáticamente idéntico a G1 para la
+`L` sintética del brief — no ejercita distancia-al-segmento de forma distinta a G1 con esta
+fixture; queda anotado, no bloquea.
+Mutación 5 (remuestreo sin arrastre entre segmentos) — confirmada que sobrevive por ejecución
+independiente del revisor, no solo por el informe del implementador. Es la debilidad conocida
+y aceptada del brief para estas 9 letras con `TOLERANCE=0.15`; no se pide test nuevo.
+
+Fix round 1/5: se resume al implementador original (mismo agente, sonnet) con los 3 Important
+verbatim.
+
+**Tarea 1 — fix round 1/5 (commits 1045f20..24b017b):**
+1. Duplicación de `resampleForTest`/`withTremor` → arreglada: `src/engine/trace-test-fixtures.ts`
+   nuevo, importado desde ambos test files; `git show` confirma `trace.ts` de producción
+   idéntico al commit anterior.
+2. Cifra de la mutación 2 → el implementador discrepó del primer revisor (7 tests rotos, no 8;
+   G12 no detecta esta mutación porque compara la misma función mutada contra sí misma sobre
+   una entrada que, tras filtrar no-finitos, queda estructuralmente idéntica). La re-revisión
+   reimplementó el algoritmo en un script aislado y confirmó de forma independiente al
+   **implementador**: 7 bloques (G1, G2, G5, G7, G9, G11, G14), G12 pasa. El primer revisor se
+   equivocó en su propia reproducción. Cuarta vez en este proyecto que un informe honesto de
+   un implementador corrige a quien le dio las instrucciones (ver CLAUDE.md, «modo económico»).
+3. Cifra de la mutación 3 → confirmada sin cambios: 12 pares nuevos, coincide con las tres
+   partes.
+Re-revisión (sonnet): los 3 hallazgos ADDRESSED, sin rotura nueva. Minor (deferred):
+`trace-test-fixtures.ts` vive en `engine/` sin sufijo `.test.ts` (no rompe nada, vitest no lo
+recoge como spec); considerar moverlo a una carpeta de test-utils si se vuelve a tocar.
+
+Tarea 1: complete (commits cd4403f..24b017b, fix round 1/5, review clean tras la ronda).
+
 ## Estado
 
-Plan escrito, committeado y aprobado por el autor (2026-09-27). Siguiente: Tarea 1, en una sesión nueva con `/model sonnet`.
+Plan escrito, committeado y aprobado por el autor (2026-09-27). Tarea 1 completa. Siguiente:
+Tarea 2, «Contrato de sesión y store» (líneas 236-308 del plan).
