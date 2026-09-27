@@ -116,7 +116,9 @@ describe("trace / Presentation", () => {
 		montar(audio, LETRA_A, "strict");
 		const playOrder = audio.play.mock.invocationCallOrder;
 		const stopOrder = audio.stop.mock.invocationCallOrder;
-		expect(playOrder.length).toBeGreaterThanOrEqual(1);
+		// El doble invocado de StrictMode: si React dejara de duplicar el montaje, este
+		// test dejaría de probar nada (pasaría igual con un solo play).
+		expect(playOrder.length).toBe(2);
 		// Cada play salvo el último va seguido de un stop (la pasada que el modo estricto
 		// descarta), y el último play llega después del último stop: es el que suena de verdad.
 		for (let i = 0; i < playOrder.length - 1; i += 1) {

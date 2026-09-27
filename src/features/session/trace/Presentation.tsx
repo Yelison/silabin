@@ -48,7 +48,14 @@ export function Presentation(props: PresentationProps) {
 			<div className="flex h-32 items-center justify-center font-reading">
 				<Written item={item} size="lg" />
 			</div>
-			<div className="flex h-[44vh] w-[82vw] items-center justify-center">
+			{/*
+			 * En 360×640 quedan 528 px bajo el encabezado y el relleno de `SessionScreen`
+			 * (640 − 80 de encabezado − 32 de relleno). El par (h-32 = 128), el hueco del botón
+			 * (h-28 = 112) y los dos huecos de `gap-4` (32) ya suman 272: al lienzo le caben
+			 * como mucho 256 (40vh). 38vh dejan margen sin costarle tamaño a la letra, que en
+			 * vertical manda el ancho (82vw), no el alto (como en `trace/Evaluation.tsx`).
+			 */}
+			<div className="flex h-[38vh] w-[82vw] items-center justify-center">
 				<TraceCanvas
 					glyph={glyph}
 					level={1}

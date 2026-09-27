@@ -171,6 +171,12 @@ describe("PlantillasDev", () => {
 		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("3");
 		fireEvent.click(screen.getByRole("button", { name: "Nivel 1" }));
 		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("1");
+		// El nivel también baja con las pistas del rung simulado, no solo con la caja
+		// (guideLevel(caja, pistas)): caja 2 (nivel 3 base) con 1 pista muestra nivel 2.
+		fireEvent.click(screen.getByRole("button", { name: "Nivel 3" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("3");
+		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("2");
 	});
 
 	// La misma conversión de coordenadas que TraceCanvas usa por dentro (viewBoxOf +
@@ -241,7 +247,7 @@ describe("PlantillasDev", () => {
 		return el?.textContent ?? "";
 	}
 
-	it("D2: un trazo sintético sobre la A y 1500 ms: el marcador enseña los números de scoreTrace y «vale»", () => {
+	it("D2: un trazo sintético sobre la A y 1500 ms: el marcador enseña los números exactos de scoreTrace y «vale»", () => {
 		vi.useFakeTimers();
 		montar();
 		elegirPlantilla("trace");
@@ -252,13 +258,13 @@ describe("PlantillasDev", () => {
 		act(() => {
 			vi.advanceTimersByTime(1500);
 		});
-		const marcador = marcadorTrace();
-		expect(marcador).toMatch(/\d+ ?%/);
-		expect(marcador).toContain("vale");
-		expect(marcador).not.toContain("no vale");
+		// Trazo exacto sobre los puntos del glifo: cobertura y precisión perfectas.
+		expect(marcadorTrace()).toBe(
+			`cobertura ${glyph.strokes.map(() => "100%").join(", ")} · precisión 100% · vale`,
+		);
 	});
 
-	it("D2: un trazo fuera de la letra: el marcador dice «no vale»", () => {
+	it("D2: un trazo fuera de la letra dice «no vale»; reintentar con un trazo bueno cambia a «vale» (attemptKey)", () => {
 		vi.useFakeTimers();
 		montar();
 		elegirPlantilla("trace");
@@ -288,6 +294,19 @@ describe("PlantillasDev", () => {
 			vi.advanceTimersByTime(1500);
 		});
 		expect(marcadorTrace()).toContain("no vale");
+
+		// Sin el attemptKey + 1 de Panel, el intento seguiría `submitted` y el lienzo
+		// deshabilitado: este segundo trazo no llegaría a puntuarse ni a cambiar el marcador.
+		const item = curriculum.items.get("letter:a");
+		if (item === undefined) throw new Error("Falta letter:a");
+		const glyph = glyphFor(item, "upper");
+		trazarGlifo(svg, glyph);
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(marcadorTrace()).toBe(
+			`cobertura ${glyph.strokes.map(() => "100%").join(", ")} · precisión 100% · vale`,
+		);
 	});
 });
 
