@@ -213,7 +213,11 @@ export function TraceCanvas(props: {
 	// La animación (pista 2 o 3) siempre acaba por temporizador, suene o no el audio, y aunque
 	// jsdom no tenga eventos de animación de verdad. El punto/trazo revelado solo se mueve con
 	// `motion-safe:`; con movimiento reducido aparece entero igual, porque `revealed` sigue
-	// llegando a `true`, solo que sin transición que lo anime.
+	// llegando a `true`, solo que sin transición que lo anime. Eso exige también
+	// `motion-reduce:transition-none` en los elementos animados (Tarea 6): sin él,
+	// `transition-property` cae a su valor inicial `all` cuando `motion-safe:` no aplica, y como
+	// `transitionDuration`/`transitionDelay` van por estilo en línea (siempre activos), el
+	// elemento se animaría igual, ignorando la preferencia del sistema.
 	useEffect(() => {
 		if (animation === "none") {
 			setRevealed(false);
@@ -342,7 +346,7 @@ export function TraceCanvas(props: {
 						d={pathD(stroke)}
 						pathLength={1}
 						fill="none"
-						className="stroke-trace-ink motion-safe:transition-[stroke-dashoffset] motion-safe:ease-linear"
+						className="stroke-trace-ink motion-safe:transition-[stroke-dashoffset] motion-safe:ease-linear motion-reduce:transition-none"
 						style={{
 							strokeWidth: strokeWidthPx,
 							strokeDasharray: 1,
@@ -358,7 +362,7 @@ export function TraceCanvas(props: {
 				<circle
 					data-testid="anim-dot"
 					r={0.06}
-					className="fill-trace-ink motion-safe:transition-[offset-distance] motion-safe:ease-linear"
+					className="fill-trace-ink motion-safe:transition-[offset-distance] motion-safe:ease-linear motion-reduce:transition-none"
 					style={{
 						offsetPath: `path('${combinedPathD(glyph)}')`,
 						offsetDistance: revealed ? "100%" : "0%",

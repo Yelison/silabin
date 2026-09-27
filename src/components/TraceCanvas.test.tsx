@@ -356,6 +356,28 @@ describe("TraceCanvas", () => {
 		const { container } = montar({ strokes });
 		expect(container.querySelectorAll('[data-testid="ink"]')).toHaveLength(1);
 	});
+
+	it("T6-1: 'full' y 'dot' llevan motion-reduce:transition-none junto a su motion-safe: (bug confirmado con Playwright, ver registro de la Tarea 5)", () => {
+		const glyph = letra("letter:e");
+		const { container } = montar({ glyph, animation: "full" });
+		const full = container.querySelector('[data-testid="anim-full"]');
+		expect(full?.getAttribute("class")).toContain(
+			"motion-safe:transition-[stroke-dashoffset]",
+		);
+		expect(full?.getAttribute("class")).toContain(
+			"motion-reduce:transition-none",
+		);
+		cleanup();
+
+		const { container: container2 } = montar({ glyph, animation: "dot" });
+		const dot = container2.querySelector('[data-testid="anim-dot"]');
+		expect(dot?.getAttribute("class")).toContain(
+			"motion-safe:transition-[offset-distance]",
+		);
+		expect(dot?.getAttribute("class")).toContain(
+			"motion-reduce:transition-none",
+		);
+	});
 });
 
 describe("animationMs", () => {
