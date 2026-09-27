@@ -77,3 +77,8 @@ Task 2: fix round 1/5 (2 addressed, 0 open — test de dos consonantes vistas qu
 Task 2: minor (deferred): `expectedPieces`/`reducedPieces` lanzan ante datos incoherentes; las Tareas 3-5 deben llamarlos solo en `build` o capturarlo en sus tests.
 Task 2: complete (commits 3393b89..9e36d46, review clean)
 Sesión 2: Tarea 2 hecha (1 implementador, 1 revisión, 1 ronda de corrección, 1 re-revisión). Tokens sesión 2: `/usage` marca «Current session 90 %» al cerrar; es la ventana de uso de la suscripción, no solo esta conversación, así que puede incluir la sesión 1 si cayó en la misma ventana. Siguiente: Tarea 3.
+
+## Tarea 3 (elección compartida, rhyme, initial-sound)
+
+Sesión 3 (2026-09-26). BASE 886cc86. Coordinador en Sonnet 5 (puerta de modelo cumplida).
+Ruling: R17 — en `dim` se atenúa el primer id de `exercise.optionIds` que no es la respuesta (el motor ya mezcló, así que es determinista) — el plan lo preveía; el usuario lo confirma al retomar — si fuera equivocado, cambia qué tarjeta se atenúa, no si el niño puede acertar.
