@@ -3,10 +3,10 @@ import type { Glyph, GlyphPoint } from "@/content/glyphs";
 import {
 	guideLevel,
 	MIN_COVERAGE,
-	SAMPLE_STEP,
 	scoreTrace,
 	type TraceStroke,
 } from "@/engine/trace";
+import { withTremor } from "@/engine/trace-test-fixtures";
 import type { Box } from "@/engine/types";
 
 /** Letra sintética L: vertical de 0 a 1, más base horizontal de 0.6. */
@@ -38,51 +38,6 @@ const T_CORTA: Glyph = {
 		],
 	],
 };
-
-/** Reimplementación del remuestreo, solo para construir tinta de prueba (no se exporta
- * desde trace.ts: es un detalle interno). */
-function resampleForTest(stroke: readonly GlyphPoint[]): GlyphPoint[] {
-	const first = stroke[0];
-	if (first === undefined) return [];
-	if (stroke.length === 1) return [first];
-	const out: GlyphPoint[] = [first];
-	let traveled = 0;
-	let nextSample = SAMPLE_STEP;
-	for (let i = 1; i < stroke.length; i += 1) {
-		const a = stroke[i - 1];
-		const b = stroke[i];
-		if (a === undefined || b === undefined) continue;
-		const dx = b.x - a.x;
-		const dy = b.y - a.y;
-		const segLen = Math.hypot(dx, dy);
-		if (segLen === 0) continue;
-		while (nextSample <= traveled + segLen) {
-			const t = (nextSample - traveled) / segLen;
-			out.push({ x: a.x + dx * t, y: a.y + dy * t });
-			nextSample += SAMPLE_STEP;
-		}
-		traveled += segLen;
-	}
-	const last = stroke[stroke.length - 1];
-	const lastOut = out[out.length - 1];
-	if (
-		last !== undefined &&
-		(lastOut === undefined || lastOut.x !== last.x || lastOut.y !== last.y)
-	) {
-		out.push(last);
-	}
-	return out;
-}
-
-/** El "temblor" de G2: remuestrea cada trazo y desplaza su muestra i. */
-function withTremor(strokes: readonly GlyphPoint[][]): TraceStroke[] {
-	return strokes.map((stroke) =>
-		resampleForTest(stroke).map((p, i) => ({
-			x: p.x + (i % 2 === 1 ? 0.08 : -0.08),
-			y: p.y + (i % 3 !== 0 ? 0.04 : -0.04),
-		})),
-	);
-}
 
 function shiftX(strokes: readonly GlyphPoint[][], dx: number): TraceStroke[] {
 	return strokes.map((stroke) => stroke.map((p) => ({ x: p.x + dx, y: p.y })));
