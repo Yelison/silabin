@@ -140,8 +140,48 @@ clases CSS de `Evaluation.tsx`.
 
 Tarea 3: complete (commits 21287a2..74dbdbd, review clean, sin ronda de corrección).
 
+**Tarea 4 — implementación:** 6 commits, no los 2 del brief (uno de R29 se dividió en R29 +
+test X3 corregido; presentación/registro/dev se dividió en 3 rondas de arreglo tras
+`advisor()`): `65b8a89` (R29/D15), `7d40ac4` (X3 deja de ser tautológico, usa `planSession`
+real), `9655141` (feat: `trace/Presentation.tsx`, registro, `/dev/plantillas`), `0062354` y
+`6b0fc23` (fix: el lienzo de la presentación no llegaba al 60% del lado corto — el primer
+intento quedó incompleto, el segundo lo arregló de verdad), `4d16545` (fix: en apaisado el
+hueco del botón «Siguiente» no reservaba ancho, y la fila —lienzo incluido— saltaba 48px al
+aparecer, con el niño posiblemente a medio trazo). `pnpm test` 899 pasan / 1 skip, typecheck y
+lint limpios, verificado tras cada commit. 4 rondas de `advisor()`, documentadas con honestidad
+incluidas varias afirmaciones propias que resultaron falsas y se corrigieron en el propio
+informe (detalle en `.superpowers/sdd/2026-09-27-silabin-trazo/task-4-report.md`). Reportó
+`DONE_WITH_CONCERNS`.
+
+**Ruling:** los viewports 640×360 (apaisado de móvil pequeño, se pasa 58px) y 768×1024
+(tableta rotada a vertical, la letra llega solo al 47.6% en vez del 60%) quedan fuera del
+alcance del Global Constraint «≥60% del lado corto / sin scroll» de este plan. El plan nombra
+explícitamente solo 360×640 vertical y 1024×768 apaisado en esa misma frase; las Tareas 1 y 3
+ya sostuvieron esa lectura sin objeción en revisión, y ambos huecos son preexistentes en
+ficheros que esas tareas ya cerraron (`listen-tap/Presentation.tsx`, `trace/Evaluation.tsx`),
+no regresiones de la Tarea 4. Coste si es un error: si la prueba manual en dispositivo real de
+la Tarea 5 muestra que alguno de los dos importa en la práctica, el ajuste queda contenido a
+clases CSS en los 3 ficheros ya identificados (los dos anteriores más
+`trace/Presentation.tsx`), sin tocar lógica ni pedagogía.
+
+**Tarea 4 — revisión (sonnet, con verificación independiente):** ✅ cumplimiento del spec
+completo. **Approved**, 0 Critical, 0 Important. La mutación de R29 (guarda quitada) mata X1,
+X2 y X4 y deja X3 en verde, confirmado por ejecución propia del revisor (no solo leído del
+informe); mutación adicional a `<=3` confirma que las X3 dependen del corte exacto en 2. La
+aritmética del 60% en los dos viewports que el plan nombra (63.5%/69.7% vertical, 60.7%
+apaisado) fue re-derivada por el revisor desde las clases CSS finales, no copiada del informe,
+y coincide. El fix del salto en apaisado (`4d16545`) verificado con `git show` contra el
+mecanismo real (`justify-center` sin `w-24` reservado). El revisor revisó el Ruling del
+coordinador y no encontró objeción.
+Minor (deferred): el margen de scroll (2.4px vertical, 3.2px apaisado) depende de que nada más
+en `SessionScreen` (bordes de foco, barras de navegador móvil) consuma esos píxeles —
+inherente a no tener navegador real disponible en esta caja para medir en vez de calcular;
+mismo criterio que Tarea 3 aplicó a `Evaluation.tsx`.
+
+Tarea 4: complete (commits 65b8a89..4d16545, review clean, sin ronda de corrección).
+
 ## Estado
 
-Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1, 2 y 3 completas.
-Siguiente: Tarea 4, «Presentación, registro, `/dev/plantillas` y R29» (líneas 451-505 del plan).
-Sesión de ejecución en 1 tarea (Tarea 3) tras el `/clear` del 2026-09-27.
+Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1, 2, 3 y 4 completas.
+Siguiente: Tarea 5, «Integración, prueba manual y README» (línea 505 en adelante del plan).
+Sesión de ejecución en 2 tareas (Tarea 3, Tarea 4): toca cortar aquí.
