@@ -62,6 +62,13 @@ export function Presentation(props: PresentationProps) {
 		 * fila): escala = min(563.2/1.2, 652.8/1.4) = 466.3 → 60.7 % de 768. Sin verificación en
 		 * navegador real (sin `chromium-cli` ni Playwright en esta caja, ver el informe de la
 		 * Tarea 4): son las mismas cuentas con la fórmula exacta del lienzo, no una medida.
+		 * El hueco del botón lleva `w-24` además de `h-24`: en fila (apaisado), un hueco sin
+		 * ancho mide 0 hasta que `ready` pone el botón (96 px), y como la fila entera se centra
+		 * (`SessionScreen`, `justify-center`), aparecer lo desplazaría 48 px de golpe — con el
+		 * lienzo al lado, moviéndose justo cuando el niño puede estar trazando encima
+		 * (`disabled={false}`). Reservar el ancho fijo evita el salto; en vertical no hace nada
+		 * (el hueco ya no compite por ancho con nadie) y el presupuesto de ancho de apaisado ya
+		 * contaba con esos 96 px.
 		 */
 		<div className="flex flex-col items-center gap-2 landscape:flex-row landscape:gap-4">
 			<div className="flex h-[min(8rem,26vw)] items-center justify-center font-reading">
@@ -84,7 +91,7 @@ export function Presentation(props: PresentationProps) {
 					}}
 				/>
 			</div>
-			<div className="flex h-24 items-center">
+			<div className="flex h-24 w-24 items-center justify-center">
 				{ready && (
 					<BigButton aria-label="Siguiente" onClick={onDone}>
 						<Icon name="next" />
