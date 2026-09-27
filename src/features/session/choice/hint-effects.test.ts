@@ -18,7 +18,7 @@ function item(id: string): Item {
 
 function ejercicio(
 	it: Item,
-	templateId: "rhyme" | "initial-sound",
+	templateId: PlannedExercise["templateId"],
 	optionIds: string[],
 	correctOptionId: string,
 ): PlannedExercise {
@@ -165,5 +165,139 @@ describe("choiceEffect", () => {
 
 	it("X2: una acción desconocida no hace nada y no lanza", () => {
 		expect(efecto("accion-inventada", RIMA, EV_RIMA)).toEqual({ kind: "none" });
+	});
+});
+
+// hear-it: no hay opciones de ejercicio; en pantalla son siempre «si» y «no».
+const HEAR_PATO = item("oral:hear:a-pato");
+const HEAR_SOL = item("oral:hear:a-sol");
+const EV_HEAR_PATO = ejercicio(HEAR_PATO, "hear-it", [], "si");
+const EV_HEAR_SOL = ejercicio(HEAR_SOL, "hear-it", [], "no");
+// El motor no da correctOptionId a hear-it: la respuesta viene de item.task.answer.
+const sinCorrecta = (e: PlannedExercise): PlannedExercise => ({
+	...e,
+	correctOptionId: null,
+});
+
+function efectoHear(action: string, it: Item, exercise: PlannedExercise) {
+	const ex = sinCorrecta(exercise);
+	const expected = expectedAnswer(ex, it);
+	if (expected === null) throw new Error("sin respuesta");
+	return choiceEffect({
+		action,
+		exercise: ex,
+		item: it,
+		optionIds: ["si", "no"],
+		expected,
+		lookup: (id) => curriculum.items.get(id),
+	});
+}
+
+describe("choiceEffect: hear-it", () => {
+	it("H3: replay-word-slowly repite la palabra separada en sus sílabas", () => {
+		expect(efectoHear("replay-word-slowly", HEAR_PATO, EV_HEAR_PATO)).toEqual({
+			kind: "replay",
+			request: {
+				key: "word:pato",
+				style: "by-syllable",
+				syllables: ["pa", "to"],
+			},
+		});
+	});
+
+	it("H4: con respuesta «si», la pista 2 alarga el sonido dentro de la palabra, sin opción", () => {
+		expect(
+			efectoHear("lengthen-target-phoneme-in-word", HEAR_PATO, EV_HEAR_PATO),
+		).toEqual({
+			kind: "pulse",
+			optionId: null,
+			request: { key: "stretch-in:a-pato" },
+		});
+	});
+
+	it("H4: con respuesta «no», la pista 2 repite la palabra normal y no pide stretch-in", () => {
+		expect(
+			efectoHear("lengthen-target-phoneme-in-word", HEAR_SOL, EV_HEAR_SOL),
+		).toEqual({
+			kind: "pulse",
+			optionId: null,
+			request: { key: "word:sol" },
+		});
+	});
+
+	it("H5: mark-correct-button+await-tap marca lo que da el motor, sea «si» o «no»", () => {
+		expect(
+			efectoHear("mark-correct-button+await-tap", HEAR_PATO, EV_HEAR_PATO),
+		).toEqual({ kind: "mark", optionId: "si" });
+		expect(
+			efectoHear("mark-correct-button+await-tap", HEAR_SOL, EV_HEAR_SOL),
+		).toEqual({ kind: "mark", optionId: "no" });
+	});
+});
+
+// listen-tap: la correcta va la segunda y el distractor a atenuar es el primero.
+const LETRA = item("letter:a");
+const EV_LETRA = ejercicio(
+	LETRA,
+	"listen-tap",
+	["letter:e", "letter:a", "letter:i"],
+	"letter:a",
+);
+const SILABA = item("syllable:ma");
+const EV_SILABA = ejercicio(
+	SILABA,
+	"listen-tap",
+	["syllable:pa", "syllable:ma"],
+	"syllable:ma",
+);
+
+describe("choiceEffect: listen-tap", () => {
+	it("L2: dim-one-distractor+replay atenúa el primer distractor y repite el audio del ítem", () => {
+		expect(efecto("dim-one-distractor+replay", LETRA, EV_LETRA)).toEqual({
+			kind: "dim",
+			optionId: "letter:e",
+			replay: { key: "phoneme:a" },
+		});
+		// Si la correcta va primera, el distractor es el siguiente: nunca la respuesta.
+		const otra = ejercicio(
+			LETRA,
+			"listen-tap",
+			["letter:a", "letter:i", "letter:e"],
+			"letter:a",
+		);
+		expect(efecto("dim-one-distractor+replay", LETRA, otra)).toMatchObject({
+			kind: "dim",
+			optionId: "letter:i",
+		});
+	});
+
+	it("L3: pulse-correct+lengthen-first-phoneme pulsa la correcta (no la primera) y alarga el ítem", () => {
+		expect(
+			efecto("pulse-correct+lengthen-first-phoneme", SILABA, EV_SILABA),
+		).toEqual({
+			kind: "pulse",
+			optionId: "syllable:ma",
+			request: { key: "stretch:syllable:ma" },
+		});
+	});
+
+	it("L3: mark-correct+await-tap marca la respuesta que da el motor", () => {
+		expect(efecto("mark-correct+await-tap", SILABA, EV_SILABA)).toEqual({
+			kind: "mark",
+			optionId: "syllable:ma",
+		});
+	});
+
+	it("L4: ninguna de sus pistas pide el nombre de la letra", () => {
+		for (const a of [
+			"dim-one-distractor+replay",
+			"pulse-correct+lengthen-first-phoneme",
+		]) {
+			const e = efecto(a, LETRA, EV_LETRA);
+			const request =
+				e.kind === "dim" ? e.replay : e.kind === "pulse" ? e.request : null;
+			expect(request).not.toBeNull();
+			expect(request?.key.startsWith("letter:")).toBe(false);
+		}
 	});
 });

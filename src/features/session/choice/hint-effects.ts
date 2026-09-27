@@ -1,5 +1,11 @@
 import type { AudioRequest } from "@/audio";
-import { endingKey, type Item, type PlannedExercise } from "@/engine";
+import {
+	endingKey,
+	type Item,
+	type PlannedExercise,
+	stretchInKey,
+	stretchKey,
+} from "@/engine";
 
 /**
  * Lo que la interfaz hace con la pista que ordena el motor en las plantillas de elección.
@@ -62,7 +68,8 @@ export function choiceEffect(input: {
 					request: { key: endingKey(id) },
 				})),
 			};
-		case "dim-one-distractor+replay-phoneme": {
+		case "dim-one-distractor+replay-phoneme":
+		case "dim-one-distractor+replay": {
 			const distractor = exercise.optionIds.find((id) => id !== expected);
 			if (distractor === undefined) return { kind: "none" };
 			return {
@@ -80,7 +87,35 @@ export function choiceEffect(input: {
 			});
 			return { kind: "sequence", steps };
 		}
+		case "replay-word-slowly":
+			return {
+				kind: "replay",
+				request:
+					item.syllables === undefined
+						? { key: `word:${item.text}` }
+						: {
+								key: `word:${item.text}`,
+								style: "by-syllable",
+								syllables: item.syllables,
+							},
+			};
+		case "lengthen-target-phoneme-in-word":
+			// Solo audio: en hear-it los botones son «sí» y «no», ninguno pulsa con esta pista.
+			return {
+				kind: "pulse",
+				optionId: null,
+				request: {
+					key: expected === "si" ? stretchInKey(item.id) : `word:${item.text}`,
+				},
+			};
+		case "pulse-correct+lengthen-first-phoneme":
+			return {
+				kind: "pulse",
+				optionId: expected,
+				request: { key: stretchKey(item.id) },
+			};
 		case "mark-correct+await-tap":
+		case "mark-correct-button+await-tap":
 			return { kind: "mark", optionId: expected };
 		default:
 			return { kind: "none" };
