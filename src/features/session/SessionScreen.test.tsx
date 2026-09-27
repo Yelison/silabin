@@ -9,8 +9,23 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { curriculum } from "@/engine";
-import type { TemplateViews } from "@/features/session/registry";
+import {
+	type Box,
+	createAttemptState,
+	curriculum,
+	emptyItemProgress,
+	type Glyph,
+	glyphFor,
+	type PlannedExercise,
+	type ProgressState,
+	type SessionRun,
+	traceGuide,
+} from "@/engine";
+import type {
+	EvaluationProps,
+	PresentationProps,
+	TemplateViews,
+} from "@/features/session/registry";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import {
 	conProveedores,
@@ -388,6 +403,150 @@ describe("SessionScreen", () => {
 		for (const c of audio.play.mock.calls)
 			expect(c[0].onSegment).toBeUndefined();
 	});
+
+	it("S3: una evaluación que no es trace no recibe props.trace", async () => {
+		const { vistas } = await montar();
+		const user = userEvent.setup();
+		await hastaEvaluacion(user);
+		expect(vistas.ultimo()?.trace).toBeUndefined();
+	});
+
+	describe("evaluación trace", () => {
+		const LETTER_A_ID = "letter:a";
+		const TRACE_EXERCISE: PlannedExercise = {
+			id: "ex-trace",
+			kind: "evaluation",
+			templateId: "trace",
+			itemId: LETTER_A_ID,
+			optionIds: [],
+			correctOptionId: null,
+			source: "active-unit",
+		};
+
+		function glifoA(): Glyph {
+			const item = curriculum.items.get(LETTER_A_ID);
+			if (item === undefined) throw new Error("falta letter:a");
+			return glyphFor(item, "upper");
+		}
+
+		/**
+		 * Monta a mano una corrida con 2 ejercicios de trazo, sin pasar por el planificador. Van
+		 * 2 y no 1: al acertar el primero, `cursor` avanza pero la sesión no termina, así que
+		 * `run` sigue sin ser null y el test puede seguir mirándolo.
+		 */
+		function trazoRun(progress: ProgressState, box: Box): SessionRun {
+			return {
+				sessionIndex: progress.sessionCounter,
+				unitId: null,
+				exercises: [TRACE_EXERCISE, { ...TRACE_EXERCISE, id: "ex-trace-2" }],
+				cursor: 0,
+				attempt: createAttemptState(),
+				resolutions: [],
+				progress: {
+					...progress,
+					items: {
+						...progress.items,
+						[LETTER_A_ID]: { ...emptyItemProgress(), box },
+					},
+				},
+			};
+		}
+
+		/** Vista falsa de `trace`: anota las props de cada pintado y ofrece "acertar"/"fallar". */
+		function vistaTraceFalsa() {
+			const pintados: EvaluationProps[] = [];
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" data-view="presentation" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: (p: EvaluationProps) => {
+					pintados.push(p);
+					return (
+						<div data-view="evaluation" data-exercise={p.exercise.id}>
+							<button
+								type="button"
+								aria-label="acertar"
+								onClick={() => p.trace?.onTrace(glifoA().strokes)}
+							/>
+							<button
+								type="button"
+								aria-label="fallar"
+								onClick={() => p.trace?.onTrace([])}
+							/>
+						</div>
+					);
+				},
+			};
+			return { views, pintados, ultimo: () => pintados[pintados.length - 1] };
+		}
+
+		async function montarTrace(box: Box) {
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			store.setState({ run: trazoRun(store.getState().progress, box) });
+			const audio = fakeAudio();
+			const vistas = vistaTraceFalsa();
+			const onEnd = vi.fn();
+			const onExit = vi.fn();
+			const { container } = render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={onEnd}
+						onExit={onExit}
+						views={{ trace: vistas.views }}
+						celebrationMs={0}
+					/>,
+				),
+			);
+			const run = () => {
+				const r = store.getState().run;
+				if (r === null) throw new Error("sin corrida");
+				return r;
+			};
+			const claves = () => audio.play.mock.calls.map((c) => c[0].key);
+			return { store, audio, vistas, onEnd, onExit, container, run, claves };
+		}
+
+		it("S1: la vista recibe trace.guide igual a traceGuide(curriculum, run); onTrace llama a answerTrace, y dos seguidos dan una sola llamada", async () => {
+			const { vistas, run } = await montarTrace(0);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(vistas.ultimo()?.trace?.guide).toEqual(
+				traceGuide(curriculum, run()),
+			);
+
+			const antes = run().resolutions.length;
+			const onTrace = vistas.ultimo()?.trace?.onTrace;
+			if (onTrace === undefined) throw new Error("sin trace.onTrace");
+			await act(async () => {
+				onTrace(glifoA().strokes);
+				onTrace(glifoA().strokes);
+			});
+			await waitFor(() => expect(run().resolutions.length).toBe(antes + 1));
+			expect(run().resolutions).toEqual([{ status: "mastery-credit" }]);
+		});
+
+		it("S2: un fallo con letter:a en caja 2 suena feedback:retry, sube attemptKey y la vista pasa del nivel 3 al 2 (más guía)", async () => {
+			const { vistas, claves, run } = await montarTrace(2);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(vistas.ultimo()?.trace?.guide.level).toBe(3);
+			const onTrace = vistas.ultimo()?.trace?.onTrace;
+			if (onTrace === undefined) throw new Error("sin trace.onTrace");
+
+			await act(async () => {
+				onTrace([]);
+			});
+			await waitFor(() => expect(claves()).toContain("feedback:retry"));
+			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
+			expect(vistas.ultimo()?.trace?.guide.level).toBe(2);
+			expect(run().resolutions).toEqual([]);
+		});
+	});
+
 	describe("guardias de desmontaje y pausa de celebración", () => {
 		/** Registra los rechazos sin capturar que ocurran mientras dure el test. */
 		function vigilarRechazos() {

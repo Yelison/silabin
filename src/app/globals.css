@@ -19,6 +19,9 @@
 	/* Oscurecido desde #C98A00 (mismo tono ámbar) para llegar a 3:1 contra surface/card/mark. */
 	--color-mark-border: #ac7600;
 	--color-celebrate: #ff9f1c;
+	/* Tinta del trazo (Plan 4): un morado vivo, distinto del azul de la guía y del ámbar de
+	   `action`, para que el niño distinga sin duda lo que ha dibujado él de la guía. */
+	--color-trace-ink: #6a4cff;
 	--radius-card: 1.5rem;
 	--spacing-target: 8rem;
 	--font-reading: var(--font-andika);

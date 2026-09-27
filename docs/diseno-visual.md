@@ -44,6 +44,7 @@ tipografía definitivas, y no hay ilustraciones ni compañero (mascota) todavía
 | `--color-mark` | fondo de la opción marcada por el modelo | `#FFE27A` |
 | `--color-mark-border` | borde de la opción marcada por el modelo | `#AC7600` |
 | `--color-celebrate` | solo celebraciones y estrellas | `#FF9F1C` |
+| `--color-trace-ink` | tinta del dedo en el lienzo de `trace` (Plan 4) | `#6A4CFF` |
 | `--radius-card` | tarjetas y botones | `1.5rem` |
 | `--spacing-target` | lado mínimo de una opción | `8rem` (128 px) |
 | `--font-reading` | letras, sílabas y palabras que el niño lee | Andika (`next/font/google`, pesos 400 y 700) |
@@ -75,8 +76,12 @@ El texto (`ink`, `ink-soft`, `action-ink`) cumple AA con holgura. Los bordes de 
 (`calm-border`, `mark-border`) se oscurecieron manteniendo su tono (azul suave y ámbar,
 respectivamente; ningún rojo ni verde) hasta llegar a ≥ 3 : 1 contra `surface`, `card` y su
 propio fondo (`calm` / `mark`), que son los tres sitios donde puede aparecer un borde de
-estado. Además, ningún estado depende solo del color: `pulsing` también anima y `marked`
-también engrosa el borde a 8 px y añade el icono de mano.
+estado. `trace-ink` no es texto (es el trazo grueso que deja el dedo sobre el lienzo de
+`trace`, Plan 4): no entra en la tabla de contraste AA, pero se eligió un morado bien
+saturado, distinto del azul de la guía (`calm-border`) y del ámbar de `action`, para que se
+distinga a simple vista sobre `surface`/`card` sin depender de más que el color, ya que ahí
+no hay forma ni movimiento que lo respalde. Además, ningún estado depende solo del color:
+`pulsing` también anima y `marked` también engrosa el borde a 8 px y añade el icono de mano.
 
 ## Reglas
 

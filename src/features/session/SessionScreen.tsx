@@ -8,7 +8,10 @@ import {
 	curriculum,
 	isSessionOver,
 	type PlannedExercise,
+	type SessionRun,
 	type TemplateId,
+	type TraceStroke,
+	traceGuide,
 } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
 import { type TemplateViews, templateViews } from "@/features/session/registry";
@@ -70,11 +73,14 @@ function ExerciseView(props: {
 	exercise: PlannedExercise;
 	views: TemplateViews;
 	celebrationMs: number;
+	/** Para `traceGuide`: solo se lee en evaluaciones `trace`. */
+	run: SessionRun;
 }) {
-	const { exercise, views, celebrationMs } = props;
+	const { exercise, views, celebrationMs, run } = props;
 	const audio = useAudio();
 	const presentationDone = useApp((s) => s.presentationDone);
 	const answer = useApp((s) => s.answer);
+	const answerTrace = useApp((s) => s.answerTrace);
 	const next = useApp((s) => s.next);
 	const item = curriculum.items.get(exercise.itemId);
 
@@ -114,8 +120,13 @@ function ExerciseView(props: {
 		// Solo al montar el ejercicio: un reintento no repite ni la instrucción ni la palabra.
 	}, []);
 
-	async function resolver(respuesta: string) {
-		const fb = await answer(respuesta);
+	/**
+	 * Lo que hoy hacen `answer` y `answerTrace` en cuanto el motor ya ha respondido: el mismo
+	 * paso a pista, modelo o celebración, sea cual sea la plantilla. `llamar` es `() =>
+	 * answer(a)` o `() => answerTrace(trazos)`.
+	 */
+	async function resolver(llamar: () => Promise<AttemptFeedback>) {
+		const fb = await llamar();
 		if (!alive.current) return;
 		const resolucion = fb.resolution;
 		if (resolucion === null) {
@@ -172,13 +183,26 @@ function ExerciseView(props: {
 					if (busy.current) return;
 					busy.current = true;
 					setLocked(true);
-					void resolver(a);
+					void resolver(() => answer(a));
 				}}
 				onModelDone={() => {
 					if (!modelPending.current) return;
 					modelPending.current = false;
 					next();
 				}}
+				{...(exercise.templateId === "trace"
+					? {
+							trace: {
+								guide: traceGuide(curriculum, run),
+								onTrace: (trazos: TraceStroke[]) => {
+									if (busy.current) return;
+									busy.current = true;
+									setLocked(true);
+									void resolver(() => answerTrace(trazos));
+								},
+							},
+						}
+					: {})}
 			/>
 		</div>
 	);
@@ -254,6 +278,7 @@ export function SessionScreen(props: {
 					exercise={exercise}
 					views={view}
 					celebrationMs={celebrationMs}
+					run={run}
 				/>
 			</div>
 		</main>

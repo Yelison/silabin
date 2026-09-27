@@ -7,6 +7,8 @@ import {
 	type PlannedExercise,
 	type ProgressState,
 	type TemplateId,
+	type TraceGuide,
+	type TraceStroke,
 	type Unit,
 } from "@/engine";
 import { Evaluation as BuildEvaluation } from "@/features/session/build/Evaluation";
@@ -29,6 +31,12 @@ export type PresentationProps = {
 	onDone(): void;
 };
 
+/** Lo que necesita la evaluación de `trace`: la guía a pintar y adónde mandar el trazo cerrado. */
+export type TraceInput = {
+	guide: TraceGuide;
+	onTrace(strokes: TraceStroke[]): void;
+};
+
 /** Lo que recibe la vista de evaluación. La interfaz pinta; el motor decide. */
 export type EvaluationProps = {
 	exercise: PlannedExercise;
@@ -42,6 +50,8 @@ export type EvaluationProps = {
 	onAnswer(answer: string): void;
 	/** El niño reprodujo el modelo del tercer rung. */
 	onModelDone(): void;
+	/** Solo en la evaluación `trace`, que la exige (lanza si falta). */
+	trace?: TraceInput;
 };
 
 export type TemplateViews = {
