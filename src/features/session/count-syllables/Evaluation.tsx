@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/Icon";
 import { Picture } from "@/components/Picture";
 import { ReplayButton } from "@/components/ReplayButton";
 import { useAudio } from "@/features/app-context";
@@ -154,7 +155,7 @@ export function Evaluation(props: EvaluationProps) {
 				onClick={tocar}
 				className="h-56 w-56 touch-manipulation select-none rounded-full bg-action text-8xl shadow-lg active:scale-95"
 			>
-				🥁
+				<Icon name="drum" size={144} />
 			</button>
 			<div className="flex min-h-14 items-center gap-3">
 				{modelo

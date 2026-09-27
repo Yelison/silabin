@@ -81,6 +81,10 @@ describe("initial-sound / Presentation", () => {
 		await terminar();
 		await terminar();
 		expect(siguiente()).not.toBeNull();
+		expect(siguiente()?.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-next.png",
+		);
+		expect(siguiente()?.textContent).not.toContain("➡️");
 		const palabras = peticiones(audio)
 			.filter((r) => r.key.startsWith("word:"))
 			.map((r) => r.key);

@@ -78,6 +78,15 @@ describe("hear-it / Evaluation", () => {
 			.getAllByRole("button")
 			.map((b) => b.getAttribute("aria-label"));
 		expect(nombres).toEqual(["Oír otra vez", "sí", "no"]);
+		const icono = (nombre: string) =>
+			screen
+				.getByRole("button", { name: nombre })
+				.querySelector("img")
+				?.getAttribute("src");
+		expect(icono("Oír otra vez")).toBe("/icons/ui-replay.png");
+		expect(icono("sí")).toBe("/icons/ui-yes.png");
+		expect(icono("no")).toBe("/icons/ui-no.png");
+		expect(m.container.textContent).not.toMatch(/[👍✋🔊]/u);
 		fireEvent.click(screen.getByRole("button", { name: "Oír otra vez" }));
 		expect(claves(m.audio)).toEqual([{ key: "instruction:hear:a-pato" }]);
 		fireEvent.click(screen.getByRole("button", { name: "sí" }));

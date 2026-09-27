@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Icon } from "@/components/Icon";
 
 /**
  * `idle`: en reposo. `dimmed`: distractor ya descartado (opacidad y escala menor). `pulsing`:
@@ -61,8 +62,11 @@ export function OptionCard(props: Props) {
 		>
 			{children}
 			{state === "marked" && (
-				<span aria-hidden="true" className="absolute -top-3 -right-3 text-4xl">
-					👆
+				<span
+					aria-hidden="true"
+					className="-translate-x-1/2 absolute -top-8 left-1/2"
+				>
+					<Icon name="hand" size={56} />
 				</span>
 			)}
 		</button>

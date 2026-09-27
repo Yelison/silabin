@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
 import { Picture } from "@/components/Picture";
 import { curriculum, endingKey } from "@/engine";
 import { useAudio } from "@/features/app-context";
@@ -69,7 +70,7 @@ export function Presentation(props: PresentationProps) {
 			<div className="flex h-28 items-center">
 				{ready && (
 					<BigButton aria-label="Siguiente" onClick={onDone}>
-						➡️
+						<Icon name="next" />
 					</BigButton>
 				)}
 			</div>

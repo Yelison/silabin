@@ -108,6 +108,10 @@ describe("listen-tap / Presentation", () => {
 			await vi.advanceTimersByTimeAsync(5000);
 		});
 		expect(siguiente()).not.toBeNull();
+		expect(siguiente()?.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-next.png",
+		);
+		expect(siguiente()?.textContent).not.toContain("➡️");
 	});
 
 	it("al desmontar se corta el sonido y no suena la segunda vez", async () => {

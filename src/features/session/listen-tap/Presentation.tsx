@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
 import { useAudio } from "@/features/app-context";
 import { Written } from "@/features/session/listen-tap/Written";
 import type { PresentationProps } from "@/features/session/registry";
@@ -60,7 +61,7 @@ export function Presentation(props: PresentationProps) {
 			<div className="flex h-28 items-center">
 				{ready && (
 					<BigButton aria-label="Siguiente" onClick={onDone}>
-						➡️
+						<Icon name="next" />
 					</BigButton>
 				)}
 			</div>

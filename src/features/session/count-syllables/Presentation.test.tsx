@@ -74,7 +74,9 @@ describe("count-syllables / Presentation", () => {
 	it("C1: suena la palabra y luego beats con las sílabas; onDone solo tras tocar siguiente", async () => {
 		const { audio, pendientes, terminar } = conPlayManual();
 		const { onDone } = montar(audio);
-		expect(screen.getByRole("img", { name: "mesa" }).textContent).toBe("🪑");
+		expect(screen.getByRole("img", { name: "mesa" }).getAttribute("src")).toBe(
+			"/images/palabras/mesa.webp",
+		);
 		expect(pendientes.map((p) => p.req)).toEqual([{ key: "word:mesa" }]);
 		expect(siguiente()).toBeNull();
 		await terminar(0);
@@ -114,6 +116,10 @@ describe("count-syllables / Presentation", () => {
 		montar(audio);
 		await act(async () => {});
 		expect(siguiente()).not.toBeNull();
+		expect(siguiente()?.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-next.png",
+		);
+		expect(siguiente()?.textContent).not.toContain("➡️");
 	});
 
 	it("si el audio falla, el botón aparece igual", async () => {

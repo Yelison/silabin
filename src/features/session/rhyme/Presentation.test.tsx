@@ -94,6 +94,10 @@ describe("rhyme / Presentation", () => {
 		montar(audio);
 		await act(async () => {});
 		expect(siguiente()).not.toBeNull();
+		expect(siguiente()?.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-next.png",
+		);
+		expect(siguiente()?.textContent).not.toContain("➡️");
 	});
 
 	it("al desmontar se corta el sonido y no suena el resto de la secuencia", async () => {

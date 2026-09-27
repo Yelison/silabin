@@ -123,6 +123,10 @@ describe("build / Presentation", () => {
 		montar("syllable:ma", audio);
 		await act(async () => {});
 		expect(siguiente()).not.toBeNull();
+		expect(siguiente()?.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-next.png",
+		);
+		expect(siguiente()?.textContent).not.toContain("➡️");
 	});
 
 	it("el botón siguiente mide al menos 72 px", async () => {

@@ -1,3 +1,5 @@
+import { Icon } from "@/components/Icon";
+
 type Props = {
 	onReplay: () => void;
 	disabled?: boolean;
@@ -19,10 +21,10 @@ export function ReplayButton(props: Props) {
 				if (disabled) return;
 				onReplay();
 			}}
-			className={`flex min-h-18 min-w-18 items-center justify-center rounded-card bg-action p-4 text-5xl text-action-ink shadow-md active:scale-95 ${disabled ? "opacity-30" : ""}`}
+			className={`flex min-h-18 min-w-18 items-center justify-center rounded-card bg-action p-4 text-action-ink shadow-md active:scale-95 ${disabled ? "opacity-30" : ""}`}
 			{...rest}
 		>
-			🔊
+			<Icon name="replay" />
 		</button>
 	);
 }

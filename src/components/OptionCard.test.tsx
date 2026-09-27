@@ -55,7 +55,10 @@ describe("OptionCard", () => {
 		);
 		const boton = screen.getByRole("button", { name: "gato" });
 		expect(boton.dataset.state).toBe("marked");
-		expect(boton.textContent).toContain("👆");
+		expect(boton.querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-hand.png",
+		);
+		expect(boton.textContent).not.toContain("👆");
 	});
 
 	it("V4: dimmed queda marcada en data-state", () => {
