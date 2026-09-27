@@ -80,7 +80,7 @@ function UnitButton(props: {
 			onClick={() => {
 				if (jugable) onStart();
 			}}
-			className={`flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left text-xl ${estilo} ${aparte ? "opacity-50" : ""}`}
+			className={`flex min-h-18 w-full items-center justify-between gap-3 rounded-2xl p-4 text-left text-xl ${estilo} ${aparte ? "opacity-50" : ""}`}
 		>
 			<span>{unit.title}</span>
 			{status === "done" && <Estrellas n={stars} />}
