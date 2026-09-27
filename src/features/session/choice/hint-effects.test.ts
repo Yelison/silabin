@@ -301,3 +301,50 @@ describe("choiceEffect: listen-tap", () => {
 		}
 	});
 });
+
+// R29 (D15): con solo 2 opciones no queda nada que atenuar sin dejar una única opción tocable,
+// así que la pista 1 repite el audio en vez de apagar un distractor.
+const FONEMA_A = item("phoneme:a");
+const EV_FONEMA_2 = ejercicio(
+	FONEMA_A,
+	"initial-sound",
+	["picture:oso", "picture:avión"],
+	"picture:avión",
+);
+
+describe("choiceEffect: R29 (D15)", () => {
+	it("X1: listen-tap con 2 opciones, pista 1: repite el audio del ítem, no atenúa", () => {
+		expect(efecto("dim-one-distractor+replay", SILABA, EV_SILABA)).toEqual({
+			kind: "replay",
+			request: { key: "syllable:ma" },
+		});
+	});
+
+	it("X2: initial-sound con un ítem fonema y 2 opciones, pista 1: repite el audio del ítem", () => {
+		expect(
+			efecto("dim-one-distractor+replay-phoneme", FONEMA_A, EV_FONEMA_2),
+		).toEqual({
+			kind: "replay",
+			request: { key: "phoneme:a" },
+		});
+	});
+
+	it("X3: con 3 opciones no cambia nada: sigue atenuando un distractor, nunca la correcta", () => {
+		expect(efecto("dim-one-distractor+replay", LETRA, EV_LETRA)).toMatchObject({
+			kind: "dim",
+		});
+		expect(
+			efecto("dim-one-distractor+replay-phoneme", INICIAL, EV_INICIAL),
+		).toMatchObject({ kind: "dim", optionId: "picture:oso" });
+	});
+
+	it("X3: phase0:initial (único ítem oral jugable hoy) siempre trae 3 opciones del dato y nunca da replay", () => {
+		// Las opciones de oral:initial:avión vienen ya escritas en item.task.optionIds (3),
+		// tal como las pasa buildOptions a exercise.optionIds: nunca son 2.
+		expect(INICIAL.task?.optionIds).toHaveLength(3);
+		expect(EV_INICIAL.optionIds).toHaveLength(3);
+		expect(
+			efecto("dim-one-distractor+replay-phoneme", INICIAL, EV_INICIAL).kind,
+		).not.toBe("replay");
+	});
+});

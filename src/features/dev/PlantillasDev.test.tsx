@@ -79,12 +79,14 @@ describe("PlantillasDev", () => {
 		expect(evaluacion().querySelectorAll("button").length).toBeGreaterThan(0);
 	});
 
-	it("rung 1 atenúa un distractor; rung 3 marca el modelo (listen-tap)", () => {
+	it("R29/D15: con el ítem de arranque (2 opciones) rung 1 repite el audio sin atenuar; rung 3 marca el modelo (listen-tap)", () => {
 		montar();
 		elegirPlantilla("listen-tap");
+		// El ítem de arranque (caja 0, nivel fácil) trae 2 opciones: R29 hace que la pista 1
+		// repita el audio en vez de atenuar (dejaría una sola opción tocable).
 		expect(atenuados()).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
-		expect(atenuados().length).toBe(1);
+		expect(atenuados()).toHaveLength(0);
 		expect(marcados()).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "Rung 3" }));
 		expect(marcados().length).toBe(1);
