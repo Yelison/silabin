@@ -22,6 +22,13 @@ import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 // dedo» al soltar, y la vista los busca con esa API (ver `arrastrar`).
 const original = Object.getOwnPropertyDescriptor(document, "elementsFromPoint");
 beforeEach(() => {
+	// jsdom no implementa la captura de puntero: un método vacío que los tests pueden espiar.
+	if (!("setPointerCapture" in HTMLElement.prototype))
+		Object.defineProperty(HTMLElement.prototype, "setPointerCapture", {
+			configurable: true,
+			writable: true,
+			value: () => {},
+		});
 	Object.defineProperty(document, "elementsFromPoint", {
 		configurable: true,
 		writable: true,
@@ -30,6 +37,7 @@ beforeEach(() => {
 });
 afterEach(() => {
 	cleanup();
+	vi.restoreAllMocks();
 	if (original === undefined)
 		Reflect.deleteProperty(document, "elementsFromPoint");
 	else Object.defineProperty(document, "elementsFromPoint", original);
@@ -464,6 +472,65 @@ describe("build / Evaluation", () => {
 		expect(enCasilla(1)).toEqual(["l"]);
 		tocar("o");
 		expect(m.onModelDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("C1: el tercer fallo llega con el MISMO attemptKey y las casillas llenas: se vacían y el modelo se completa", () => {
+		const m = montar(MA(), { feedback: conPista(2) });
+		m.cambiar({ feedback: conPista(2), attemptKey: 1 });
+		tocar("a", "e"); // respuesta errónea que llena las casillas
+		expect(enCasilla(1)).toEqual(["a"]);
+		expect(enCasilla(2)).toEqual(["e"]);
+		m.cambiar({ feedback: conPista(3), attemptKey: 1 });
+		expect(enCasilla(1)).toEqual([]);
+		expect(enCasilla(2)).toEqual([]);
+		tocar("a"); // fuera de orden
+		expect(enCasilla(1)).toEqual([]);
+		tocar("m");
+		expect(enCasilla(1)).toEqual(["m"]);
+		expect(m.onModelDone).not.toHaveBeenCalled();
+		tocar("a");
+		expect(m.onModelDone).toHaveBeenCalledTimes(1);
+		expect(m.onAnswer).toHaveBeenCalledTimes(1); // solo la errónea de antes
+		expect(m.onAnswer).toHaveBeenCalledWith("ae");
+	});
+
+	it("C1: volver a pintar con la misma pista 3 no vacía lo que el niño ya colocó del modelo", () => {
+		const pista = conPista(3);
+		const m = montar(MA(), { feedback: pista });
+		tocar("m");
+		m.cambiar({ feedback: pista, attemptKey: 0 });
+		expect(enCasilla(1)).toEqual(["m"]);
+	});
+
+	it("I1: un toque sin movimiento no captura el puntero (con ratón retargetearía el clic)", () => {
+		const captura = vi.fn();
+		vi.spyOn(HTMLElement.prototype, "setPointerCapture").mockImplementation(
+			captura,
+		);
+		const m = montar(MA());
+		const pieza = boton("m");
+		fireEvent.pointerDown(pieza, { pointerId: 1, clientX: 10, clientY: 10 });
+		fireEvent.pointerUp(pieza, { pointerId: 1, clientX: 10, clientY: 10 });
+		fireEvent.click(pieza);
+		expect(captura).not.toHaveBeenCalled();
+		expect(enCasilla(1)).toEqual(["m"]);
+		expect(m.onAnswer).not.toHaveBeenCalled();
+	});
+
+	it("I1: el puntero se captura una sola vez, al superar el umbral de arrastre", () => {
+		const captura = vi.fn();
+		vi.spyOn(HTMLElement.prototype, "setPointerCapture").mockImplementation(
+			captura,
+		);
+		montar(MA());
+		const pieza = boton("m");
+		fireEvent.pointerDown(pieza, { pointerId: 7, clientX: 10, clientY: 10 });
+		fireEvent.pointerMove(pieza, { pointerId: 7, clientX: 13, clientY: 10 });
+		expect(captura).not.toHaveBeenCalled();
+		fireEvent.pointerMove(pieza, { pointerId: 7, clientX: 40, clientY: 10 });
+		fireEvent.pointerMove(pieza, { pointerId: 7, clientX: 60, clientY: 10 });
+		expect(captura).toHaveBeenCalledTimes(1);
+		expect(captura).toHaveBeenCalledWith(7);
 	});
 
 	it("B9: terminado el modelo, nada más responde ni avisa otra vez", () => {

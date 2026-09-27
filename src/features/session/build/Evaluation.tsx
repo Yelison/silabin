@@ -103,6 +103,11 @@ export function Evaluation(props: EvaluationProps) {
 				return;
 			}
 			case "highlight-both-pieces-in-order":
+				// El tercer fallo llega sin intento nuevo: las casillas siguen con la respuesta
+				// errónea y, llenas, ninguna pieza respondería al modelo. Se vacían aquí.
+				setCasillas(VACIAS);
+				setArrastre(null);
+				gesto.current = null;
 				setModelo(expectedPieces(exercise, curriculum, item));
 				return;
 		}
@@ -158,8 +163,6 @@ export function Evaluation(props: EvaluationProps) {
 	function alBajar(e: ReactPointerEvent<HTMLElement>, id: string) {
 		if (!interactiva(id)) return;
 		gesto.current = { id, x0: e.clientX, y0: e.clientY, movido: false };
-		// Sigue al dedo aunque salga de la pieza. jsdom no lo implementa.
-		e.currentTarget.setPointerCapture?.(e.pointerId);
 	}
 
 	function alMover(e: ReactPointerEvent<HTMLElement>) {
@@ -168,6 +171,10 @@ export function Evaluation(props: EvaluationProps) {
 		const dx = e.clientX - g.x0;
 		const dy = e.clientY - g.y0;
 		if (!g.movido && Math.hypot(dx, dy) < UMBRAL_ARRASTRE_PX) return;
+		if (!g.movido)
+			// Solo al empezar a arrastrar: capturar en el pointerdown retargeta el `click` al
+			// contenedor y, con ratón, el toque no llegaría al botón. jsdom no lo implementa.
+			e.currentTarget.setPointerCapture?.(e.pointerId);
 		g.movido = true;
 		setArrastre({ id: g.id, dx, dy });
 	}
