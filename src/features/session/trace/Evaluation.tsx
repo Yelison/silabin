@@ -176,11 +176,14 @@ export function Evaluation(props: EvaluationProps) {
 			 * El lienzo mide directamente contra el viewport (no contra el padre: la cadena de
 			 * flex de SessionScreen centra sin estirar, así que un `h-full` aquí no tendría
 			 * nada que llenar). En vertical, el botón va encima y el lienzo tiene todo el ancho
-			 * corto para sí; en horizontal (`landscape:`) el botón se pone al lado para no
-			 * comerle alto al lienzo, que es lo que limita el 60 % del lado corto pedido por el
-			 * spec (apaisado 768 px de alto es más estrecho que ancho: ahí se decide todo).
+			 * corto para sí, así que lo que decide el tamaño es el ancho (88vw), no el alto: por
+			 * eso el alto se recorta a 65vh, lo justo para que el botón + el hueco no empujen la
+			 * página a hacer scroll en 360×640, sin que la letra pierda nada (sigue limitada por
+			 * el ancho). En horizontal (`landscape:`) el botón se pone al lado para no comerle
+			 * alto al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el
+			 * spec (apaisado 768 px de alto es más estrecho que ancho).
 			 */}
-			<div className="flex h-[75vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
+			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
 				<TraceCanvas
 					glyph={guiaMostrada.glyph}
 					level={guiaMostrada.level}
