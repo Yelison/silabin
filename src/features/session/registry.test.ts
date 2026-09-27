@@ -179,8 +179,9 @@ describe("isSessionPlayable", () => {
 		).toBe(true);
 	});
 
-	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it y listen-tap", () => {
+	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap y build", () => {
 		expect([...IMPLEMENTED_TEMPLATES].sort()).toEqual([
+			"build",
 			"count-syllables",
 			"hear-it",
 			"initial-sound",

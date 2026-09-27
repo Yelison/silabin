@@ -72,4 +72,33 @@ describe("OptionCard", () => {
 		const boton = screen.getByRole("button", { name: "gato" });
 		expect(boton.dataset.state).toBe("dimmed");
 	});
+
+	it("compact mide 72 px como mínimo y por defecto sigue midiendo 128 px", () => {
+		render(
+			<>
+				<OptionCard
+					state="idle"
+					disabled={false}
+					aria-label="pequeña"
+					compact
+					onSelect={vi.fn()}
+				>
+					m
+				</OptionCard>
+				<OptionCard
+					state="idle"
+					disabled={false}
+					aria-label="grande"
+					onSelect={vi.fn()}
+				>
+					m
+				</OptionCard>
+			</>,
+		);
+		const pequeña = screen.getByRole("button", { name: "pequeña" });
+		const grande = screen.getByRole("button", { name: "grande" });
+		expect(pequeña.className).toContain("min-h-18");
+		expect(pequeña.className).not.toContain("min-h-target");
+		expect(grande.className).toContain("min-h-target");
+	});
 });

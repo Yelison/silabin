@@ -13,12 +13,21 @@ type Props = {
 	/** El niño no lee: el nombre accesible es para el adulto y los lectores de pantalla. */
 	"aria-label": string;
 	onSelect: () => void;
+	/**
+	 * Tamaño mínimo de 72 px en lugar de 128 px, para cuando hay muchas a la vez (la bandeja de
+	 * piezas de `build`). Sigue siendo un objetivo táctil válido.
+	 */
+	compact?: boolean;
 	/** Una `Picture`, una letra o una sílaba. */
 	children: ReactNode;
 };
 
 const BASE =
-	"relative flex min-h-target min-w-target items-center justify-center rounded-card font-reading text-ink";
+	"relative flex items-center justify-center rounded-card font-reading text-ink";
+const TAMAÑO = {
+	normal: "min-h-target min-w-target",
+	compact: "min-h-18 min-w-18",
+};
 
 // Cada estado se ve por su forma o su movimiento, nunca solo por el color (spec §9).
 const ESTILO: Record<OptionState, string> = {
@@ -30,7 +39,14 @@ const ESTILO: Record<OptionState, string> = {
 
 /** Una opción para tocar, sin lógica de pedagogía: solo pinta lo que le manda quien la usa. */
 export function OptionCard(props: Props) {
-	const { state, disabled, onSelect, children, ...rest } = props;
+	const {
+		state,
+		disabled,
+		onSelect,
+		compact = false,
+		children,
+		...rest
+	} = props;
 	return (
 		<button
 			type="button"
@@ -40,7 +56,7 @@ export function OptionCard(props: Props) {
 				if (disabled) return;
 				onSelect();
 			}}
-			className={`${BASE} ${ESTILO[state]}`}
+			className={`${BASE} ${compact ? TAMAÑO.compact : TAMAÑO.normal} ${ESTILO[state]}`}
 			{...rest}
 		>
 			{children}

@@ -9,6 +9,8 @@ import {
 	type TemplateId,
 	type Unit,
 } from "@/engine";
+import { Evaluation as BuildEvaluation } from "@/features/session/build/Evaluation";
+import { Presentation as BuildPresentation } from "@/features/session/build/Presentation";
 import { Evaluation as CountSyllablesEvaluation } from "@/features/session/count-syllables/Evaluation";
 import { Presentation as CountSyllablesPresentation } from "@/features/session/count-syllables/Presentation";
 import { Evaluation as HearItEvaluation } from "@/features/session/hear-it/Evaluation";
@@ -66,6 +68,7 @@ export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
 		Presentation: ListenTapPresentation,
 		Evaluation: ListenTapEvaluation,
 	},
+	build: { Presentation: BuildPresentation, Evaluation: BuildEvaluation },
 };
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
@@ -76,6 +79,7 @@ export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
 		"initial-sound",
 		"hear-it",
 		"listen-tap",
+		"build",
 	]);
 
 /**
