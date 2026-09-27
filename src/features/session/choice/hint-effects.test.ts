@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	curriculum,
+	emptyProgressState,
 	expectedAnswer,
 	type Item,
 	type PlannedExercise,
+	planSession,
 } from "@/engine";
 import {
 	choiceEffect,
@@ -329,22 +331,59 @@ describe("choiceEffect: R29 (D15)", () => {
 		});
 	});
 
-	it("X3: con 3 opciones no cambia nada: sigue atenuando un distractor, nunca la correcta", () => {
-		expect(efecto("dim-one-distractor+replay", LETRA, EV_LETRA)).toMatchObject({
-			kind: "dim",
-		});
-		expect(
-			efecto("dim-one-distractor+replay-phoneme", INICIAL, EV_INICIAL),
-		).toMatchObject({ kind: "dim", optionId: "picture:oso" });
+	it("X3: con 3 opciones (listen-tap letter:a) sigue atenuando un distractor, nunca la correcta", () => {
+		const e = efecto("dim-one-distractor+replay", LETRA, EV_LETRA);
+		expect(e.kind).toBe("dim");
+		if (e.kind === "dim") expect(e.optionId).not.toBe("letter:a");
 	});
 
-	it("X3: phase0:initial (único ítem oral jugable hoy) siempre trae 3 opciones del dato y nunca da replay", () => {
-		// Las opciones de oral:initial:avión vienen ya escritas en item.task.optionIds (3),
-		// tal como las pasa buildOptions a exercise.optionIds: nunca son 2.
-		expect(INICIAL.task?.optionIds).toHaveLength(3);
-		expect(EV_INICIAL.optionIds).toHaveLength(3);
-		expect(
-			efecto("dim-one-distractor+replay-phoneme", INICIAL, EV_INICIAL).kind,
-		).not.toBe("replay");
+	it("X3: initial-sound con un ítem fonema y 3 opciones tampoco cambia nada", () => {
+		const ev3 = ejercicio(
+			FONEMA_A,
+			"initial-sound",
+			["picture:oso", "picture:avión", "picture:uva"],
+			"picture:avión",
+		);
+		const e = efecto("dim-one-distractor+replay-phoneme", FONEMA_A, ev3);
+		expect(e.kind).toBe("dim");
+		if (e.kind === "dim") expect(e.optionId).not.toBe("picture:avión");
+	});
+
+	it("X3: phase0:initial por el planificador real siempre trae 3 opciones y nunca da replay (único ítem oral jugable hoy)", () => {
+		// No a mano: se planifica de verdad, como hace `buildOptions` al pasar
+		// `item.task.optionIds` completo a `exercise.optionIds`. Si algún día una unidad
+		// planificara este ítem con solo 2 opciones, este test lo notaría.
+		const evaluacionesIniciales: PlannedExercise[] = [];
+		for (const seed of [1, 2, 3, 4, 5]) {
+			const plan = planSession({
+				content: curriculum,
+				state: emptyProgressState(),
+				activeUnitId: "phase0:initial",
+				sessionLength: 6,
+				seed,
+			});
+			for (const ex of plan) {
+				if (ex.kind === "evaluation" && ex.templateId === "initial-sound")
+					evaluacionesIniciales.push(ex);
+			}
+		}
+		expect(evaluacionesIniciales.length).toBeGreaterThan(0);
+		for (const ex of evaluacionesIniciales) {
+			const it = curriculum.items.get(ex.itemId);
+			if (it === undefined) throw new Error(`Falta ${ex.itemId}`);
+			const expected = expectedAnswer(ex, it);
+			if (expected === null) throw new Error("sin respuesta");
+			expect(ex.optionIds).toHaveLength(3);
+			const e = choiceEffect({
+				action: "dim-one-distractor+replay-phoneme",
+				exercise: ex,
+				item: it,
+				optionIds: ex.optionIds,
+				expected,
+				lookup: (id) => curriculum.items.get(id),
+			});
+			expect(e.kind).toBe("dim");
+			if (e.kind === "dim") expect(e.optionId).not.toBe(expected);
+		}
 	});
 });
