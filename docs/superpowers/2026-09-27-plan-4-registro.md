@@ -297,15 +297,56 @@ cambio de `strokeDashoffset`/`offset-distance` se anima igual. Confirmado con mu
 de animación** ("con movimiento reducido, el trazo aparece entero, sin animar"). Ningún test
 existente lo cubre: `jsdom` no ejecuta transiciones CSS reales.
 
-**Resumen de todo lo pendiente de decisión del autor antes de poder cerrar la Tarea 5**, todo
-en ficheros fuera del alcance de archivos que tocó el brief de la Tarea 5:
-1. Marcadores de inicio superpuestos en A/E/M/P (candidato D18) — pendiente de que el autor
-   elija el tratamiento visual.
-2. Flechas de dirección poco visibles (nivel 1) — pendiente de decidir si se agrandan.
-3. `motion-safe:` no protege con movimiento reducido — bug confirmado, candidato claro a
-   arreglar (no es una decisión de diseño, es una violación de un Global Constraint).
-4. Déficit de tamaño de `trace/Presentation.tsx` en 768×1024 (47.6% vs 60%, en el dispositivo
-   objetivo principal) y overflow de 58px en 640×360 en `Evaluation.tsx` y `Presentation.tsx`
-   — pendiente de decidir si se arregla ahora o se aplaza.
-5. Confirmación explícita del autor de que cuidado/torpe pasan y garabato falla en las letras
-   ya probadas, y de si el tiempo de espera se siente bien.
+**Resolución de todo lo anterior con el autor (2026-09-27) — Tarea 6 añadida al plan
+(`docs/superpowers/plans/2026-09-27-silabin-trazo.md`, sección «Tarea 6»):**
+
+1. **Ruling — motion-safe:** se arregla (bug, no decisión de diseño). Verificado también el
+   segundo caso (`animation="dot"`, pista 2): mismo patrón exacto (`transitionDuration` en
+   línea), mismo fix (`motion-reduce:transition-none`). Aislado con Playwright dos veces:
+   - Sin fix, `reducedMotion: reduce`: `transitionProperty: "all"`,
+     `samplesOver900ms: [0.36, 0.15, 0.05, 0.007, 0, 0]` (anima).
+   - Con fix, `reducedMotion: reduce`: `transitionProperty: "none"`,
+     `samplesOver900ms: [0, 0, 0, 0, 0, 0]` (no anima, revela al instante).
+   - Con fix, `reducedMotion: no-preference`: sigue animando igual que sin el fix
+     (`transitionProperty: "stroke-dashoffset"`, decae 0.45→0 en varias muestras) — el fix no
+     rompe el caso normal.
+   Grep recursivo confirma que el patrón de duración en línea (`transitionDuration`/
+   `transitionDelay`) solo existe en `TraceCanvas.tsx` — no hace falta auditar el resto de la
+   app.
+2. **D18 (Ruling del coordinador, a que el autor lo vete al leer la Tarea 6 antes de
+   dispatch):** los marcadores superpuestos se separan desplazándolos a lo largo de la
+   dirección de su propio trazo (~0.19-0.22 unidades para A/M, no 0.09 — esa cifra no
+   alcanzaba, quedaban a ~0.06 de distancia con un círculo de 0.07 de radio).
+3. **Flechas:** no solo se agrandan — el autor pidió una guía de dirección **animada**, nueva,
+   que reemplaza la pista 2 (el punto simple) reutilizando su mismo mecanismo
+   (`offsetPath`/`offsetDistance`, ya recorre los trazos en orden), con forma de flecha y
+   `offset-rotate: auto`. En la presentación va **después** de que la letra termine de
+   dibujarse (no simultánea — decisión explícita del autor), encadenada a `onAnimationEnd`. La
+   flecha estática de hoy (agrandada, ~0.06-0.08 en vez de ~0.03-0.05) queda como respaldo bajo
+   movimiento reducido y como marca continua de nivel 1.
+4. **Ruling — `trace/Presentation.tsx` en 768×1024:** se arregla (768×1024 es el iPad en
+   vertical, dispositivo principal declarado en el README — no es aplazable).
+5. **Ruling — 58px de más en 640×360:** se aplaza (no es el dispositivo principal; coste
+   contenido a las mismas clases CSS ya identificadas si hiciera falta después).
+
+**Sigue pendiente, no bloquea la Tarea 6 pero sí cerrar la Tarea 5:** confirmación explícita
+del autor de una traza torpe **completa** (no solo una parte) que pase, un garabato **completo**
+que falle, si el tiempo de espera (1.5s) se siente bien, y qué pasó al dibujar una letra
+distinta encima de la pedida. Lo único confirmado hasta ahora: la precisión por trazo de la A
+distingue bien un trazo lateral correcto de una barra central mal puesta, y no se deja engañar
+por un intento que empieza bien y se relaja al final — señal positiva, pero no cubre los cuatro
+puntos de arriba.
+
+## Estado
+
+Plan escrito y aprobado (2026-09-27). Tareas 1-4 completas. Tarea 5 (parte automatizada):
+completa y revisada, clean. Tarea 6 añadida al plan con todo lo que decidió el autor durante la
+prueba manual (ver arriba) — lista para brief y dispatch en la próxima sesión. Antes de cerrar
+la Tarea 5 formalmente falta la confirmación de cuatro puntos de la prueba manual (arriba).
+Después de la Tarea 6: revisión final de la rama (opus).
+
+**Corte de sesión — obligatorio, sesión muy larga (tres subagentes, dos investigaciones de
+bugs con Playwright aislado, ~305k tokens de contexto).** Siguiente sesión: confirmar los
+cuatro puntos pendientes con el autor (o dispatch de Tarea 6 en paralelo si el autor prefiere
+no bloquear en eso), escribir el brief de la Tarea 6 (`sed -n` sobre el plan, sección «Tarea
+6»), y ejecutar con `subagent-driven-development` en `/model sonnet`.
