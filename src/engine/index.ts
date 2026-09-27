@@ -5,6 +5,8 @@ export {
 	stretchInKey,
 	stretchKey,
 } from "@/content/audio-keys";
+export type { Glyph, GlyphPoint, LetterCase } from "@/content/glyphs";
+export { glyphFor } from "@/content/glyphs";
 export type { CurriculumIndex } from "@/content/index";
 export { curriculum } from "@/content/index";
 export type { HintStep, TemplateId } from "@/content/templates";
@@ -49,6 +51,7 @@ export type {
 	AttemptFeedback,
 	SessionRun,
 	SessionSummary,
+	TraceGuide,
 } from "@/engine/session";
 export {
 	checkAnswer,
@@ -59,8 +62,12 @@ export {
 	nextExercise,
 	startSession,
 	submitAnswer,
+	submitTrace,
+	traceGuide,
 } from "@/engine/session";
 export { firstTryRatio, starsForSession } from "@/engine/stars";
+export type { GuideLevel, TraceScore, TraceStroke } from "@/engine/trace";
+export { guideLevel, scoreTrace } from "@/engine/trace";
 export type {
 	Box,
 	Counters,

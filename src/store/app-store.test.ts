@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { UPPER_GLYPHS } from "@/content/glyphs";
 import { curriculum } from "@/content/index";
-import { currentExercise, isSessionOver } from "@/engine";
+import {
+	createAttemptState,
+	currentExercise,
+	isSessionOver,
+	type PlannedExercise,
+	type ProgressState,
+	type SessionRun,
+} from "@/engine";
 import { createAppStore } from "@/store/app-store";
 import {
 	createMemoryAdapter,
@@ -215,6 +223,66 @@ describe("guardado tras cada paso", () => {
 		await store.getState().answer(respuestaCorrecta(store));
 		const s = store.getState();
 		expect(s.progress).toBe(s.run?.progress);
+	});
+});
+
+const LETTER_A_ID = "letter:a";
+const TRACE_EXERCISE: PlannedExercise = {
+	id: "ex-trace",
+	kind: "evaluation",
+	templateId: "trace",
+	itemId: LETTER_A_ID,
+	optionIds: [],
+	correctOptionId: null,
+	source: "active-unit",
+};
+const GLYPH_A = UPPER_GLYPHS.a;
+if (GLYPH_A === undefined) throw new Error("falta UPPER_GLYPHS.a");
+const TRAZO_CORRECTO = GLYPH_A.strokes;
+
+/** Monta a mano una corrida de un solo ejercicio de trazo, sin pasar por el planificador. */
+function trazoRun(progress: ProgressState): SessionRun {
+	return {
+		sessionIndex: progress.sessionCounter,
+		unitId: null,
+		exercises: [TRACE_EXERCISE],
+		cursor: 0,
+		attempt: createAttemptState(),
+		resolutions: [],
+		progress,
+	};
+}
+
+/** Un adaptador en memoria que solo cuenta cuántas veces se escribió. */
+function adaptadorQueCuenta() {
+	const base = createMemoryAdapter();
+	let escrituras = 0;
+	const adapter: StorageAdapter = {
+		read: () => base.read(),
+		clear: () => base.clear(),
+		write: (value) => {
+			escrituras += 1;
+			return base.write(value);
+		},
+	};
+	return { adapter, escrituras: () => escrituras };
+}
+
+describe("answerTrace", () => {
+	it("C9: guarda solo tras la resolución, y devuelve el feedback del motor", async () => {
+		const { adapter, escrituras } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		store.setState({ run: trazoRun(store.getState().progress) });
+
+		const fallo = await store.getState().answerTrace([]);
+		expect(fallo.resolution).toBeNull();
+		expect(escrituras()).toBe(0);
+
+		const acierto = await store.getState().answerTrace(TRAZO_CORRECTO);
+		expect(acierto.resolution).not.toBeNull();
+		expect(escrituras()).toBe(1);
 	});
 });
 

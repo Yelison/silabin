@@ -11,6 +11,8 @@ import {
 	type SessionSummary,
 	startSession,
 	submitAnswer,
+	submitTrace,
+	type TraceStroke,
 } from "@/engine";
 import {
 	exportState,
@@ -59,6 +61,7 @@ export type AppState = {
 	beginSession(): void;
 	presentationDone(): Promise<void>;
 	answer(value: string): Promise<AttemptFeedback>;
+	answerTrace(strokes: readonly TraceStroke[]): Promise<AttemptFeedback>;
 	next(): void;
 	/** Lanza, sin tocar el estado, si no hay sesión o todavía no ha terminado. */
 	endSession(): Promise<void>;
@@ -151,6 +154,19 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 					content,
 					run: corridaEnCurso(),
 					answer: value,
+					now: now(),
+				});
+				set({ run, progress: run.progress });
+				if (feedback.resolution !== null)
+					await guardar(withProgress(get().doc, run.progress));
+				return feedback;
+			},
+
+			async answerTrace(strokes) {
+				const { run, feedback } = submitTrace({
+					content,
+					run: corridaEnCurso(),
+					strokes,
 					now: now(),
 				});
 				set({ run, progress: run.progress });
