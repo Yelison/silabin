@@ -180,8 +180,44 @@ mismo criterio que Tarea 3 aplicó a `Evaluation.tsx`.
 
 Tarea 4: complete (commits 65b8a89..4d16545, review clean, sin ronda de corrección).
 
+**Tarea 5 — implementación:** 2 commits: `6fdb93e` (`test(ui): trace de punta a punta con
+motor y store reales` — un solo `it()`, no tres, porque I2 depende de que I1 haya subido
+`letter:a` de caja e I3 de los contadores acumulados de toda la sesión) y `35dfed5`
+(`docs: README con trace construida y la Fase 1 esperando a say-it` — `next.config.ts` con
+`allowedDevOrigins` desde `DEV_ORIGINS`, y los 6 puntos del README del brief). `pnpm test` 900
+pasan / 1 omitido (899 previos + 1 nuevo), typecheck y lint limpios, verificado tras cada
+commit. Encontró que `boundaries.test.ts` (U8) bloqueaba importar `buildCurriculum` desde
+`@/content/index` en el test de integración — lo resolvió construyendo el `CurriculumIndex` de
+prueba a mano (el barrel `@/engine` ya expone el tipo); sin `Ruling` necesario. No tocó
+`src/engine/trace.ts` ni `glyphs.test.ts` (la prueba manual, que decide si hace falta, no ha
+ocurrido) ni hizo la prueba manual (fuera de su alcance). Reportó `DONE`.
+
+**Tarea 5 — revisión (sonnet, con verificación independiente):** ✅ cumplimiento del spec
+completo. **Approved**, 0 Critical, 0 Important. Verificó los 6 puntos del README uno a uno
+contra el código fuente, no solo contra el informe — incluida la trampa 9: confirmó en
+`session.ts` que `submitAnswer` lanza explícitamente para `trace` (línea 201-204) y que
+`submitTrace` (221-247) es un camino de evaluación paralelo completo vía `scoreTrace`, y que
+`SessionScreen` nunca llama a `answer`/`submitAnswer` para `trace`; cierre real, no una
+afirmación sin sustento, y sigue 🔴 para `say-it`/`read-word` como debe. Corrió
+`boundaries.test.ts` (U8) aislado (23/23), el test nuevo aislado (1/1), typecheck y lint de
+forma independiente del informe. Verificó I1-I3 contra el motor real (`guideLevel`,
+`recordAttempt`, `MAX_PRESENTATIONS`, `sessionLength`) y la conversión pantalla↔letra como
+inversa exacta de `toLetterSpace` (`TraceCanvas.tsx:59-70`), a mano con números concretos.
+Minor (deferred): el banner superior del README (línea ~8, «Estado a 2026-09-26... Plan 3...
+817 tests») y la frase «Estado tras el Plan 2» en «Trampas conocidas» quedaron desactualizados
+— deuda previa a esta tarea, no causada por ella, señalada por el implementador en vez de
+tocada sin permiso. Pendiente para una tarea de limpieza aparte, fuera de este plan.
+
+Tarea 5 (parte automatizada): review clean, sin ronda de corrección (commits
+6fdb93e..35dfed5). **Pendiente antes de cerrar la tarea:** la prueba manual en dispositivo real
+que pide el brief — acceso con `DEV_ORIGINS`, repasar cada letra en los niveles 1 y 3 (cuidado,
+torpe, garabato, letra encima), y decidir si `TOLERANCE`/`MIN_COVERAGE`/`MIN_PRECISION`/
+`TRACE_IDLE_MS` se mueven. El coordinador para aquí y se la pide al autor, como manda el plan.
+
 ## Estado
 
 Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1, 2, 3 y 4 completas.
-Siguiente: Tarea 5, «Integración, prueba manual y README» (línea 505 en adelante del plan).
-Sesión de ejecución en 2 tareas (Tarea 3, Tarea 4): toca cortar aquí.
+Tarea 5: parte automatizada completa y revisada (clean); falta la prueba manual del autor antes
+de cerrarla, y después la revisión final de la rama (opus) — última tarea del plan.
+Sesión de ejecución en 3 tareas (Tarea 3, Tarea 4, Tarea 5 parcial): toca cortar aquí tras la
+prueba manual y el cierre de la Tarea 5.
