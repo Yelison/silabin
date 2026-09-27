@@ -119,12 +119,14 @@ export function traceGuide(content: CurriculumIndex, run: SessionRun): TraceGuid
 - `expectedAnswer` sigue devolviendo `null` para `trace`: la **trampa 9 queda cerrada para
   `trace`** porque ningún camino llega a `checkAnswer` con un trazo, y sigue abierta para
   `say-it` y `read-word`.
-- El barril `@/engine` reexporta `submitTrace`, `traceGuide`, `TraceGuide`, `TraceStroke`,
-  `GuideLevel`, `Glyph` y `GlyphPoint`. También `scoreTrace` y `TraceScore`, que solo
-  necesita el marcador de `/dev/plantillas` (§4): `features/` no puede importar módulos
-  internos del motor (test U8), y un test de fronteras nuevo comprueba que ningún fichero
-  fuera de `src/features/dev/` usa `scoreTrace`, para que ninguna vista decida por su cuenta
-  si un trazo vale.
+- El barril `@/engine` reexporta `submitTrace`, `traceGuide`, `glyphFor`, `TraceGuide`,
+  `TraceStroke`, `GuideLevel`, `Glyph`, `GlyphPoint` y `LetterCase`. La presentación usa
+  `glyphFor`, porque no hay intento ni guía que calcular. También reexporta `scoreTrace`,
+  `TraceScore` y `guideLevel`, que solo necesita `/dev/plantillas` (§4) para construir la
+  guía y el marcador sin una sesión en curso: `features/` no puede importar módulos internos
+  del motor (test U8), y un test de fronteras nuevo comprueba que ningún fichero fuera de
+  `src/features/dev/` usa `scoreTrace` ni `guideLevel`, para que ninguna vista decida por su
+  cuenta si un trazo vale ni qué guía toca.
 - El store gana `answerTrace(strokes)` junto a `answer(value)`, con el mismo guardado tras
   cada paso.
 
@@ -149,9 +151,14 @@ export function traceGuide(content: CurriculumIndex, run: SessionRun): TraceGuid
   niño vuelve a tocar, se cancela. Al vencer, la vista manda todos los trazos del intento con
   `onTrace(strokes)`. Levantar el dedo entre trazos o para recolocarse no es un fallo. La
   constante se ajusta en la prueba manual.
-- `EvaluationProps` gana `onTrace(strokes)` y `guide: TraceGuide | null`; `SessionScreen`
-  saca `guide` de `traceGuide` y su `resolver` acepta tanto `answer` como `answerTrace`. El
-  sonido neutro de fallo y el `attemptKey` que limpia la tinta no cambian.
+- `EvaluationProps` gana un único campo opcional `trace?: { guide: TraceGuide;
+  onTrace(strokes): void }`, que `SessionScreen` solo pasa en los ejercicios `trace` (con
+  `guide` sacado de `traceGuide`). Opcional para no tocar las 8 vistas de toque ni sus
+  tests; la vista de trazo lanza si no lo recibe. El `resolver` de `SessionScreen` acepta
+  tanto `answer` como `answerTrace`. El sonido neutro de fallo y el `attemptKey` que limpia
+  la tinta no cambian.
+- Tras un acierto, la vista conserva la guía que tenía mientras dura la celebración: el
+  motor ya ha subido la caja y `traceGuide` daría un nivel más tenue.
 
 ### Pistas (`src/features/session/trace/hint-effects.ts`)
 
@@ -191,10 +198,14 @@ opciones. Con 3, siguen atenuando un distractor (nunca la correcta).
   la tolerancia pasa; dibujarla sin uno de sus trazos falla; un garabato que tapa la caja
   falla; un dedo rápido con 2 puntos por trazo pasa; sin tinta falla.
 - **Nivel de guía:** la tabla completa de caja × pistas.
-- **Prueba cruzada** con las 9 letras reales: cada una, dibujada con sus propios trazos, pasa;
-  dibujada sobre la caja de cualquier otra, falla. Si algún par no se separa con constantes
-  razonables, el implementador lo reporta en vez de ajustar hasta que pase, y se decide con
-  el autor.
+- **Prueba cruzada** con las 9 letras reales: cada una, dibujada con sus propios trazos (y
+  con un temblor de ±0.08), pasa; dibujada sobre la caja de cualquier otra, falla, salvo una
+  lista explícita de pares confundibles que se permite que pasen. Un prototipo al escribir el
+  plan (2026-09-27) dio con las constantes de partida 5 pares: E sobre S, E sobre P, S sobre
+  E, O sobre U y U sobre O; con tolerancia 0.10 solo quedaba U sobre O. Es el precio de D12
+  (mejor un falso acierto que frustrar): la guía está a la vista y el niño repasa esa letra,
+  no dibuja otra. Si aparece un par nuevo, el implementador lo reporta en vez de ajustar hasta
+  que pase, y se decide con el autor.
 - **Sesión:** `submitTrace` con acierto al primer intento, fallo con pista, tres fallos hasta
   `assisted`, `counters.traces`, y las guardas de `submitAnswer`, `submitTrace` y
   `traceGuide`.
