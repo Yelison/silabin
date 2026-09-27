@@ -62,7 +62,7 @@ Ruling: R19 aplicado (en `pickVoice` el acento pesa más que la calidad; A10).
 Task 1b: minor (deferred): A18 y A20 fusionados en un solo test (cubre las dos propiedades).
 Task 1b: minor (deferred): los tests reescritos de robustez no comprueban `synth.cancelCalls` localmente (lo cubre otro test existente).
 Task 1: complete (commits 24d1e12..36d0a06, review clean; 1a y 1b revisadas por separado)
-Sesión 1: Tarea 1 hecha. Tokens sesión 1: (pendiente, lo apunta el autor).
+Sesión 1: Tarea 1 hecha. Tokens sesión 1: no medida.
 
 ## Tarea 2 (motor y contenido)
 
@@ -75,4 +75,4 @@ Task 2: minor (deferred): M11 barre 200 semillas por unidad para cubrir combinac
 Task 2: fix round 1/5 (2 addressed, 0 open — test de dos consonantes vistas que chocan entre sí; casos de `rimeOf` terminados en s: «lunas», «compás»; commits 214ea6b..9e36d46)
 Task 2: minor (deferred): `expectedPieces`/`reducedPieces` lanzan ante datos incoherentes; las Tareas 3-5 deben llamarlos solo en `build` o capturarlo en sus tests.
 Task 2: complete (commits 3393b89..9e36d46, review clean)
-Sesión 2: Tarea 2 hecha. Siguiente: Tarea 3.
+Sesión 2: Tarea 2 hecha (1 implementador, 1 revisión, 1 ronda de corrección, 1 re-revisión). Tokens sesión 2: `/usage` marca «Current session 90 %» al cerrar; es la ventana de uso de la suscripción, no solo esta conversación, así que puede incluir la sesión 1 si cayó en la misma ventana. Siguiente: Tarea 3.
