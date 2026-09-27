@@ -93,3 +93,7 @@ Task 3: minor (deferred): sin test de `layout="grid"`, de la cancelación de la 
 Task 3: minor (deferred): `ReplayButton` vive fuera de `ChoiceEvaluation`; pulsarlo durante una `sequence` intercala audio (cosmético). T4 puede pasar un `header`.
 Task 3: minor (deferred): ⚠️ sin scroll en 360×640 con 3 imágenes (presentación de `phoneme:a` y evaluación de initial-sound con 3 opciones) solo calculado a mano; confirmar en la prueba manual de la Tarea 5b/6.
 Task 3: complete (commits 886cc86..20ce86d, review clean)
+
+## Tarea 4 (hear-it y listen-tap)
+
+Sesión 3 (continúa). BASE 586b1b5.
