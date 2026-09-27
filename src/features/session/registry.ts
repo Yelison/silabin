@@ -23,6 +23,8 @@ import { Evaluation as ListenTapEvaluation } from "@/features/session/listen-tap
 import { Presentation as ListenTapPresentation } from "@/features/session/listen-tap/Presentation";
 import { Evaluation as RhymeEvaluation } from "@/features/session/rhyme/Evaluation";
 import { Presentation as RhymePresentation } from "@/features/session/rhyme/Presentation";
+import { Evaluation as TraceEvaluation } from "@/features/session/trace/Evaluation";
+import { Presentation as TracePresentation } from "@/features/session/trace/Presentation";
 
 /** Lo que recibe la vista de presentación de una plantilla: enseña el ítem y avisa al terminar. */
 export type PresentationProps = {
@@ -79,6 +81,7 @@ export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
 		Evaluation: ListenTapEvaluation,
 	},
 	build: { Presentation: BuildPresentation, Evaluation: BuildEvaluation },
+	trace: { Presentation: TracePresentation, Evaluation: TraceEvaluation },
 };
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
@@ -90,6 +93,7 @@ export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
 		"hear-it",
 		"listen-tap",
 		"build",
+		"trace",
 	]);
 
 /**
