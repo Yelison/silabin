@@ -24,4 +24,4 @@ Prototipo desechable de la puntuación con los trazos de la Tarea 1 y las consta
 
 ## Estado
 
-Plan escrito y committeado. Siguiente: Tarea 1, en una sesión nueva con `/model sonnet`.
+Plan escrito, committeado y aprobado por el autor (2026-09-27). Siguiente: Tarea 1, en una sesión nueva con `/model sonnet`.
