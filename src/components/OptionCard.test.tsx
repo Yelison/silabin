@@ -61,6 +61,40 @@ describe("OptionCard", () => {
 		expect(boton.textContent).not.toContain("👆");
 	});
 
+	it("M6: la mano lleva ancho propio (sin él un absolute se encoge a media tarjeta), más pequeña en la compacta", () => {
+		render(
+			<>
+				<OptionCard
+					state="marked"
+					disabled={false}
+					aria-label="pequeña"
+					compact
+					onSelect={vi.fn()}
+				>
+					m
+				</OptionCard>
+				<OptionCard
+					state="marked"
+					disabled={false}
+					aria-label="grande"
+					onSelect={vi.fn()}
+				>
+					m
+				</OptionCard>
+			</>,
+		);
+		const mano = (n: string) => {
+			const img = screen
+				.getByRole("button", { name: n })
+				.querySelector("img") as HTMLImageElement;
+			return { img, envoltorio: img.parentElement as HTMLElement };
+		};
+		expect(mano("grande").img.getAttribute("width")).toBe("56");
+		expect(mano("grande").envoltorio.className).toContain("w-14");
+		expect(mano("pequeña").img.getAttribute("width")).toBe("40");
+		expect(mano("pequeña").envoltorio.className).toContain("w-10");
+	});
+
 	it("V4: dimmed queda marcada en data-state", () => {
 		render(
 			<OptionCard

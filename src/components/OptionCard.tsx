@@ -64,9 +64,12 @@ export function OptionCard(props: Props) {
 			{state === "marked" && (
 				<span
 					aria-hidden="true"
-					className="-translate-x-1/2 absolute -top-8 left-1/2"
+					// El ancho va fijo: sin él, un `absolute` con `left-1/2` se encoge a la mitad de la
+					// tarjeta y la mano de la compacta salía a 28 px. Los desplazamientos cuentan desde el borde interior (el marcado tiene 8 px de borde). En la compacta la mano baja hasta
+					// apoyarse en el borde (sin llegar a la letra) y cabe en el hueco de la fila de arriba.
+					className={`-translate-x-1/2 absolute left-1/2 ${compact ? "-top-9 w-10" : "-top-8 w-14"}`}
 				>
-					<Icon name="hand" size={56} />
+					<Icon name="hand" size={compact ? 40 : 56} />
 				</span>
 			)}
 		</button>

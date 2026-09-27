@@ -249,7 +249,8 @@ export function Evaluation(props: EvaluationProps) {
 					{orden >= 0 && (
 						<span
 							aria-hidden="true"
-							className="absolute -bottom-2 -left-2 flex h-8 w-8 items-center justify-center rounded-full bg-action text-2xl font-bold text-action-ink"
+							// Fuera de la caja de la letra: los desplazamientos cuentan desde el borde interior.
+							className="absolute -bottom-5 -left-5 flex h-7 w-7 items-center justify-center rounded-full bg-action text-2xl font-bold text-action-ink"
 						>
 							{orden + 1}
 						</span>
@@ -283,7 +284,8 @@ export function Evaluation(props: EvaluationProps) {
 					</fieldset>
 				))}
 			</div>
-			<div className="flex flex-row flex-wrap items-center justify-center gap-3 font-reading">
+			{/* El hueco entre filas (28 px) es donde cabe la mano de la pieza marcada del modelo. */}
+			<div className="flex flex-row flex-wrap items-center justify-center gap-x-3 gap-y-7 font-reading">
 				{exercise.optionIds.map((id) => (
 					<div key={id} className="min-h-18 min-w-18">
 						{!casillas.includes(id) && pieza(id)}
