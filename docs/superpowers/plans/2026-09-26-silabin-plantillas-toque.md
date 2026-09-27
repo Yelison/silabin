@@ -632,7 +632,7 @@ export function Icon(props: { name: IconName; size?: number /* px, por defecto 4
   con `role="img"` y `aria-label`, como hoy. **`<img>` y no `next/image`**: los ficheros ya
   vienen a su tamaño y la PWA los precacheará tal cual (spec §8); el optimizador de Next no
   aporta nada y no funciona sin servidor. Si Biome marca `noImgElement`, suprímelo con
-  `biome-ignore` y ese motivo (Ruling previsto R20).
+  `biome-ignore` y ese motivo (Ruling previsto R21).
 - **`Icon`** es decorativo: el botón que lo contiene ya lleva `aria-label`. La mano de
   `OptionCard` (ui-hand señala hacia abajo) va centrada encima de la tarjeta, no en la esquina.
 - `ui-star` no se usa todavía (la celebración es del Plan 6) y no se copia.
@@ -720,7 +720,7 @@ con `NODE_ENV=production` debe fallar).
 - Rulings previstos para el ledger: R15 (`build` acepta tocar y arrastrar), R16 (tema claro
   fijo), R17 (se atenúa el primer distractor en el orden del motor), R18 (`listen-tap` pinta
   el par minúscula-mayúscula en cada opción de letra), R19 (en `pickVoice`, el acento pesa
-  más que la calidad), R20 (`<img>` y no `next/image` en `Picture` e `Icon`).
+  más que la calidad), R21 (`<img>` y no `next/image` en `Picture` e `Icon`).
 - README (Tarea 6): en «Después», la voz. Prueba de Azure con unos 10 audios en `do` y `mx`
   antes del lote, y **los fonemas sueltos («mmm», «sss», «p») grabados con voz humana**:
   ninguna voz sintética los dice bien.
