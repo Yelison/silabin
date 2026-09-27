@@ -55,7 +55,7 @@ export function Presentation(props: PresentationProps) {
 
 	return (
 		<div className="flex flex-col items-center gap-8">
-			<div className="flex min-h-40 items-center justify-center">
+			<div className="flex min-h-40 items-center justify-center font-reading">
 				<Written item={item} size="lg" />
 			</div>
 			<div className="flex h-28 items-center">

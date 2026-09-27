@@ -100,6 +100,20 @@ describe("listen-tap / Presentation", () => {
 		]);
 	});
 
+	it("M12: el ítem se pinta con la fuente de lectura, como las opciones de la evaluación", async () => {
+		montar("word:mama");
+		expect(
+			screen.getByText("mamá").closest(".font-reading"),
+			"la palabra",
+		).not.toBeNull();
+		cleanup();
+		montar("letter:m");
+		expect(
+			screen.getByText("m").closest(".font-reading"),
+			"la letra",
+		).not.toBeNull();
+	});
+
 	it("con el reproductor que falla, el botón aparece igual", async () => {
 		const audio = fakeAudio();
 		audio.play.mockRejectedValue(new Error("sin voz"));

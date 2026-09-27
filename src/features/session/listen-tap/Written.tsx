@@ -7,8 +7,10 @@ import type { Item } from "@/engine";
  */
 export function Written(props: { item: Item; size: "lg" | "md" }) {
 	const { item, size } = props;
-	const grande = size === "lg" ? "text-9xl" : "text-7xl";
-	const chica = size === "lg" ? "text-7xl" : "text-5xl";
+	// En grande, el tamaño se ajusta al ancho: una palabra de cuatro letras a `text-9xl` mide
+	// ~406 px y a 360 px de pantalla se cortaba. Con `min()` sigue en 8 rem en pantallas anchas.
+	const grande = size === "lg" ? "text-[min(8rem,26vw)]" : "text-7xl";
+	const chica = size === "lg" ? "text-[min(4.5rem,15vw)]" : "text-5xl";
 	if (item.display !== undefined)
 		return (
 			<span className="flex items-baseline gap-3 leading-none text-ink">
