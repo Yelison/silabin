@@ -5,13 +5,16 @@ español desde cero: conciencia fonológica, vocales y sílabas CV, con pistas e
 repaso espaciado, validación por voz y recompensas. Uso principal en iPad/iPhone con Safari,
 como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acompaña.
 
-> **Estado a 2026-09-26:** el núcleo sin interfaz (Plan 1) está fusionado en `main`. El
-> **Plan 2** (rama `feat/plan-2-sesion`, sin fusionar aún) hace **jugable una sesión de
-> `phase0:clap`**: «Toca para empezar», mapa, presentaciones, ejercicios de contar sílabas con
-> el tambor y pistas de menos a más, pantalla final con estrellas y progreso guardado. Las
-> demás unidades aparecen atenuadas en el mapa hasta que sus plantillas tengan vista. **Falta
-> la prueba manual con `pnpm dev`** (ver [deuda menor](#deuda-menor-aceptada)) y la revisión
-> final de la rama antes del PR. El siguiente paso es el Plan 3.
+> **Estado a 2026-09-26:** el núcleo sin interfaz (Plan 1, PR #1) y la primera sesión jugable
+> (Plan 2, PR #3) están fusionados en `main`. El **Plan 3** (rama
+> `feat/plan-3-plantillas-toque`) hace **jugable la Fase 0 entera**: `count-syllables`,
+> `rhyme`, `initial-sound` y `hear-it`, con una base visual mínima, las 65 ilustraciones y los
+> 6 iconos reales, y las plantillas `listen-tap` y `build` construidas (se ven en
+> `/dev/plantillas`, porque ninguna unidad las ofrece todavía). 817 tests (1 omitido), y
+> `typecheck`, `lint` y `pnpm build` en verde. Las unidades de la Fase 1 y la 2 siguen
+> atenuadas en el mapa hasta que existan `trace` y `say-it`. **Falta** la revisión final de la
+> rama (Opus), la prueba manual de la Fase 0 por el autor y el PR (ver
+> [siguientes pasos](#siguientes-pasos-concretos)).
 
 ---
 
@@ -21,12 +24,14 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 2. [Documentos y en qué orden leerlos](#documentos-y-en-qué-orden-leerlos)
 3. [Arquitectura](#arquitectura)
 4. [Lo que ya está hecho: Plan 1](#lo-que-ya-está-hecho-plan-1)
-5. [Lo que falta: planes 3 a 6](#lo-que-falta-planes-3-a-6)
-6. [Siguientes pasos concretos](#siguientes-pasos-concretos)
-7. [Decisiones tomadas](#decisiones-tomadas)
-8. [Trampas conocidas](#trampas-conocidas)
-9. [Deuda menor aceptada](#deuda-menor-aceptada)
-10. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
+5. [Lo que ya está hecho: Plan 2](#lo-que-ya-está-hecho-plan-2)
+6. [Lo que ya está hecho: Plan 3](#lo-que-ya-está-hecho-plan-3)
+7. [Lo que falta: planes 4 a 6](#lo-que-falta-planes-4-a-6)
+8. [Siguientes pasos concretos](#siguientes-pasos-concretos)
+9. [Decisiones tomadas](#decisiones-tomadas)
+10. [Trampas conocidas](#trampas-conocidas)
+11. [Deuda menor aceptada](#deuda-menor-aceptada)
+12. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
 
 ---
 
@@ -36,13 +41,19 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 609 tests + 1 omitido (el de ficheros de audio)
+pnpm test        # Vitest: 817 tests + 1 omitido (el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src
-pnpm dev         # Next.js: la aplicación, con la sesión de phase0:clap jugable
+pnpm dev         # Next.js: la aplicación, con las 4 unidades de la Fase 0 jugables
 ```
 
-Las tres puertas (`test`, `typecheck` y `lint`) están en verde en la rama del Plan 2.
+Las tres puertas (`test`, `typecheck` y `lint`) y `pnpm build` están en verde en la rama del
+Plan 3.
+
+**`/dev/plantillas`** (solo con `pnpm dev`; en producción da 404): un selector de plantilla e
+ítem que monta la presentación y la evaluación con un ejercicio planificado por el motor, y
+botones para simular el rung 1, 2 o 3 y el bloqueo. Sirve para ver `listen-tap` y `build`, que
+ninguna unidad ofrece aún (las unidades de la Fase 1 y la 2 esperan a `trace` y `say-it`).
 
 El test omitido comprueba que los ficheros de audio existen en disco en los 3 acentos. Solo
 corre con `SILABIN_CHECK_AUDIO_FILES=1`, que se enciende cuando lleguen los audios reales.
@@ -66,6 +77,20 @@ instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
 |---|---|---|
 | 1 | Este README | Estado, pendientes y siguientes pasos |
 | 2 | `docs/superpowers/specs/2026-09-18-silabin-design.md` | **El spec aprobado. Es la autoridad.** Pedagogía, arquitectura, contenido, motor, voz, recompensas, UX y pruebas |
+| 3 | `docs/superpowers/2026-09-26-plan-3-registro.md` | Registro de ejecución del Plan 3. Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-3-plantillas-toque` |
+| 4 | `docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md` | El Plan 3 (tareas 1-6, con la 5b): base visual, plantillas de toque y Fase 0 de punta a punta, con las decisiones D8-D11 al principio |
+| 5 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens y reglas visuales (D8). La identidad final sigue pendiente |
+| 6 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete) |
+| 7 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito |
+| 8 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
+| 9 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
+| 10 | `docs/superpowers/plans/2026-09-18-silabin-nucleo.md` | El Plan 1 completo (22 tareas) y la hoja de ruta original al final |
+| 11 | `docs/research/pedagogia-lectura-inicial.md` | Evidencia pedagógica: método fonético-silábico, orden de letras, espejo b/d/p/q |
+| 12 | `docs/research/reconocimiento-voz-infantil.md` | Comparativa de reconocimiento de voz infantil; por qué el evaluador `parent` es el del día uno y Azure viene después |
+
+---|---|---|
+| 1 | Este README | Estado, pendientes y siguientes pasos |
+| 2 | `docs/superpowers/specs/2026-09-18-silabin-design.md` | **El spec aprobado. Es la autoridad.** Pedagogía, arquitectura, contenido, motor, voz, recompensas, UX y pruebas |
 | 3 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-2-sesion` |
 | 4 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
 | 5 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
@@ -82,12 +107,12 @@ src/
   content/     Currículo como datos, validado con Zod al importar. Sin React.       ✅ hecho
   engine/      Motor: funciones puras, sin React ni DOM.                           ✅ hecho
   store/       Estado persistido, store de Zustand y puente con el motor.          ✅ hecho
-  audio/       Interfaz AudioPlayer; placeholder con speechSynthesis y cola.       🟡 en parte (Plan 2)
-  images/      Interfaz de imágenes; placeholder con emoji (clave img:<palabra>).  🟡 en parte (Plan 2)
+  audio/       Interfaz AudioPlayer; placeholder con speechSynthesis y cola.       🟡 en parte (Planes 2-3)
+  images/      Interfaz de imágenes: WebP ilustrado (65) y emoji de respaldo.      🟡 en parte (Plan 3)
   speech/      SpeechEvaluator (parent, browser, azure), VAD, fonemización.        ⏳ Plan 5
-  features/    Inicio, mapa, sesión (count-syllables), fin, aviso y exportación.   🟡 en parte (Plan 2)
-  components/  UI infantil: solo BigButton y use-long-press por ahora.              🟡 en parte (Plan 2)
-  app/         Ruta única de Next.js que monta App; falta /api/speech-token.       🟡 en parte (Plan 2)
+  features/    Inicio, mapa, sesión (5 plantillas de toque), fin, aviso, exportar. 🟡 en parte (Planes 2-3)
+  components/  UI infantil: BigButton, OptionCard, Picture, Icon, ReplayButton.    🟡 en parte (Plan 3)
+  app/         Ruta única que monta App, /dev/plantillas; falta /api/speech-token. 🟡 en parte (Plan 3)
 ```
 
 **Regla de fronteras:** `features/` y `components/` nunca deciden pedagogía. Solo pintan lo
@@ -181,10 +206,9 @@ Refinamientos del spec que introdujo el Plan 1 (documentados en el plan):
 
 ## Lo que ya está hecho: Plan 2
 
-Plan 2 = **primera sesión jugable de `count-syllables`**, en la rama `feat/plan-2-sesion`
-(9 tareas, ledger en `docs/superpowers/2026-09-26-plan-2-registro.md`). La revisión final de
-rama (Opus) ya está hecha y sus hallazgos corregidos (I1-I3, M1; ver el ledger); el PR y la
-prueba manual siguen pendientes.
+Plan 2 = **primera sesión jugable de `count-syllables`** (9 tareas, ledger en
+`docs/superpowers/2026-09-26-plan-2-registro.md`). Fusionado en `main` mediante el PR #3. La
+revisión final de rama (Opus) corrigió sus hallazgos (I1-I3, M1; ver el ledger).
 
 - **Motor:** `engine/session.ts` (corrida de sesión pura: plan, intentos, resoluciones y
   cierre); sesión de solo repaso cuando se agota el currículo (`planReviewOnly`); `basePool`
@@ -200,36 +224,73 @@ prueba manual siguen pendientes.
   `EndScreen`, y las vistas de `count-syllables` (presentación con luces por sílaba, tambor y
   pistas 1-2-3). `SaveWarning` avisa al adulto si no se guardó, y `ExportGesture` exporta el
   progreso manteniendo pulsado el logo 3 s.
-- Solo `phase0:clap` es jugable. El mapa atenúa las unidades cuyas plantillas aún no tienen
-  vista (`isSessionPlayable`).
+- Al acabar el Plan 2 solo `phase0:clap` era jugable. El mapa atenúa las unidades cuyas
+  plantillas aún no tienen vista (`isSessionPlayable`).
 
 ---
 
-## Lo que falta: planes 3 a 6
+## Lo que ya está hecho: Plan 3
+
+Plan 3 = **el resto de plantillas de toque y la base visual**, en la rama
+`feat/plan-3-plantillas-toque` (tareas 1-6 con la 5b; ledger en
+`docs/superpowers/2026-09-26-plan-3-registro.md`). Cada tarea pasó revisión; falta la revisión
+final de la rama y el PR. Resultado: **la Fase 0 entera es jugable** (`phase0:clap`,
+`phase0:rhyme`, `phase0:initial` y `phase0:hear-it`), con 817 tests (1 omitido).
+
+- **Base visual (D8):** tokens de color, tipografía (Andika), radios y tamaño de objetivo en
+  `src/app/globals.css`; componentes `OptionCard`, `Picture`, `ReplayButton` y `Icon`. La
+  investigación y la tabla de tokens están en `docs/diseno-visual.md`. Tema claro fijo.
+- **Audio:** `pickVoice` elige mejor voz del dispositivo (primero el acento, después la
+  calidad) y la pausa entre sílabas tiene en cuenta la latencia de las voces «Natural» de red
+  de Edge, que alargaba «ga ····· to» en la prueba manual del Plan 2.
+- **Motor y contenido:** `engine/answers.ts` (`expectedAnswer`, `expectedPieces`,
+  `reducedPieces`), `content/audio-keys.ts`, `rimeOf` y los ítems orales que necesitan
+  `rhyme`, `initial-sound` y `hear-it`; el invariante M11 comprueba que cada plantilla de toque
+  resuelve `correct` para cada ítem que acepta.
+- **Interfaz:** `ChoiceEvaluation` (cuerpo común de `rhyme` e `initial-sound`), `hear-it`,
+  `listen-tap` (par minúscula-mayúscula en cada letra) y `build` (tocar **o** arrastrar las
+  piezas).
+- **Ilustraciones e iconos reales (Tarea 5b):** 65 WebP en `public/images/palabras/` y 6 PNG
+  en `public/icons/`, generados con `scripts/optimizar-ilustraciones.py` a partir de las
+  ilustraciones originales; `Picture` e `Icon` usan `<img>` y, si la imagen no carga, `Picture`
+  cae al emoji de respaldo.
+- **Cierre (Tarea 6):** una prueba de integración con vistas, motor y store reales juega la
+  Fase 0 de punta a punta (incluido un fallo a propósito en cada rung hasta el modelo), y la
+  ruta `/dev/plantillas` (solo en desarrollo; 404 en producción) muestra `listen-tap` y `build`.
+- Solo la Fase 0 es jugable: las unidades de la Fase 1 y la 2 declaran `trace` y `say-it`
+  (y la 2 también `read-word`) y el mapa las atenúa hasta los Planes 4 y 5 (D10).
+
+---
+
+## Lo que falta: planes 4 a 6
 
 La hoja de ruta original está al final del Plan 1. Esta es la **versión revisada y
-confirmada con el autor** (D7): el Plan 2 ya está construido, y los planes 3 a 6 se reparten
-así.
+confirmada con el autor** (D7), ya con los planes 2 y 3 construidos.
 
 | Plan | Contenido | Resultado visible |
 |---|---|---|
-| ~~2~~ | ~~Capa `audio/`, Zustand sobre `store/`, inicio, mapa, sesión, fin y `count-syllables` de punta a punta~~ **hecho** (ver arriba) | Un niño juega una sesión real de `phase0:clap` |
-| 3 | El resto de plantillas de toque: `rhyme`, `initial-sound`, `hear-it` (es de este plan), `listen-tap` y `build` | Fases 0 y 2 jugables casi completas |
+| ~~2~~ | ~~Capa `audio/`, Zustand sobre `store/`, inicio, mapa, sesión, fin y `count-syllables` de punta a punta~~ **hecho** | Un niño juega una sesión real de `phase0:clap` |
+| ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (falta el PR) | La Fase 0 entera es jugable; `listen-tap` y `build` se ven en `/dev/plantillas` |
 | 4 | `trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía. Es el componente más difícil del proyecto | Escribir letras con el dedo |
 | 5 | Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word` | Leer en voz alta con validación del adulto |
-| 6 | Recompensas y cosméticos, panel de padres con PIN, PWA y service worker, lista de verificación en iPad | Primera versión completa |
-| Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto) | Validación automática de pronunciación |
+| 6 | Recompensas y cosméticos, panel de padres con PIN, importar el progreso (`importState`, con el contrato de D9), PWA y service worker, lista de verificación en iPad | Primera versión completa |
+| Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 
-**Por qué el Plan 2 cambia respecto a la hoja de ruta original:** el Plan 1 decía que el
+**La Fase 1 y la 2 siguen atenuadas en el mapa tras el Plan 3.** Todas sus unidades declaran
+`trace` y `say-it` (la Fase 2 también `read-word`), así que esperan a los Planes 4 y 5; `listen-tap`
+y `build` ya están construidas, pero ninguna unidad las ofrece hasta entonces (D10).
+
+**Voz, en «Después».** Antes de generar el lote entero, una **prueba de Azure con unos 10
+audios en `do` y `mx`**. Y **los fonemas sueltos («mmm», «sss», «p») hay que grabarlos con voz
+humana**: ninguna voz sintética los dice bien.
+
+**Por qué el Plan 2 cambió respecto a la hoja de ruta original:** el Plan 1 decía que el
 Plan 2 construiría `listen-tap`. Pero la primera unidad jugable del currículo es
 `phase0:clap`, que solo declara `count-syllables`, y `listen-tap` no aparece hasta la Fase 1.
 Con solo `listen-tap`, el motor planificaría ejercicios que la interfaz no sabe dibujar.
 `count-syllables` es de toque puro, sin voz ni trazo, y sus ítems ya traen las opciones en
-el dato. (Recomendación acordada el 2026-09-19.)
-
-Además, `hear-it` no aparecía en ningún plan de la hoja de ruta original y es necesaria
-para `phase0:hear-it`. Queda en el Plan 3 junto con `listen-tap`, que salió del Plan 2
-(confirmado, D7).
+el dato. (Recomendación acordada el 2026-09-19.) `listen-tap` y `hear-it` (que no aparecía en
+ningún plan original) se construyeron en el Plan 3.
 
 **El audio no bloquea nada.** Hasta que existan la cuenta de Azure y los audios reales, la
 capa `audio/` usa `speechSynthesis` del navegador detrás de la misma interfaz. Las 131
@@ -239,28 +300,21 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-1. **Cerrar el Plan 2:** revisión final de la rama con el modelo más capaz (apuntada a los
-   `minor (deferred)` y a los rulings R1-R12 del registro) y decidir si las luces que
-   desplazan el tambor (ver [deuda menor](#deuda-menor-aceptada)) se arreglan antes del merge.
-2. **Prueba manual con `pnpm dev`** por el autor: una sesión completa de `phase0:clap` con
-   voz real, tambor con el dedo y pistas 1-2-3 fallando a propósito. Si se puede, en
-   iPhone/iPad con `pnpm dev --hostname 0.0.0.0`.
-3. **Abrir el PR** de `feat/plan-2-sesion` contra `main`.
-4. **Escribir el Plan 3** (plantillas de toque restantes) con `superpowers:writing-plans`, en
+1. **Cerrar el Plan 3:** revisión final de la rama con el modelo más capaz (`model: "opus"`,
+   apuntada a los `minor (deferred)` y a los rulings del registro del Plan 3).
+2. **Prueba manual de la Fase 0 por el autor** con `pnpm dev` (si se puede, en iPhone/iPad con
+   `pnpm dev --hostname 0.0.0.0`), y un vistazo a `/dev/plantillas` para `listen-tap` y
+   `build`. Puntos que el registro dejó sin medir: scroll en 360 × 640 con tres imágenes, la
+   cabecera de `hear-it`, la bandeja de `build` con unas 13 piezas, la mano de `OptionCard`
+   y el aspecto de los iconos dentro de los botones (ver [deuda menor](#deuda-menor-aceptada)).
+3. **Abrir el PR** de `feat/plan-3-plantillas-toque` contra `main` (pregunta al autor antes
+   del push).
+4. **Escribir el Plan 4** (`trace`) con `superpowers:writing-plans`, en
    `docs/superpowers/plans/`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo
    con `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
    [cómo se trabaja](#cómo-se-trabaja-en-este-repo). Antes de escribirlo, revisa las
-   [trampas vivas](#trampas-conocidas), sobre todo la 9.
-   - **Decisión abierta: estilo visual (preguntar al autor antes de escribir el Plan 3).**
-     Ningún plan lo cubre. El spec fija solo la tecnología (Tailwind 4, Framer Motion) y las
-     reglas de interfaz (objetivos ≥ 72 px, `motion-safe:`, celebración < 4 s). Hoy
-     `src/app/globals.css` tiene dos variables de color y la fuente del sistema; no hay paleta,
-     tipografía propia, ilustraciones ni sistema de componentes, y ningún documento declara el
-     aspecto actual provisional (solo el emoji, D1, y la voz). El Plan 6 menciona «recompensas
-     y cosméticos» y Framer Motion «si hace falta», pero no el aspecto general. Riesgo: cada
-     plantilla nueva del Plan 3 nacería con Tailwind suelto y habría que rehacerlas todas al
-     llegar el diseño. Opciones: un plan propio de diseño visual (paleta, tipografía,
-     ilustraciones, tema y componentes base) antes del Plan 3, o dejarlo en el Plan 6.
+   [trampas vivas](#trampas-conocidas), sobre todo la 9. Pregunta al autor las decisiones
+   abiertas que queden.
 5. Llevar el ledger del plan **versionado desde el primer día** en
    `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
    sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
@@ -271,21 +325,27 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 Las cuatro decisiones que el Plan 1 dejó abiertas, más las de producto del Plan 2, se
 resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
-[Plan 2](docs/superpowers/plans/2026-09-26-silabin-sesion.md).
+[Plan 2](docs/superpowers/plans/2026-09-26-silabin-sesion.md). D8-D11 son del
+[Plan 3](docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md).
 
 | # | Decisión |
 |---|---|
-| D1 | Imágenes: **emoji como placeholder** detrás de `src/images/`, clave `img:<palabra>`. Las 65 ilustraciones reales ya están generadas (2026-09-26, estilo 3D suave tipo juguete; ver `docs/ilustraciones-prompts.md`), pendientes de optimizar e integrar en el código |
+| D1 | Imágenes: detrás de `src/images/`, clave `img:<palabra>`. Las 65 ilustraciones reales (2026-09-26, estilo 3D suave tipo juguete; ver `docs/ilustraciones-prompts.md`) **ya están integradas** como WebP optimizados (Tarea 5b del Plan 3); el **emoji queda solo como respaldo** si la imagen no carga |
 | D2 | `basePool` **lanza error** en vez de caer al respaldo global, y un invariante de contenido lo comprueba en `pnpm test` |
 | D2b | Consecuencia de D2: las 4 unidades de Fase 2 declaran `initial-sound` con peso 1 |
 | D3 | Barril `@/engine`: reexporta `curriculum`, `CurriculumIndex`, `templates`, `TemplateId`, `HintStep`, `Item` y `Unit`; deja de exportar `owningUnits`, `similarity`, `createRng`, `promote`, `demote`, `MASTERY_TARGET`, `REVIEW_SHARE` y `unitMasteryRatio` |
 | D4 | Currículo agotado (`activeUnitId === null`): **sesión de solo repaso** planificada por el motor |
 | D5 | `saveState` → `{ saved: false }`: **aviso discreto para el adulto** y reintento en el siguiente guardado |
 | D6 | **Exportación mínima** con gesto oculto de adulto (mantener pulsado el logo 3 s) |
-| D7 | Hoja de ruta de los planes 3 a 6 **confirmada** |
+| D7 | Hoja de ruta de los planes 3 a 6 **confirmada** (la de 4 a 6 sigue en pie; ver [arriba](#lo-que-falta-planes-4-a-6)) |
+| D8 | Estilo visual: **base mínima dentro del Plan 3**. Tokens de color, tipografía, radios y tamaño de objetivo en `globals.css` y componentes base. La identidad final (paleta definitiva, ilustraciones, compañero) llegará después y cambiará los tokens sin tocar las vistas. Detalle en [`docs/diseno-visual.md`](docs/diseno-visual.md) |
+| D9 | `importState` **va al Plan 6** con el contrato fijado: un import deliberado del adulto **sustituye `doc` entero y quita `readFailed`** (y `recovered`), porque el adulto ha elegido qué documento vale. Hasta entonces no se cablea |
+| D10 | Las 5 plantillas de toque (`rhyme`, `initial-sound`, `hear-it`, `listen-tap`, `build`). Tras el Plan 3 **solo la Fase 0 es jugable**: las unidades de Fase 1 y 2 declaran `trace` y `say-it`, y el mapa las atenúa hasta los Planes 4 y 5. `listen-tap` y `build` se prueban con tests y con `/dev/plantillas` |
+| D11 | La prueba manual del Plan 2 la hizo el autor **antes** de ejecutar el Plan 3 (Edge y Chrome, sin fallos salvo la pausa larga entre sílabas en Edge, atendida en la Tarea 1) |
 
-Los rulings tomados durante la ejecución (R1-R12) están en el
-[registro del Plan 2](docs/superpowers/2026-09-26-plan-2-registro.md).
+Los rulings tomados durante la ejecución están en los registros:
+[Plan 2](docs/superpowers/2026-09-26-plan-2-registro.md) (R1-R12) y
+[Plan 3](docs/superpowers/2026-09-26-plan-3-registro.md).
 
 ---
 
@@ -316,38 +376,43 @@ se ignoraba. Estado tras el Plan 2:
 8. ✅ **Los tests de componentes necesitan `jsdom`.** Resuelta: `jsdom` y Testing Library
    están instalados. `vitest.config.ts` sigue en entorno `node`, así que **cada test de
    interfaz debe llevar** `// @vitest-environment jsdom`.
-9. 🔴 **Viva (R6): `checkAnswer` lanza para ítems `trace` y `say-it`.** Hoy es inofensivo
-   porque la única unidad jugable es `phase0:clap`, que no planifica esas plantillas. Hay que
-   tratarla cuando un plan futuro active una unidad con esos ejercicios (Fase 1 en adelante,
-   Planes 4 y 5), o una sesión de solo repaso con ítems de letras: sin una guarda o un camino
-   propio de evaluación, el niño toparía con una excepción a mitad de sesión.
+9. 🔴 **Viva (R6), acotada en el Plan 3: `checkAnswer` lanza para ítems `trace`, `say-it` y
+   `read-word`.** `expectedAnswer` (`src/engine/answers.ts`) es ya la única fuente de la
+   respuesta esperada y devuelve `null` solo para esas tres plantillas, sin evaluador propio
+   todavía; `checkAnswer` lanza ante `null`. El invariante M11 comprueba que las plantillas de
+   toque (incluida `build`, que dejó de ser un caso oculto) sí resuelven `correct` para cada
+   ítem que aceptan. Es inofensivo hoy porque la única fase jugable es la 0, pero hay que
+   tratarla cuando un plan active una unidad con esas plantillas (Planes 4 y 5): sin una guarda
+   o un camino propio de evaluación, el niño toparía con una excepción a mitad de sesión. Vale
+   también para una sesión de solo repaso con ítems de letras.
 
 ---
 
 ## Deuda menor aceptada
 
 Nada de esto bloquea, salvo lo que se marca como pendiente. Detalle en los registros (busca
-`minor (deferred)`).
+`minor (deferred)`). Las notas visuales están en [`docs/diseno-visual.md`](docs/diseno-visual.md).
 
-**Pendiente antes de dar el Plan 2 por cerrado**
+**Pendiente de la parte del Plan 2**
 
-- **Prueba manual con `pnpm dev`:** una sesión completa de `phase0:clap`. `createIdbAdapter`,
-  `createSpeechPlayer` y `downloadInBrowser` reales solo se han comprobado a mano
-  (Chromium), y ningún test las cubre en un navegador de verdad. Queda por probar en
-  iPhone/iPad.
+- **Prueba manual en iPhone/iPad.** El autor probó el Plan 2 con `pnpm dev` en Edge y Chrome
+  (D11): sesiones, pistas y guardado bien. `createIdbAdapter`, `createSpeechPlayer` y
+  `downloadInBrowser` reales solo se han comprobado a mano en Chromium, y ningún test las
+  cubre en un navegador de verdad.
 - **Comprobar en navegador que instrucción y palabra suenan seguidas sin cortarse** al empezar
   una evaluación (la palabra suena sola desde la revisión final, I1). Solo se probó con audio
   falso y por lectura del código.
-- **Decisión abierta: `importState`.** Existe en `persist.ts` pero no está cableado al store ni
-  a la interfaz. Al cablearlo hay que decidir que un import deliberado del adulto sustituya el
-  documento y quite la marca `readFailed`; si no, quedaría bloqueado sin escribir.
+- **`importState` movido al Plan 6 (D9).** Existe en `persist.ts` pero no está cableado al
+  store ni a la interfaz. Contrato fijado: un import deliberado del adulto sustituye `doc`
+  entero y quita `readFailed` (y `recovered`); si no, la app quedaría bloqueada sin escribir.
 - **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): `guardar` no escribe
   mientras `readFailed`, para no pisar un documento bueno que solo no se pudo leer. «Reintentar»
   solo desbloquea si el disco está vacío; con un documento real no hace nada visible (no hay
   fusión de documentos) y hay que recargar la app. El niño sigue jugando en memoria y el
   adulto puede exportar desde `SaveWarning`.
 
-**Plan 2, interfaz y accesibilidad**
+**Plan 2, interfaz y accesibilidad** (la base visual del Plan 3 pudo resolver alguna; no se
+ha reverificado)
 
 - `EndScreen` con 0 estrellas pinta un `<span>` vacío con `aria-label`; hoy el motor no
   genera una corrida vacía, y un plan de 0 ejercicios haría `isSessionOver` verdadero al
@@ -372,13 +437,54 @@ Nada de esto bloquea, salvo lo que se marca como pendiente. Detalle en los regis
   debe depender de él para avanzar. El listener de `voiceschanged` no se quita y `AudioPlayer`
   no tiene `dispose` (un reproductor por aplicación). `startsWith("es")` aceptaría códigos
   de tres letras.
-- Emoji provisionales: los de Unicode 13/15 (🪽 🫏 🫓 🫖 🛖) pueden salir como cuadrado en
+- Emoji de respaldo (ya solo salen si la ilustración no carga): los de Unicode 13/15 (🪽 🫏 🫓 🫖 🛖) pueden salir como cuadrado en
   Android/Windows antiguos, `👎` (mala) y `😠` (malo) rozan el principio de «sin mensajes
   negativos», `🍼` para «pipa» es dudoso, y el invariante I1 no detecta entradas huérfanas.
 - Huecos de test conocidos (mutaciones supervivientes): `startSession` con `seed`,
   `masteredAt === now`, el orden de `run.resolutions`, el desempate `lastSessionIndex` del
   modo normal, y un invariante que solo mire el primer elemento de `introduces`.
   `boundaries.test.ts` no detecta `require(...)`.
+
+**Plan 3 (abiertas al cerrar la rama; el detalle está en el registro, busca `minor (deferred)`)**
+
+- **Ilustraciones, a criterio del autor:** `una` (uña) parece una mano con uñas pintadas y puede
+  leerse como «mano»; `asa` es una taza entera y puede leerse como «taza»; `sumo` va con el
+  torso descubierto; iglú y velo tienen poco contraste sobre `--color-calm` a 96 px. `mama`,
+  `mimo`, `pelo`, `uno`, `escoba` y `ala` llegan al borde del cuadro, el estilo es mixto
+  (personas más planas que los objetos 3D) y `mala` y `tomate` tienen rojo dominante. `pipa` es
+  un biberón a propósito (en República Dominicana «pipa» es el biberón).
+- **`scripts/optimizar-ilustraciones.py`:** solo cuenta 65 PNG y no valida los nombres contra
+  el currículo (un sobrante no lo caza nadie), y un fallo a mitad deja WebP parciales en
+  `public/`. Tampoco se ha corrido contra `/mnt/c` ni comprobado el precacheo de la PWA.
+- **Navegadores sin probar:** Safari iOS y Firefox, sobre todo el arrastre de `build` (solo se
+  verificó en Chromium); la lista de verificación del Plan 6 debe incluir tocar y arrastrar.
+- **Sin medir en 360 × 640:** scroll con tres imágenes (presentación de `phoneme:a` e
+  `initial-sound`), la cabecera de `hear-it`, y la bandeja de `build` con unas 13 piezas de
+  72 px. La mano de `OptionCard` marcada solapa unos 17 px la tarjeta y en `compact` puede
+  rozar la letra. El aspecto de los iconos dentro de `BigButton`/`ReplayButton` tampoco se ha
+  visto en un navegador. El emoji de respaldo de `Picture` (~128 px) ocupa menos que la imagen
+  de 160 px: pequeño salto de layout.
+- **Audio y presentaciones:** si `audio.play` nunca resuelve ni rechaza, las presentaciones de
+  `hear-it`, `listen-tap` y `rhyme` (y la `sequence` de `ChoiceEvaluation`) dejan al niño sin
+  avanzar; hay que comprobar que el `AudioPlayer` real siempre resuelve o rechaza.
+  `PAUSE_MS` de `listen-tap` puede bajar a 0 sin que falle ningún test.
+- **Motor y duplicaciones:** el patrón `letter:${phoneme}` está repetido en `answers.ts` y
+  `planner.ts` (un `letterIdOf` lo unificaría); `picture:${item.text}` y la partición «inicio +
+  resto» (`onsetRequest`) están escritas en línea en `hint-effects.ts` y las presentaciones;
+  `expectedPieces` y `reducedPieces` lanzan ante datos incoherentes; M11 barre 200 semillas por
+  unidad (determinista, pero de cobertura probabilística).
+- **Huecos de test:** `layout="grid"`, la cancelación de la secuencia por `token` y
+  `ReplayButton disabled={locked}` en `choice/`; `pointercancel`, `attemptKey` durante un
+  arrastre y el `dimmed` del resto de piezas en `build`; el rung 2 de `PlantillasDev.test.tsx`
+  (herramienta de desarrollo); `jugarSesion` en `Phase0.integration.test.tsx` solo exige
+  `evaluaciones > 0`; `PAUSE_MS`.
+- **`build` no sale por la vía normal:** el planificador aún no saca `build` en `phase2:m`, así
+  que `build/SessionFlow.test.tsx` inyecta la corrida con `store.setState` (R24). Cuando la
+  unidad sea jugable (Planes 4 y 5), sustituir la inyección.
+- **Tarea 6:** un `pkill` de procesos `next` en el puerto 3000 durante la implementación y la
+  revisión; si el autor tenía un `pnpm dev` en marcha, hay que relanzarlo.
+- **Para el Plan 6:** el mapa no enseña ningún avance hasta completar una unidad (5-6 sesiones
+  en `phase0:clap`), y ni el niño ni el adulto ven que se guarda.
 
 **Plan 2, tests y limpieza**
 
