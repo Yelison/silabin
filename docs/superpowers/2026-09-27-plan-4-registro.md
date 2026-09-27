@@ -89,7 +89,31 @@ recoge como spec); considerar moverlo a una carpeta de test-utils si se vuelve a
 
 Tarea 1: complete (commits cd4403f..24b017b, fix round 1/5, review clean tras la ronda).
 
+**Tarea 2 — implementación:** commit `f26b455` (feat(engine): el trazo entra al motor por
+submitTrace para que ninguna vista decida si vale). `pnpm test` 854 pasan / 1 skip (preexistente),
+typecheck y lint limpios. `resolveAttempt` extraído tal cual de `submitAnswer` (con `now` como
+5º parámetro, no listado en la firma de prosa del brief pero exigido por `applyResolution`;
+sin riesgo, es interno). Barril `@/engine` con los símbolos de T1 y T2. Las 4 mutaciones
+dirigidas del brief, muertas.
+
+**Tarea 2 — revisión (sonnet, con verificación independiente de las 4 mutaciones):** ✅
+cumplimiento del spec completo (firmas, orden de guardas, mensajes, barril, C1-C10 uno a uno).
+Las 4 mutaciones re-derivadas de forma independiente por el revisor, sin ejecutar nada,
+coinciden con el informe. **Approved**, 0 Critical, 0 Important.
+Minor (deferred):
+- `session.test.ts` (C6): solo el primer subcaso verifica el mensaje de la guarda; los otros
+  tres solo comprueban `.toThrow()` genérico. Sin riesgo de comportamiento (el revisor verificó
+  a mano que el mensaje es correcto en los 4).
+- Las guardas «sesión terminada» / «no es evaluación» / «ítem desconocido» están duplicadas en
+  espejo entre `submitAnswer` y `submitTrace` — es lo que pide el brief, candidato a un helper
+  compartido en una tarea futura, no ahora.
+- `traceGuide` con ítem desconocido no tiene test dedicado (ya lo había anotado el implementador).
+
+Tarea 2: complete (commits 7c7d1e3..f26b455, review clean, sin ronda de corrección).
+
 ## Estado
 
-Plan escrito, committeado y aprobado por el autor (2026-09-27). Tarea 1 completa. Siguiente:
-Tarea 2, «Contrato de sesión y store» (líneas 236-308 del plan).
+Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1 y 2 completas.
+Siguiente: Tarea 3, «Lienzo y evaluación de trace» (líneas 309-450 del plan; riesgo: pedagogía
+de pistas, contrato y entrada táctil — revisión completa con mutaciones). Sesión de ejecución
+en 2 tareas: toca cortar aquí.
