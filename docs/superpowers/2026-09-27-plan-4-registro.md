@@ -111,9 +111,37 @@ Minor (deferred):
 
 Tarea 2: complete (commits 7c7d1e3..f26b455, review clean, sin ronda de corrección).
 
+**Tarea 3 — implementación:** commits `21287a2` (feat(ui): lienzo de trazo con guía que se
+desvanece y pistas que no dependen del audio), `b994aa0` (fix(ui): el modelo del tercer fallo
+no se quedaba bloqueado, y el lienzo ya usa el lado corto) y `74dbdbd` (fix(ui): en vertical el
+lienzo de trazo no dejaba sitio al botón sin hacer scroll). Los dos `fix` salen de dos rondas de
+`advisor()` del propio implementador (encontró 4 problemas reales) antes de reportar. `pnpm test`
+885 pasan / 1 skip, typecheck y lint limpios. Reportó `DONE_WITH_CONCERNS` con dos dudas: (a) el
+≥60% del lado corto y «sin scroll» están justificados por cálculo a mano, no en navegador real
+(sin Playwright en este plan, llega en el Plan 5; la prueba manual de la Tarea 5 lo confirma en
+dispositivo); (b) los números de inicio y flechas de la guía como «texto visible». El coordinador
+verificó (b) contra el spec (`docs/superpowers/specs/2026-09-27-trace-design.md:53,88,139`):
+es una excepción de diseño pedagógico ya decidida, no una desviación — no bloqueó el paso a
+revisión.
+
+**Tarea 3 — revisión (sonnet, con verificación independiente):** ✅ cumplimiento del spec
+completo (principios §2, coordenadas, `touch-action`, tokens de color —
+`--color-trace-ink` en `docs/diseno-visual.md:47,79` —, frontera `@/engine` con `U9` en verde,
+excepción de números/flechas confirmada). **Approved**, 0 Critical, 0 Important. Las 5
+mutaciones dirigidas (temporizador no cancelado, puntero no primario aceptado, modelo llama a
+`onTrace`, desbloqueo atado al audio, guía no congelada) verificadas por el revisor aplicando
+cada cambio y ejecutando el test afectado — mismo detector, mismo mensaje de fallo y mismo
+recuento que el informe del implementador.
+Minor (deferred): `Evaluation.tsx:186` — el caso apaisado 1024×768 queda con ~3px de holgura
+entre alto necesario (652.8px) y disponible (656px); aritmética verificada de forma
+independiente por el revisor, coincide con el implementador (60.7% del lado corto). Margen real
+pero muy ajustado; el ajuste, si la prueba manual de la Tarea 5 lo pide, queda contenido a dos
+clases CSS de `Evaluation.tsx`.
+
+Tarea 3: complete (commits 21287a2..74dbdbd, review clean, sin ronda de corrección).
+
 ## Estado
 
-Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1 y 2 completas.
-Siguiente: Tarea 3, «Lienzo y evaluación de trace» (líneas 309-450 del plan; riesgo: pedagogía
-de pistas, contrato y entrada táctil — revisión completa con mutaciones). Sesión de ejecución
-en 2 tareas: toca cortar aquí.
+Plan escrito, committeado y aprobado por el autor (2026-09-27). Tareas 1, 2 y 3 completas.
+Siguiente: Tarea 4, «Presentación, registro, `/dev/plantillas` y R29» (líneas 451-505 del plan).
+Sesión de ejecución en 1 tarea (Tarea 3) tras el `/clear` del 2026-09-27.
