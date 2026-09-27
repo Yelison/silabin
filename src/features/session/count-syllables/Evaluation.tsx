@@ -141,21 +141,24 @@ export function Evaluation(props: EvaluationProps) {
 
 	return (
 		<div className="flex flex-col items-center gap-6">
-			<Picture imageKey={item.imageKey} />
-			<ReplayButton
-				aria-label="Oír otra vez"
-				onReplay={oirOtraVez}
-				disabled={locked}
-			/>
+			{/* En pantallas bajas el altavoz va al lado de la imagen: si no, el tambor no cabe. */}
+			<div className="flex flex-col items-center gap-6 short:flex-row short:gap-4">
+				<Picture imageKey={item.imageKey} />
+				<ReplayButton
+					aria-label="Oír otra vez"
+					onReplay={oirOtraVez}
+					disabled={locked}
+				/>
+			</div>
 			<Luces count={luces} />
 			<button
 				type="button"
 				aria-label="Tambor"
 				aria-disabled={locked}
 				onClick={tocar}
-				className="h-56 w-56 touch-manipulation select-none rounded-full bg-action text-8xl shadow-lg active:scale-95"
+				className="flex h-56 w-56 touch-manipulation select-none items-center justify-center rounded-full bg-action shadow-lg active:scale-95 short:h-48 short:w-48"
 			>
-				<Icon name="drum" size={144} />
+				<Icon name="drum" size={192} />
 			</button>
 			<div className="flex min-h-14 items-center gap-3">
 				{modelo
