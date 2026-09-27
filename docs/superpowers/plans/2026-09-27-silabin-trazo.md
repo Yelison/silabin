@@ -556,6 +556,96 @@ confundibles como dato conocido.
 
 ---
 
+## Tarea 6: hallazgos de la prueba manual — motion-safe, marcadores, guía de dirección animada
+
+**Añadida durante la ejecución** (la prueba manual de la Tarea 5 encontró estos hallazgos en
+ficheros que las Tareas 3/4 ya habían cerrado y revisado; detalle completo en el registro,
+sección de la Tarea 5). **Riesgo:** interfaz y una regla de pista — revisión completa con
+mutación en `TraceCanvas.tsx`/`hint-effects.ts`; el ajuste de tamaño de `Presentation.tsx` en
+768×1024 es solo cumplimiento (dato/CSS, sin mutación).
+
+**Files:**
+- Modify: `src/components/TraceCanvas.tsx`, `src/features/session/trace/Presentation.tsx`,
+  `src/features/session/trace/hint-effects.ts`, y sus tests.
+
+**Contrato:**
+
+1. **Fix `motion-safe` (bug confirmado, no es una decisión de diseño).** Añadir
+   `motion-reduce:transition-none` junto a `motion-safe:transition-[stroke-dashoffset]`
+   (`animation==="full"`) y junto a `motion-safe:transition-[offset-distance]`
+   (`animation==="dot"`/la nueva flecha del punto 3). Causa: con `prefers-reduced-motion:
+   reduce`, la clase `motion-safe:` no aplica, pero `transition-property` cae a su valor
+   inicial `all` (no hay reset de Preflight que lo lleve a `none`) — y como
+   `transitionDuration`/`transitionDelay` se ponen por estilo en línea (aplican siempre), el
+   elemento se anima igual, ignorando la preferencia del sistema. Verificado de forma aislada
+   con Playwright (`reducedMotion: 'reduce'` sobre el CSS compilado real del proyecto, sin
+   pasar por la app): sin el fix, decae de 0.36→0 en varias muestras (anima); con
+   `motion-reduce:transition-none`, salta a `0` en la primera muestra (no anima). Con
+   `no-preference`, sigue animando igual que antes en ambos casos. Detalle completo, con los
+   JSON de las dos corridas, en el registro de la Tarea 5. Test: assertar que ambas clases
+   están presentes en los dos elementos animados (`jsdom` no ejecuta transiciones reales, así
+   que el test es de presencia de clase — la evidencia de comportamiento real vive en el
+   registro, no es reproducible en CI).
+
+2. **Marcadores de inicio de trazo superpuestos (candidato D18, Ruling del coordinador — el
+   autor lo revisa al leer/aprobar este añadido antes de dispatch).** `A`, `E`, `M` y `P`
+   definen (en `src/content/glyphs.ts`) dos trazos que empiezan en el mismo punto exacto; el
+   círculo+número del segundo trazo se pinta encima del primero en las mismas coordenadas
+   (`TraceCanvas.tsx`, el bloque que mapea `guide-start-{n}`), tapando el «1» por completo.
+   Fix: cuando el punto de inicio de un trazo coincide con el de otro trazo de la misma letra,
+   desplazar el marcador de cada uno a lo largo de la dirección inicial de *su propio* trazo
+   (mismo cálculo que ya existe para el ángulo de la flecha, pero desde el principio del trazo
+   en vez del final) lo suficiente para que los círculos no se toquen: el círculo mide 0.07 de
+   radio, hacen falta ≥0.14 de distancia entre centros — con A y M, que están casi alineados,
+   eso pide ~0.19-0.22 unidades, no un valor pequeño (0.09 no alcanza, quedan a ~0.06 de
+   distancia). Trazos con inicio único no se tocan. Test: recorrer las 9 letras de
+   `UPPER_GLYPHS` y comprobar que, para cada letra, ningún par de marcadores `guide-start-*`
+   queda a menos de 0.14 de distancia entre sí (mutación: quitar el desplazamiento debe romper
+   este test para A, E, M y P).
+
+3. **Guía de dirección animada, nueva (decisión del autor, 2026-09-27): reemplaza la pista 2
+   de `trace` (el punto simple), no añade un nivel de pista nuevo.** Reutiliza el mecanismo que
+   ya existe para `animation="dot"` (`offsetPath`/`offsetDistance` sobre `combinedPathD`, que ya
+   recorre los trazos en orden): en vez de un `<circle>`, un marcador con forma de flecha
+   (triángulo) con `offset-rotate: auto` para que apunte en la dirección de avance en cada
+   instante. Dos usos:
+   - **Presentación** (`Presentation.tsx`): tras `onAnimationEnd` del dibujo completo
+     (`animation="full"`), encadena esta animación de flecha — no simultánea con el dibujo, va
+     después, con la letra ya completa y quieta un instante. Más corta que el dibujo completo
+     (el implementador decide la proporción, p. ej. 60% de `animationMs`). Al acabar, se
+     muestra «Siguiente» como hoy (el gancho de `onAnimationEnd` se encadena, no se duplica).
+   - **Pista 2 de evaluación** (`hint-effects.ts`, acción `animate-dot-along-stroke+play-phoneme`):
+     usa esta misma flecha en vez del punto simple, con el mismo audio del fonema. Mismo lugar
+     en la secuencia de pistas (1 = pulsar inicio, 2 = esta flecha, 3 = modelo completo) — D15/R29
+     no cambian.
+   - Con `prefers-reduced-motion: reduce`: en vez de la flecha viajando, se ve la flecha
+     estática de fin de trazo (nivel 1, ya existente, ver punto 4) — mismo patrón que `full` con
+     el trazo entero.
+
+4. **Flecha estática (nivel 1, fin de cada trazo) más grande.** De ~0.03-0.05 a ~0.06-0.08
+   unidades (mismo color `calm-border`, ya al mínimo de contraste aceptado — no se cambia de
+   token). Sigue siendo el respaldo visible bajo movimiento reducido para el punto 3.
+
+5. **`trace/Presentation.tsx` no llega al 60% en 768×1024 (Ruling del coordinador — dispositivo
+   principal declarado en el README, «uso principal en iPad/iPhone»; no se pregunta, se
+   arregla).** Medido con `browser-qa`/Playwright: 47.6% del lado corto en vez de ≥60%.
+   Recalcular la fórmula de tamaño con el mismo método que las Tareas 3/4
+   (`min(w/vb.w, h/vb.h)` contra el lado corto del viewport) y documentarlo en un comentario,
+   igual que el resto del fichero.
+
+**Fuera de esta tarea (Ruling, deferred):** los 58px de más sobre el presupuesto de
+`SessionScreen` en 640×360 (apaisado de móvil pequeño), en `trace/Evaluation.tsx` y
+`trace/Presentation.tsx`, quedan aplazados — no es el dispositivo principal, y el coste si hace
+falta arreglarlo después queda contenido a las mismas clases CSS ya identificadas.
+
+**Commits:** al menos `fix(ui): la animación de trace respeta el movimiento reducido de
+verdad` (puntos 1, separado por ser un bug de accesibilidad puro) y
+`feat(ui): flecha de dirección animada tras la presentación y en la pista 2, marcadores
+separados y lienzo de presentación a tamaño en tableta` (puntos 2-5, o divididos si el
+implementador lo ve más claro).
+
+---
+
 ## Fuera de alcance de este plan
 
 - Las minúsculas y el interruptor `lowercaseTracing` (Plan 6, D16).
@@ -571,8 +661,9 @@ confundibles como dato conocido.
   día en `docs/superpowers/2026-09-27-plan-4-registro.md`.
 - **Puerta de modelo:** coordinador en Sonnet (`/model sonnet`); implementadores y revisores
   de tarea `model: "sonnet"`; revisión final de la rama `model: "opus"`.
-- Orden estricto 1 → 2 → 3 → 4 → 5. Cortes de sesión tras la 2 y tras la 4; la 5 con la
-  revisión final en la última sesión.
+- Orden estricto 1 → 2 → 3 → 4 → 5 → 6. Cortes de sesión tras la 2 y tras la 4; la 5 encontró
+  hallazgos en la prueba manual que dieron pie a la 6 (ver el registro); la revisión final va
+  después de la 6, en su propia sesión.
 - Briefs con `sed -n` sobre este fichero (`grep -n '^## Tarea' <plan>`); el implementador lee
   también la sección del spec que le toca.
 - Rulings previstos (desde R30): R30, los pares confundibles aceptados (E↔S, E→P, O↔U), con
