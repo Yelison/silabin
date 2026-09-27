@@ -28,6 +28,10 @@ import type {
 } from "@/features/session/registry";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import {
+	Evaluation as RealTraceEvaluation,
+	TRACE_IDLE_MS,
+} from "@/features/session/trace/Evaluation";
+import {
 	conProveedores,
 	crearStore,
 	fakeAudio,
@@ -544,6 +548,104 @@ describe("SessionScreen", () => {
 			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
 			expect(vistas.ultimo()?.trace?.guide.level).toBe(2);
 			expect(run().resolutions).toEqual([]);
+		});
+
+		it("integración: la vista real de trace no salta a un nivel más tenue a media celebración, aunque el motor ya haya subido la caja", async () => {
+			// A diferencia de las demás plantillas (que responden a un toque, en el mismo
+			// evento), `onTrace` llega desde un `setTimeout` propio de la evaluación de
+			// trazo: `setLocked(true)` y la llamada al store no comparten turno de React con
+			// nada más. Si la guía congelada de `Evaluation` mirara `guide` en vez de a su
+			// propio ref, este es el hueco donde se colaría el nivel nuevo.
+			if (!("setPointerCapture" in Element.prototype)) {
+				Object.defineProperty(Element.prototype, "setPointerCapture", {
+					configurable: true,
+					writable: true,
+					value: () => {},
+				});
+			}
+			vi.useFakeTimers();
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			store.setState({ run: trazoRun(store.getState().progress, 0) });
+			const audio = fakeAudio();
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" data-view="presentation" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: RealTraceEvaluation,
+			};
+			const { container } = render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={vi.fn()}
+						onExit={vi.fn()}
+						views={{ trace: views }}
+						celebrationMs={700}
+					/>,
+				),
+			);
+			const svg = container.querySelector("svg");
+			if (svg === null) throw new Error("sin <svg>");
+			vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+				left: 0,
+				top: 0,
+				width: 400,
+				height: 400,
+				right: 400,
+				bottom: 400,
+				x: 0,
+				y: 0,
+				toJSON: () => ({}),
+			});
+			expect(svg.getAttribute("data-level")).toBe("1");
+
+			// Los 3 trazos de la A (coordenadas de pantalla ya convertidas a mano con la misma
+			// fórmula del lienzo, para un rect de 400×400 en (0,0) y `glyph.width` 0.8).
+			const trazos: [number, number, number, number][] = [
+				[200, 57.14, 85.71, 342.86],
+				[200, 57.14, 314.29, 342.86],
+				[129.14, 234.29, 270.86, 234.29],
+			];
+			let pointerId = 1;
+			for (const [x0, y0, x1, y1] of trazos) {
+				fireEvent.pointerDown(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x0,
+					clientY: y0,
+				});
+				fireEvent.pointerMove(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x1,
+					clientY: y1,
+				});
+				fireEvent.pointerUp(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x1,
+					clientY: y1,
+				});
+				pointerId += 1;
+			}
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(TRACE_IDLE_MS);
+			});
+			// A media celebración: el motor ya acertó (la caja de letter:a subió de 0 a 1, y
+			// `traceGuide` daría nivel 2), pero la vista sigue mostrando el nivel con el que
+			// el niño trazó.
+			expect(store.getState().run?.progress.items[LETTER_A_ID]?.box).toBe(1);
+			expect(svg.getAttribute("data-level")).toBe("1");
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(700);
+			});
 		});
 	});
 

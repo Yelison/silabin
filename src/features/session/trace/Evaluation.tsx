@@ -104,7 +104,19 @@ export function Evaluation(props: EvaluationProps) {
 				});
 				return;
 			case "model":
+				// El tercer fallo llega sin `attemptKey` nuevo (no es un intento más: es el
+				// modelo del mismo intento ya resuelto como `assisted`), así que el efecto de
+				// `attemptKey` no pasa por aquí para desbloquear ni limpiar la tinta errónea
+				// del tercer intento. Se hace aquí, como en `build/Evaluation.tsx`.
 				modelMode.current = true;
+				modelDone.current = false;
+				setSubmitted(false);
+				strokesRef.current = [];
+				setInk([]);
+				if (idleTimer.current !== null) {
+					clearTimeout(idleTimer.current);
+					idleTimer.current = null;
+				}
 				setAnimating(true);
 				setAnimation("full");
 				return;
@@ -150,7 +162,7 @@ export function Evaluation(props: EvaluationProps) {
 	const disabled = locked || animating || submitted;
 
 	return (
-		<div className="flex flex-col items-center gap-6">
+		<div className="flex flex-col items-center justify-center gap-4 landscape:flex-row landscape:gap-4">
 			<ReplayButton
 				aria-label="Oír otra vez"
 				disabled={locked}
@@ -160,7 +172,15 @@ export function Evaluation(props: EvaluationProps) {
 					});
 				}}
 			/>
-			<div className="flex h-[min(60vh,26rem)] w-[min(90vw,26rem)] items-center justify-center">
+			{/*
+			 * El lienzo mide directamente contra el viewport (no contra el padre: la cadena de
+			 * flex de SessionScreen centra sin estirar, así que un `h-full` aquí no tendría
+			 * nada que llenar). En vertical, el botón va encima y el lienzo tiene todo el ancho
+			 * corto para sí; en horizontal (`landscape:`) el botón se pone al lado para no
+			 * comerle alto al lienzo, que es lo que limita el 60 % del lado corto pedido por el
+			 * spec (apaisado 768 px de alto es más estrecho que ancho: ahí se decide todo).
+			 */}
+			<div className="flex h-[75vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
 				<TraceCanvas
 					glyph={guiaMostrada.glyph}
 					level={guiaMostrada.level}

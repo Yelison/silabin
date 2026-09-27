@@ -243,7 +243,7 @@ export function TraceCanvas(props: {
 			data-disabled={disabled ? "true" : undefined}
 			aria-label="Lienzo para trazar la letra"
 			style={{ touchAction: "none" }}
-			className={`h-full max-h-[65vh] w-full max-w-full ${disabled ? "opacity-70" : ""}`}
+			className={`h-full max-h-full w-full max-w-full ${disabled ? "opacity-70" : ""}`}
 			onPointerDown={handlePointerDown}
 			onPointerMove={handlePointerMove}
 			onPointerUp={endStroke}

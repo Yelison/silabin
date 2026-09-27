@@ -266,16 +266,31 @@ describe("trace Evaluation", () => {
 		expect(svg.getAttribute("data-disabled")).toBeNull();
 	});
 
-	it("E7 (mutación 3: el modelo no debe puntuar): la pista 3 anima 'full', desbloquea a los animationMs y un intento cerrado con tinta llama a onModelDone una sola vez, nunca a onTrace, con el audio que no resuelve", () => {
+	it("E7 (mutación 3: el modelo no debe puntuar): tras un tercer fallo real (mismo attemptKey, sin intento nuevo), la pista 3 desbloquea a los animationMs con la tinta del intento fallido ya borrada, y un intento cerrado llama a onModelDone una sola vez, nunca a onTrace, con el audio que no resuelve", () => {
 		vi.useFakeTimers();
 		const audio = fakeAudio();
 		audio.play.mockImplementation(() => new Promise<void>(() => {}));
-		const { svg, onModelDone, onTrace, props } = montar({
+		// 1) El tercer intento (fallido) se cierra por inactividad: `onTrace` suena una vez y
+		// el lienzo queda "enviado". El motor (SessionScreen, fuera de esta vista) lo
+		// puntuaría como `wrong` y devolvería la pista 3 sin subir `attemptKey` (así lo fija
+		// el propio SessionScreen: `resolucion.status === "assisted"` no lo toca).
+		const { container, svg, onModelDone, onTrace, actualizar, props } = montar({
+			audio,
+		});
+		trazoSimple(svg);
+		act(() => {
+			vi.advanceTimersByTime(TRACE_IDLE_MS);
+		});
+		expect(onTrace).toHaveBeenCalledTimes(1);
+
+		// 2) Llega la pista 3, con el mismo attemptKey (0) y locked en false, tal cual lo
+		// manda SessionScreen. Si la vista no deshace su propio "enviado" aquí, el lienzo se
+		// queda disabled para siempre y el niño no puede repasar el modelo.
+		actualizar({
 			feedback: {
 				hint: templates.trace.hints[2],
 				resolution: { status: "assisted" },
 			},
-			audio,
 		});
 		expect(svg.getAttribute("data-level")).toBe("1");
 		expect(svg.getAttribute("data-disabled")).toBe("true");
@@ -284,12 +299,16 @@ describe("trace Evaluation", () => {
 			vi.advanceTimersByTime(ms);
 		});
 		expect(svg.getAttribute("data-disabled")).toBeNull();
+		// La tinta del tercer intento (fallido) no se queda pegada al modelo.
+		expect(container.querySelectorAll('[data-testid="ink"]')).toHaveLength(0);
+
+		// 3) El niño repasa el modelo: un intento cerrado llama a onModelDone, nunca a onTrace.
 		trazoSimple(svg);
 		act(() => {
 			vi.advanceTimersByTime(TRACE_IDLE_MS);
 		});
 		expect(onModelDone).toHaveBeenCalledTimes(1);
-		expect(onTrace).not.toHaveBeenCalled();
+		expect(onTrace).toHaveBeenCalledTimes(1);
 	});
 
 	it("E8: la guía queda congelada mientras locked, aunque el nivel que llega suba", () => {
