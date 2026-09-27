@@ -279,3 +279,33 @@ déficit de `trace/Presentation.tsx` en 768×1024, y la confirmación explícita
 cuidado/torpe pasan y garabato falla en las letras probadas). Después de cerrar la Tarea 5:
 revisión final de la rama (opus) — última tarea del plan.
 Sesión de ejecución: solo la Tarea 5 (parte automatizada + primera pasada de prueba manual).
+
+**Hallazgo crítico añadido en la misma pasada — `motion-safe:` no protege de verdad con
+movimiento reducido.** El autor reportó ver la letra dibujarse en la presentación con
+`prefers-reduced-motion: reduce` activo (confirmado dos veces con `matchMedia` en la misma
+pestaña). Verificado de forma aislada (CSS compilado real del proyecto, sin pasar por la app,
+Playwright con `reducedMotion: 'reduce'`, script y HTML en el scratchpad de la sesión, no en el
+repo): con la preferencia activa, `transitionProperty` computado es `all` (no `none` — no hay
+reset de Preflight para eso) y `transitionDuration` sigue siendo el valor real (0.9s) porque se
+pone por **estilo en línea** (`TraceCanvas.tsx:349-351` y `361-362`), que aplica sin importar
+el media query. `motion-safe:transition-[stroke-dashoffset]`/`[offset-distance]` solo evita que
+la clase ponga `transition-property`, pero al caer al valor inicial `all` en vez de `none`, el
+cambio de `strokeDashoffset`/`offset-distance` se anima igual. Confirmado con muestras
+(`samplesOver900ms`: 0.36→0.15→0.05→0.007→0px, animación real, no instantánea). Afecta a
+`animation="full"` (presentación) y, por el mismo patrón exacto, casi seguro a
+`animation="dot"` (pista 2) — no probado ese segundo caso todavía. **Viola el Global Constraint
+de animación** ("con movimiento reducido, el trazo aparece entero, sin animar"). Ningún test
+existente lo cubre: `jsdom` no ejecuta transiciones CSS reales.
+
+**Resumen de todo lo pendiente de decisión del autor antes de poder cerrar la Tarea 5**, todo
+en ficheros fuera del alcance de archivos que tocó el brief de la Tarea 5:
+1. Marcadores de inicio superpuestos en A/E/M/P (candidato D18) — pendiente de que el autor
+   elija el tratamiento visual.
+2. Flechas de dirección poco visibles (nivel 1) — pendiente de decidir si se agrandan.
+3. `motion-safe:` no protege con movimiento reducido — bug confirmado, candidato claro a
+   arreglar (no es una decisión de diseño, es una violación de un Global Constraint).
+4. Déficit de tamaño de `trace/Presentation.tsx` en 768×1024 (47.6% vs 60%, en el dispositivo
+   objetivo principal) y overflow de 58px en 640×360 en `Evaluation.tsx` y `Presentation.tsx`
+   — pendiente de decidir si se arregla ahora o se aplaza.
+5. Confirmación explícita del autor de que cuidado/torpe pasan y garabato falla en las letras
+   ya probadas, y de si el tiempo de espera se siente bien.
