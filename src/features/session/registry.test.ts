@@ -179,8 +179,18 @@ describe("isSessionPlayable", () => {
 		).toBe(true);
 	});
 
-	it("hoy solo count-syllables está implementada", () => {
-		expect([...IMPLEMENTED_TEMPLATES]).toEqual(["count-syllables"]);
+	it("hoy están implementadas count-syllables, rhyme e initial-sound", () => {
+		expect([...IMPLEMENTED_TEMPLATES].sort()).toEqual([
+			"count-syllables",
+			"initial-sound",
+			"rhyme",
+		]);
+	});
+
+	it("X13: con phase0:rhyme activa y las plantillas reales, sí hay sesión jugable", () => {
+		const p = conUnidadesHechasHasta("phase0:clap");
+		expect(p.units["phase0:rhyme"]?.status).toBe("active");
+		expect(isSessionPlayable(curriculum, p, IMPLEMENTED_TEMPLATES)).toBe(true);
 	});
 });
 
