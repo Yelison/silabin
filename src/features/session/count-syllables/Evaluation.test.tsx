@@ -123,9 +123,15 @@ const playCalls = (a: ReturnType<typeof fakeAudio>) =>
 describe("count-syllables / Evaluation", () => {
 	it("pinta la imagen grande, el altavoz y el tambor, sin texto", () => {
 		const m = montar();
-		expect(screen.getByRole("img", { name: "mesa" }).textContent).toBe("🪑");
+		expect(screen.getByRole("img", { name: "mesa" }).getAttribute("src")).toBe(
+			"/images/palabras/mesa.webp",
+		);
 		expect(screen.getByRole("button", { name: "Oír otra vez" })).toBeDefined();
 		expect(m.tambor()).toBeDefined();
+		expect(m.tambor().querySelector("img")?.getAttribute("src")).toBe(
+			"/icons/ui-drum.png",
+		);
+		expect(m.tambor().textContent).not.toContain("🥁");
 		expect(m.circulos()).toBe(0);
 		expect(m.audio.play).not.toHaveBeenCalled();
 	});

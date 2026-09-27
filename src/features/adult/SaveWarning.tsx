@@ -35,7 +35,7 @@ export function SaveWarning() {
 				type="button"
 				aria-label="Aviso para el adulto sobre el progreso guardado"
 				onClick={() => setOpen(true)}
-				className="fixed top-2 right-2 z-10 rounded-full p-2 text-gray-400"
+				className="fixed top-2 right-2 z-10 rounded-full p-2 text-ink-soft"
 			>
 				<svg
 					width="20"
@@ -56,9 +56,9 @@ export function SaveWarning() {
 				<div
 					role="dialog"
 					aria-label="Aviso para el adulto"
-					className="fixed inset-0 z-20 flex items-center justify-center bg-gray-900/40 p-4"
+					className="fixed inset-0 z-20 flex items-center justify-center bg-ink/40 p-4"
 				>
-					<div className="max-w-md space-y-4 rounded-2xl bg-white p-6 text-gray-800 shadow-lg">
+					<div className="max-w-md space-y-4 rounded-card bg-card p-6 text-ink shadow-lg">
 						{/* Con la lectura fallida `recovered` también es true, pero no hay nada dañado:
 						    no se leyó. Sale solo el texto de lectura, no los dos. */}
 						{readFailed ? (
@@ -72,7 +72,7 @@ export function SaveWarning() {
 						<div className="flex gap-3">
 							<button
 								type="button"
-								className="rounded-lg bg-gray-200 px-4 py-2"
+								className="rounded-lg bg-calm px-4 py-2 text-ink"
 								onClick={() => {
 									void retrySave();
 								}}
@@ -81,7 +81,7 @@ export function SaveWarning() {
 							</button>
 							<button
 								type="button"
-								className="rounded-lg bg-gray-200 px-4 py-2"
+								className="rounded-lg bg-calm px-4 py-2 text-ink"
 								onClick={() => setOpen(false)}
 							>
 								Cerrar

@@ -35,7 +35,7 @@ function SalirAdulto(props: { onLongPress: () => void }) {
 			// Sin menú contextual ni selección: mantener pulsado es el gesto.
 			onContextMenu={(e) => e.preventDefault()}
 			style={{ touchAction: "none", userSelect: "none" }}
-			className="h-12 w-12 shrink-0 rounded-full bg-gray-100 text-xl text-gray-400"
+			className="h-12 w-12 shrink-0 rounded-full bg-card text-xl text-ink-soft"
 		>
 			✕
 		</button>
@@ -52,10 +52,10 @@ function Progreso(props: { cursor: number; total: number }) {
 			aria-valuemin={0}
 			aria-valuemax={total}
 			aria-valuenow={cursor}
-			className="h-4 flex-1 overflow-hidden rounded-full bg-gray-200"
+			className="h-4 flex-1 overflow-hidden rounded-full bg-calm"
 		>
 			<div
-				className="h-full rounded-full bg-amber-400 transition-[width]"
+				className="h-full rounded-full bg-calm-border transition-[width]"
 				style={{ width: `${pct}%` }}
 			/>
 		</div>

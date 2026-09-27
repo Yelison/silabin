@@ -179,8 +179,34 @@ describe("isSessionPlayable", () => {
 		).toBe(true);
 	});
 
-	it("hoy solo count-syllables está implementada", () => {
-		expect([...IMPLEMENTED_TEMPLATES]).toEqual(["count-syllables"]);
+	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap y build", () => {
+		expect([...IMPLEMENTED_TEMPLATES].sort()).toEqual([
+			"build",
+			"count-syllables",
+			"hear-it",
+			"initial-sound",
+			"listen-tap",
+			"rhyme",
+		]);
+	});
+
+	it("L5: con phase0:hear-it activa hay sesión jugable; con phase1:vowel-a, aún no (faltan trace y say-it)", () => {
+		const hearIt = conUnidadesHechasHasta("phase0:initial");
+		expect(hearIt.units["phase0:hear-it"]?.status).toBe("active");
+		expect(isSessionPlayable(curriculum, hearIt, IMPLEMENTED_TEMPLATES)).toBe(
+			true,
+		);
+		const vocal = conUnidadesHechasHasta("phase0:hear-it");
+		expect(vocal.units["phase1:vowel-a"]?.status).toBe("active");
+		expect(isSessionPlayable(curriculum, vocal, IMPLEMENTED_TEMPLATES)).toBe(
+			false,
+		);
+	});
+
+	it("X13: con phase0:rhyme activa y las plantillas reales, sí hay sesión jugable", () => {
+		const p = conUnidadesHechasHasta("phase0:clap");
+		expect(p.units["phase0:rhyme"]?.status).toBe("active");
+		expect(isSessionPlayable(curriculum, p, IMPLEMENTED_TEMPLATES)).toBe(true);
 	});
 });
 

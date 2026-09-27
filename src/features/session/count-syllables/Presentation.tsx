@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
+import { Picture } from "@/components/Picture";
 import { useAudio } from "@/features/app-context";
-import { Imagen, Luces } from "@/features/session/count-syllables/parts";
+import { Luces } from "@/features/session/count-syllables/parts";
 import type { PresentationProps } from "@/features/session/registry";
 
 /**
@@ -54,12 +56,12 @@ export function Presentation(props: PresentationProps) {
 
 	return (
 		<div className="flex flex-col items-center gap-8">
-			<Imagen imageKey={item.imageKey} />
+			<Picture imageKey={item.imageKey} />
 			<Luces count={luces} />
 			<div className="flex h-28 items-center">
 				{listo && (
 					<BigButton aria-label="Siguiente" onClick={onDone}>
-						➡️
+						<Icon name="next" />
 					</BigButton>
 				)}
 			</div>

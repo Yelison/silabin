@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
+import { Picture } from "@/components/Picture";
+import { ReplayButton } from "@/components/ReplayButton";
 import { useAudio } from "@/features/app-context";
-import { Imagen, Luces } from "@/features/session/count-syllables/parts";
+import { Luces } from "@/features/session/count-syllables/parts";
 import type { EvaluationProps } from "@/features/session/registry";
 
 /** Silencio que cierra la respuesta: el niño terminó de tocar. */
@@ -139,19 +141,24 @@ export function Evaluation(props: EvaluationProps) {
 
 	return (
 		<div className="flex flex-col items-center gap-6">
-			<Imagen imageKey={item.imageKey} />
-			<BigButton aria-label="Oír otra vez" onClick={oirOtraVez}>
-				🔊
-			</BigButton>
+			{/* En pantallas bajas el altavoz va al lado de la imagen: si no, el tambor no cabe. */}
+			<div className="flex flex-col items-center gap-6 short:flex-row short:gap-4">
+				<Picture imageKey={item.imageKey} />
+				<ReplayButton
+					aria-label="Oír otra vez"
+					onReplay={oirOtraVez}
+					disabled={locked}
+				/>
+			</div>
 			<Luces count={luces} />
 			<button
 				type="button"
 				aria-label="Tambor"
 				aria-disabled={locked}
 				onClick={tocar}
-				className="h-56 w-56 touch-manipulation select-none rounded-full bg-amber-400 text-8xl shadow-lg active:scale-95"
+				className="flex h-56 w-56 touch-manipulation select-none items-center justify-center rounded-full bg-action shadow-lg active:scale-95 short:h-48 short:w-48"
 			>
-				🥁
+				<Icon name="drum" size={192} />
 			</button>
 			<div className="flex min-h-14 items-center gap-3">
 				{modelo
@@ -164,7 +171,7 @@ export function Evaluation(props: EvaluationProps) {
 								data-model-circle
 								data-state={i < modeloToques ? "tapped" : "marked"}
 								onClick={tocarModelo}
-								className={`h-14 w-14 rounded-full border-4 border-amber-500 ${i < modeloToques ? "bg-amber-400" : "motion-safe:animate-pulse bg-white"}`}
+								className={`h-14 w-14 rounded-full border-4 border-mark-border ${i < modeloToques ? "bg-mark-border" : "motion-safe:animate-pulse bg-mark"}`}
 							/>
 						))
 					: Array.from({ length: toques }, (_, i) => (
@@ -172,7 +179,7 @@ export function Evaluation(props: EvaluationProps) {
 								// biome-ignore lint/suspicious/noArrayIndexKey: los círculos no tienen identidad propia
 								key={i}
 								data-circle
-								className="h-14 w-14 rounded-full bg-amber-400"
+								className="h-14 w-14 rounded-full bg-action"
 							/>
 						))}
 			</div>

@@ -9,8 +9,18 @@ import {
 	type TemplateId,
 	type Unit,
 } from "@/engine";
+import { Evaluation as BuildEvaluation } from "@/features/session/build/Evaluation";
+import { Presentation as BuildPresentation } from "@/features/session/build/Presentation";
 import { Evaluation as CountSyllablesEvaluation } from "@/features/session/count-syllables/Evaluation";
 import { Presentation as CountSyllablesPresentation } from "@/features/session/count-syllables/Presentation";
+import { Evaluation as HearItEvaluation } from "@/features/session/hear-it/Evaluation";
+import { Presentation as HearItPresentation } from "@/features/session/hear-it/Presentation";
+import { Evaluation as InitialSoundEvaluation } from "@/features/session/initial-sound/Evaluation";
+import { Presentation as InitialSoundPresentation } from "@/features/session/initial-sound/Presentation";
+import { Evaluation as ListenTapEvaluation } from "@/features/session/listen-tap/Evaluation";
+import { Presentation as ListenTapPresentation } from "@/features/session/listen-tap/Presentation";
+import { Evaluation as RhymeEvaluation } from "@/features/session/rhyme/Evaluation";
+import { Presentation as RhymePresentation } from "@/features/session/rhyme/Presentation";
 
 /** Lo que recibe la vista de presentación de una plantilla: enseña el ítem y avisa al terminar. */
 export type PresentationProps = {
@@ -45,11 +55,32 @@ export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
 		Presentation: CountSyllablesPresentation,
 		Evaluation: CountSyllablesEvaluation,
 	},
+	rhyme: { Presentation: RhymePresentation, Evaluation: RhymeEvaluation },
+	"initial-sound": {
+		Presentation: InitialSoundPresentation,
+		Evaluation: InitialSoundEvaluation,
+	},
+	"hear-it": {
+		Presentation: HearItPresentation,
+		Evaluation: HearItEvaluation,
+	},
+	"listen-tap": {
+		Presentation: ListenTapPresentation,
+		Evaluation: ListenTapEvaluation,
+	},
+	build: { Presentation: BuildPresentation, Evaluation: BuildEvaluation },
 };
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
 export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
-	new Set<TemplateId>(["count-syllables"]);
+	new Set<TemplateId>([
+		"count-syllables",
+		"rhyme",
+		"initial-sound",
+		"hear-it",
+		"listen-tap",
+		"build",
+	]);
 
 /**
  * ¿Puede la interfaz jugar hoy una sesión con este progreso? Hay que saber pintar todas las

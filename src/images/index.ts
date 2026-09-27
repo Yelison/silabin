@@ -1,7 +1,11 @@
-export type PictureImage = { emoji: string; alt: string };
+/**
+ * `src` es el WebP ilustrado (ruta pública); `emoji` queda como respaldo por si no carga.
+ * `alt` es la palabra.
+ */
+export type PictureImage = { src: string; emoji: string; alt: string };
 
 /**
- * Imagen provisional: un emoji por palabra, hasta que haya ilustraciones reales.
+ * Emoji de respaldo por palabra, para cuando la ilustración no carga.
  * Cubre las 35 palabras de `pictures.ts` y las palabras de la fase 2. Las palabras
  * abstractas (ama, amo, eso, uso…) llevan un emoji aproximado; se sustituirán con el resto.
  */
@@ -77,11 +81,16 @@ const EMOJI: Record<string, string> = {
 
 const PREFIX = "img:";
 
+/** El nombre del fichero: sin tildes ni ñ («ratón» → «raton», «uña» → «una»). */
+export function slugFor(word: string): string {
+	return word.normalize("NFD").replace(/\p{M}/gu, "");
+}
+
 export function imageFor(imageKey: string): PictureImage | null {
 	if (!imageKey.startsWith(PREFIX)) return null;
 	const word = imageKey.slice(PREFIX.length);
 	if (!Object.hasOwn(EMOJI, word)) return null;
 	const emoji = EMOJI[word];
 	if (emoji === undefined) return null;
-	return { emoji, alt: word };
+	return { src: `/images/palabras/${slugFor(word)}.webp`, emoji, alt: word };
 }

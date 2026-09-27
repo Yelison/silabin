@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
 :root {
-	--background: #ffffff;
-	--foreground: #171717;
+	color-scheme: light;
 }
 
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
+	/* Ver docs/diseno-visual.md: propuesta inicial, identidad final pendiente. */
+	--color-surface: #fff8ec;
+	--color-card: #ffffff;
+	--color-ink: #2b2a33;
+	--color-ink-soft: #6b6772;
+	--color-action: #f5b83d;
+	--color-action-ink: #3a2a00;
+	--color-calm: #dcebfa;
+	/* Oscurecido desde #7FA7D6 (mismo tono azul) para llegar a 3:1 contra surface/card/calm. */
+	--color-calm-border: #5187c7;
+	--color-mark: #ffe27a;
+	/* Oscurecido desde #C98A00 (mismo tono ámbar) para llegar a 3:1 contra surface/card/mark. */
+	--color-mark-border: #ac7600;
+	--color-celebrate: #ff9f1c;
+	--radius-card: 1.5rem;
+	--spacing-target: 8rem;
+	--font-reading: var(--font-andika);
 	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
-	}
-}
+/* Pantallas bajas (móvil apaisado o pequeño): lo que no cabe a lo alto se reordena, no se recorta. */
+@custom-variant short (@media (max-height: 760px));
 
 body {
-	background: var(--background);
-	color: var(--foreground);
+	background: var(--color-surface);
+	color: var(--color-ink);
 	font-family: var(--font-sans);
 }

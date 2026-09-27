@@ -83,6 +83,14 @@ describe("MapScreen", () => {
 		}
 	});
 
+	it("M1: los botones de unidad miden al menos 72 px de alto (objetivo táctil)", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		const botones = [...container.querySelectorAll<HTMLElement>("[data-unit]")];
+		expect(botones.length).toBeGreaterThan(0);
+		for (const b of botones)
+			expect(b.className, b.dataset.unit).toContain("min-h-18");
+	});
+
 	it("U2: con progreso nuevo, phase0:clap es la activa y el resto está bloqueado", async () => {
 		const { unidad } = montar(await storeConDisco(() => {}));
 		expect(unidad("phase0:clap").getAttribute("data-status")).toBe("active");

@@ -1,8 +1,20 @@
+export {
+	endingKey,
+	picturesStartingWith,
+	rimeOf,
+	stretchInKey,
+	stretchKey,
+} from "@/content/audio-keys";
 export type { CurriculumIndex } from "@/content/index";
 export { curriculum } from "@/content/index";
 export type { HintStep, TemplateId } from "@/content/templates";
 export { templates } from "@/content/templates";
 export type { Item, Unit } from "@/content/types";
+export {
+	expectedAnswer,
+	expectedPieces,
+	reducedPieces,
+} from "@/engine/answers";
 export {
 	applyPresentation,
 	applyResolution,

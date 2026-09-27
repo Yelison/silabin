@@ -70,7 +70,7 @@ export function EndScreen(props: { onDone: () => void }) {
 			<span
 				role="img"
 				aria-label={etiquetaEstrellas(summary.stars)}
-				className="text-8xl text-yellow-500 motion-safe:animate-[bounce_1s_ease-in-out_3]"
+				className="text-8xl text-celebrate motion-safe:animate-[bounce_1s_ease-in-out_3]"
 			>
 				{"★".repeat(summary.stars)}
 			</span>

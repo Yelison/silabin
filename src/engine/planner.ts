@@ -1,4 +1,5 @@
 import type { CurriculumIndex } from "@/content/index";
+import { VOWELS } from "@/content/invariants";
 import { pictures } from "@/content/pictures";
 import { type TemplateId, templates } from "@/content/templates";
 import type { Item, Unit } from "@/content/types";
@@ -141,6 +142,52 @@ function optionPool(input: {
 	return todos;
 }
 
+/**
+ * Piezas de `build`: la consonante del ítem entra siempre, aunque nunca se haya "visto" (no
+ * hay opción sin ella); las demás consonantes ya vistas entran en el orden en que se vieron,
+ * salvo que formen una pareja prohibida (b/d/p/q) con una que ya esté dentro. Las 5 vocales
+ * entran siempre completas. `correctOptionId` queda `null`: la respuesta correcta de `build`
+ * es el orden de las piezas, no una entre ellas (la resuelve `expectedAnswer`).
+ */
+function buildSyllablePieces(input: {
+	content: CurriculumIndex;
+	item: Item;
+	rng: Rng;
+	seen: ReadonlySet<string>;
+}): { optionIds: string[]; correctOptionId: null } {
+	const { content, item, rng, seen } = input;
+	const own = content.items.get(`letter:${item.phonemes[0]}`);
+	if (own === undefined)
+		throw new Error(
+			`No existe la letra de la consonante de ${item.id} para construir sus piezas`,
+		);
+
+	const seenConsonants = [...seen]
+		.map((id) => content.items.get(id))
+		.filter(
+			(candidate): candidate is Item =>
+				candidate !== undefined &&
+				candidate.kind === "letter" &&
+				!VOWELS.has(candidate.text),
+		);
+
+	const consonants: Item[] = [own];
+	for (const candidate of seenConsonants) {
+		if (candidate.id === own.id) continue;
+		if (consonants.some((c) => isForbiddenDistractor(c, candidate))) continue;
+		consonants.push(candidate);
+	}
+
+	const vowels = [...VOWELS]
+		.map((v) => content.items.get(`letter:${v}`))
+		.filter((v): v is Item => v !== undefined);
+
+	return {
+		optionIds: rng.shuffle([...consonants, ...vowels].map((i) => i.id)),
+		correctOptionId: null,
+	};
+}
+
 function buildOptions(input: {
 	content: CurriculumIndex;
 	item: Item;
@@ -151,6 +198,10 @@ function buildOptions(input: {
 	samePhase: ReadonlySet<string>;
 }): { optionIds: string[]; correctOptionId: string | null } {
 	const { content, item, templateId, level, rng, seen, samePhase } = input;
+
+	if (templateId === "build")
+		return buildSyllablePieces({ content, item, rng, seen });
+
 	const range = templates[templateId].options;
 	if (range === undefined) return { optionIds: [], correctOptionId: null };
 
