@@ -185,3 +185,25 @@ Task 6b: minor (deferred): `overflow-x-clip` en `build/Presentation.tsx:78` camb
 Task 6b: minor (deferred): los tests de M1, M6 y M12 son de clases y no protegen la geometría (solo la medición visual); I1 e I2 sin test; `docs/diseno-visual.md` no menciona la variante `short` ni el tamaño del tambor.
 Task 6b: minor (deferred): «m M» marcada en `listen-tap` sigue con las letras casi al borde de la tarjeta; los círculos del modelo (M2) siguen en 56 px.
 Task 6b: complete (commits de652e7..9ae820a, review clean)
+
+## Revisión final de toda la rama (Opus)
+
+Sesión 6 (2026-09-27). BASE 2fd20b1. Coordinador en Sonnet 5 (puerta de modelo cumplida). Diff completo `git merge-base main HEAD`..HEAD (9654 líneas, 150 ficheros, ~71 imágenes binarias) revisado por un subagente Opus, con el diff, `diff-stat.txt` y `commits.txt` en el scratchpad de la sesión (R19 sigue aplicando: nada va a `.superpowers/sdd/`).
+
+Veredicto: **Approved con Minors**. Nada bloquea el merge a `main`.
+
+Comprobado y correcto: claves de audio (`ending:`/`stretch:`/`stretch-in:`) que piden las vistas coinciden con las que genera el manifiesto; `expectedAnswer` es la única fuente de la respuesta en todas las plantillas (incluido `hear-it` con `correctOptionId: null`); orden invalidar→pista correcto en `ChoiceEvaluation` y `build/Evaluation`; `ExerciseView` con `key={exercise.id}` no arrastra estado atenuado/marcado entre ejercicios; `/dev/plantillas` da `notFound()` en producción; sin código muerto; `engine/`/`content/` sin React ni DOM; sin `any`/`as any`/`@ts-ignore` nuevos; `features/` no decide pedagogía.
+
+7 mutaciones dirigidas a motor/store/pedagogía, las 7 muertas: `expectedAnswer` de `build` cambiado a `item.id` (muerta por `answers.test`), `dim` atenuando la respuesta correcta (muerta por 4 tests), filtro b/d/p/q quitado de `build` (muerta por `planner.test`), pista 3 de `build` aceptando cualquier orden (muerta por B9/C1 y `SessionFlow` con motor real), opción marcada llamando a `onAnswer` en vez de `onModelDone` (muerta por 8 tests incluida la integración de Fase 0), pista 2 de `hear-it` pidiendo `stretch-in` con respuesta «no» (muerta por H4), `reducedPieces` sin las 5 vocales (muerta por 4 tests).
+
+Hallazgo Important, latente, no alcanzable hoy: con `options: {min: 2}` (nivel `easy`, primer intento), la pista 1 (`dim`, atenúa un distractor) dejaría una sola opción activa —la correcta— en `listen-tap` e `initial-sound` con ítems `phoneme`; el spec supone 3 opciones al dar la pista 1. Solo se ve en `/dev/plantillas`: `listen-tap` (Fase 1/2) e `initial-sound` con `phoneme` no son jugables aún (`isSessionPlayable` los bloquea por `trace`/`say-it`, Planes 4-5). `phase0:initial` (la única unidad jugable) ya trae 3 opciones. Ningún test cubre `easy` + pista 1.
+
+Ruling: R29 — no se corrige ahora este hallazgo; se registra como decisión abierta del Plan 4 (dos salidas posibles: `easy` con 3 opciones para plantillas con `dim`, o no atenuar si quedarían ≤2 activas) — no es alcanzable con el contenido actual y tocarlo pide decidir entre dos diseños distintos de pista, fuera del alcance de este plan — si fuera equivocado (se habilita `listen-tap` o `initial-sound:phoneme` en un plan futuro sin resolverlo primero), la pista 1 regalaría la respuesta la primera vez que un niño falla.
+
+Task 6 (revisión final): minor (deferred), nuevo: `PHONEME_SOUND.p` y las claves `stretch:p*` se locutan como el nombre de letra «p» en vez de su sonido (mismo comportamiento que `phoneme:p` desde el Plan 1, ahora extendido); el test de locución del sonido excluye la p. Sin efecto mientras el audio sea `speechSynthesis` provisional; añadir a la lista cuando llegue la voz de Azure.
+Task 6 (revisión final): minor (deferred), nuevo: `stretchedText`/`stretchInText` (`audio-manifest.ts`) asumen fonema de una sola letra (`item.text.slice(1)`, `word.indexOf(phoneme)`); fallarían con «ll», «ch», «qu». Sin contenido afectado hoy.
+Task 6 (revisión final): cerrados por la revisión — ya no son deferred: la línea de la Tarea 4 sobre `audio.play` sin resolver nunca (resuelto por `SPEECH_GUARD_MIN_MS` en `speech-player.ts`) y la línea de la Tarea 5 sobre el README desfasado (el README ya refleja el Plan 2 fusionado y el Plan 3 en curso).
+
+Triaje: ningún `Ruling` (R15-R28) ni `minor (deferred)` de la rama bloquea el merge. Atención sin bloquear: M13 (voz inglesa sin voz española) puede merecer aviso al adulto antes del Plan 6 si hay niños usando la app ya; Safari iOS/WebKit y el arrastre de `build` deben entrar en la lista de verificación del iPad antes de desbloquear la Fase 2 (R24/R27).
+
+Sesión 6: revisión final hecha (1 subagente Opus, 0 rondas de corrección — no hubo hallazgos que la exigieran). Siguiente: `superpowers:finishing-a-development-branch`; push y PR requieren confirmación del autor.
