@@ -44,18 +44,30 @@ export function Presentation(props: PresentationProps) {
 	}, []);
 
 	return (
-		<div className="flex flex-col items-center gap-4">
-			<div className="flex h-32 items-center justify-center font-reading">
+		/*
+		 * Global Constraint literal (plan): la letra ocupa ≥60 % del lado corto del área del
+		 * ejercicio, sin scroll en 360×640 vertical ni en 1024×768 apaisado. Apilar los tres
+		 * bloques (par, lienzo, botón) en vertical deja 528 px bajo el encabezado y el relleno
+		 * de `SessionScreen` (640 − 80 − 32); el par por su propia fuente
+		 * (`h-[min(8rem,26vw)]` = 93.6 a 360 de ancho) y el hueco del botón ajustado a su alto
+		 * real (`h-24` = 96, sin sobrante de `h-28`) con `gap-2` (16 en total) dejan 205.6 fijos,
+		 * así que al lienzo le caben 322.4 (50vh = 320, 2.4 de margen). Con `letter:a`
+		 * (vb 1.2×1.4): escala = min(295.2/1.2, 320/1.4) = 228.6 → 63.5 % de 360 (69.7 % del
+		 * área, 328 tras el relleno). En apaisado, apilar no cabe ni de lejos (el alto disponible
+		 * es 656 y el lienzo solo por sí necesitaría 645 para el mismo 60 %): por eso aquí los
+		 * tres van en fila (`landscape:flex-row`), como el botón de `trace/Evaluation.tsx`, y el
+		 * lienzo puede ocupar casi todo el alto sin competir por él. `landscape:h-[85vh]`
+		 * (652.8) dentro de 656 (3.2 de margen, igual que en `Evaluation.tsx`) con
+		 * `landscape:w-[55vw]` (563.2, con margen de sobra para el par y el botón en la misma
+		 * fila): escala = min(563.2/1.2, 652.8/1.4) = 466.3 → 60.7 % de 768. Sin verificación en
+		 * navegador real (sin `chromium-cli` ni Playwright en esta caja, ver el informe de la
+		 * Tarea 4): son las mismas cuentas con la fórmula exacta del lienzo, no una medida.
+		 */
+		<div className="flex flex-col items-center gap-2 landscape:flex-row landscape:gap-4">
+			<div className="flex h-[min(8rem,26vw)] items-center justify-center font-reading">
 				<Written item={item} size="lg" />
 			</div>
-			{/*
-			 * En 360×640 quedan 528 px bajo el encabezado y el relleno de `SessionScreen`
-			 * (640 − 80 de encabezado − 32 de relleno). El par (h-32 = 128), el hueco del botón
-			 * (h-28 = 112) y los dos huecos de `gap-4` (32) ya suman 272: al lienzo le caben
-			 * como mucho 256 (40vh). 38vh dejan margen sin costarle tamaño a la letra, que en
-			 * vertical manda el ancho (82vw), no el alto (como en `trace/Evaluation.tsx`).
-			 */}
-			<div className="flex h-[38vh] w-[82vw] items-center justify-center">
+			<div className="flex h-[50vh] w-[82vw] items-center justify-center landscape:h-[85vh] landscape:w-[55vw]">
 				<TraceCanvas
 					glyph={glyph}
 					level={1}
@@ -72,7 +84,7 @@ export function Presentation(props: PresentationProps) {
 					}}
 				/>
 			</div>
-			<div className="flex h-28 items-center">
+			<div className="flex h-24 items-center">
 				{ready && (
 					<BigButton aria-label="Siguiente" onClick={onDone}>
 						<Icon name="next" />
