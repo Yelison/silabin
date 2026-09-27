@@ -337,16 +337,21 @@ distingue bien un trazo lateral correcto de una barra central mal puesta, y no s
 por un intento que empieza bien y se relaja al final — señal positiva, pero no cubre los cuatro
 puntos de arriba.
 
+## Confirmación del autor — los cuatro puntos pendientes de la Tarea 5 (2026-09-27, sesión nueva tras `/clear`)
+
+1. Traza torpe pero completa (tiembla, se sale un poco de la guía, pero recorre todos los
+   trazos): **pasa.**
+2. Garabato completo (no sigue la guía, ocupa toda la caja): **falla.**
+3. Tiempo de espera de inactividad (1.5s): **se siente bien.**
+4. Letra distinta a la pedida dibujada sobre la guía: **la rechazó, feedback neutro** (igual
+   que un intento fallido normal).
+
+Los cuatro confirman el comportamiento esperado — nada nuevo que corregir. **Tarea 5: cierra
+formalmente.**
+
 ## Estado
 
-Plan escrito y aprobado (2026-09-27). Tareas 1-4 completas. Tarea 5 (parte automatizada):
-completa y revisada, clean. Tarea 6 añadida al plan con todo lo que decidió el autor durante la
-prueba manual (ver arriba) — lista para brief y dispatch en la próxima sesión. Antes de cerrar
-la Tarea 5 formalmente falta la confirmación de cuatro puntos de la prueba manual (arriba).
-Después de la Tarea 6: revisión final de la rama (opus).
-
-**Corte de sesión — obligatorio, sesión muy larga (tres subagentes, dos investigaciones de
-bugs con Playwright aislado, ~305k tokens de contexto).** Siguiente sesión: confirmar los
-cuatro puntos pendientes con el autor (o dispatch de Tarea 6 en paralelo si el autor prefiere
-no bloquear en eso), escribir el brief de la Tarea 6 (`sed -n` sobre el plan, sección «Tarea
-6»), y ejecutar con `subagent-driven-development` en `/model sonnet`.
+Plan escrito y aprobado (2026-09-27). Tareas 1-5 completas (Tarea 5: automatizada clean +
+prueba manual confirmada por el autor, ver arriba). Tarea 6 añadida al plan con todo lo que
+decidió el autor durante la prueba manual — brief y dispatch en esta sesión. Después de la
+Tarea 6: revisión final de la rama (opus).
