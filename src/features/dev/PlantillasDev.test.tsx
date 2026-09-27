@@ -9,7 +9,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { curriculum } from "@/engine";
-import { PlantillasDev } from "@/features/dev/PlantillasDev";
+import {
+	itemsDe,
+	PLANTILLAS,
+	PlantillasDev,
+	planificar,
+} from "@/features/dev/PlantillasDev";
 import { fakeAudio } from "@/features/test-support";
 
 afterEach(cleanup);
@@ -119,5 +124,78 @@ describe("PlantillasDev", () => {
 		});
 		expect(screen.getByRole("status").textContent).toMatch(/^Respuesta: /);
 		expect(container.querySelector("[data-screen]")).toBeNull();
+	});
+});
+
+describe("PlantillasDev: barrido de todas las combinaciones del selector", () => {
+	const combinaciones = PLANTILLAS.flatMap((t) =>
+		itemsDe(t).map((i) => [t, i.id] as const),
+	);
+
+	it("las tareas orales solo se ofrecen con la plantilla de su unidad", () => {
+		const de = (t: Parameters<typeof itemsDe>[0]) =>
+			itemsDe(t).map((i) => i.id);
+		expect(
+			de("count-syllables").every((id) => id.startsWith("oral:clap:")),
+		).toBe(true);
+		expect(de("rhyme").every((id) => id.startsWith("oral:rhyme:"))).toBe(true);
+		expect(de("hear-it").every((id) => id.startsWith("oral:hear:"))).toBe(true);
+		const inicial = de("initial-sound");
+		expect(inicial).toContain("phoneme:a");
+		expect(inicial.some((id) => id.startsWith("oral:initial:"))).toBe(true);
+		expect(inicial.some((id) => id.startsWith("oral:clap:"))).toBe(false);
+		// Las que ninguna unidad ofrece aún siguen a la vista.
+		expect(de("listen-tap").length).toBeGreaterThan(0);
+		expect(de("build").length).toBeGreaterThan(0);
+	});
+
+	it("hay combinaciones que barrer", () => {
+		expect(combinaciones.length).toBeGreaterThan(50);
+	});
+
+	it("el motor planifica un ejercicio de cada plantilla para cada ítem que el selector ofrece", () => {
+		const fallos: string[] = [];
+		for (const [t, id] of combinaciones) {
+			const item = curriculum.items.get(id);
+			if (item === undefined) continue;
+			for (const seed of [1, 2, 3, 4]) {
+				try {
+					const plan = planificar(t, item, seed);
+					if (plan.evaluacion === undefined)
+						fallos.push(`${t} ${id}: sin evaluación`);
+				} catch (e) {
+					fallos.push(`${t} ${id} (seed ${seed}): ${(e as Error).message}`);
+				}
+			}
+		}
+		expect(fallos).toEqual([]);
+	});
+
+	it("cada combinación se monta con todos los rungs y locked, sin reventar", {
+		timeout: 120_000,
+	}, () => {
+		const fallos: string[] = [];
+		for (const [t, id] of combinaciones) {
+			try {
+				const { unmount } = montar();
+				elegirPlantilla(t);
+				fireEvent.change(screen.getByRole("combobox", { name: "Ítem" }), {
+					target: { value: id },
+				});
+				for (const nombre of [
+					"Rung 1",
+					"Rung 2",
+					"Rung 3",
+					"Sin feedback",
+					"locked",
+				])
+					fireEvent.click(screen.getByRole("button", { name: nombre }));
+				unmount();
+			} catch (e) {
+				fallos.push(`${t} ${id}: ${(e as Error).message}`);
+				cleanup();
+			}
+		}
+		expect(fallos).toEqual([]);
 	});
 });

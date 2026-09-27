@@ -28,11 +28,24 @@ const UNIT_ID = "dev:plantilla";
 const SEED_INICIAL = 1;
 
 /** Las plantillas que la interfaz sabe pintar. */
-const PLANTILLAS = Object.keys(templateViews) as TemplateId[];
+export const PLANTILLAS = Object.keys(templateViews) as TemplateId[];
 
-function itemsDe(templateId: TemplateId): Item[] {
+export function itemsDe(templateId: TemplateId): Item[] {
 	const tipos = templates[templateId].itemKinds;
-	return [...curriculum.items.values()].filter((i) => tipos.includes(i.kind));
+	return [...curriculum.items.values()].filter((i) => {
+		if (!tipos.includes(i.kind)) return false;
+		// Una tarea oral lleva su respuesta y sus opciones escritas en el dato, hechas para la
+		// plantilla de la unidad que la introduce: en otra no hay ejercicio posible (el sonido
+		// inicial de «sol» no existe como tarea) o no significaría nada. Letras, sílabas,
+		// palabras y fonemas sirven para cualquier plantilla de su tipo, `listen-tap` y `build`
+		// incluidas, que ninguna unidad ofrece todavía.
+		if (i.kind !== "oral-skill") return true;
+		return [...curriculum.units.values()].some(
+			(u) =>
+				u.introduces.includes(i.id) &&
+				u.exercises.some((e) => e.templateId === templateId),
+		);
+	});
 }
 
 /**
@@ -69,7 +82,7 @@ function conUnidadDePrueba(
 }
 
 /** Lo que el motor planifica para este ítem: su presentación y una evaluación. */
-function planificar(
+export function planificar(
 	templateId: TemplateId,
 	item: Item,
 	seed: number,
