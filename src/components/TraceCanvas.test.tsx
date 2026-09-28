@@ -423,6 +423,21 @@ describe("TraceCanvas", () => {
 		}
 	});
 
+	it("T6-2b (hallazgo del revisor, ronda 1: T6-2 solo mide distancia, no dirección): en 'm', el marcador de inicio 2 se desplaza hacia la dirección inicial de su propio trazo — (0,0)→(0.45,0.6), no hacia el final del trazo (0.9,0) ni en sentido contrario", () => {
+		const glyph = letra("letter:m");
+		const { container } = montar({ glyph, level: 1 });
+		const inicio2 = container.querySelector(
+			'[data-testid="guide-start-2"] circle',
+		);
+		// Trazo 2 de 'm': (0,0)→(0.45,0.6)→(0.9,0), coincide en el inicio con el trazo 1 (0,0).
+		// Dirección inicial (0,0)→(0.45,0.6): un triángulo 3-4-5 (0.45,0.6,0.75), cos=0.6,
+		// sen=0.8. Con START_MARKER_OFFSET=0.24: marcador esperado en (0.144, 0.192). Usar la
+		// dirección *final* del trazo (hacia (0.9,0): ángulo -53.13°) o invertir el signo del
+		// ángulo inicial dan los dos (0.144, -0.192) — rompen esta aserción exacta.
+		expect(Number(inicio2?.getAttribute("cx"))).toBeCloseTo(0.144, 5);
+		expect(Number(inicio2?.getAttribute("cy"))).toBeCloseTo(0.192, 5);
+	});
+
 	it("T6-4: la flecha estática de fin de trazo crece a 0.06-0.08 unidades, sin cambiar de color", () => {
 		const glyph = letra("letter:i");
 		const { container } = montar({ glyph, level: 1 });
