@@ -478,6 +478,11 @@ describe("trace Evaluation", () => {
 			});
 			expect(t.onModelDone).toHaveBeenCalledTimes(1);
 			expect(t.onTrace).not.toHaveBeenCalled();
+			// Un intento rechazado no deja sus trazos: `acceptsModelTrace` decide por tinta
+			// acumulada, y varios toques accidentales seguidos no pueden sumarse hasta cerrar el
+			// modelo sin repasar nada (P12/D19).
+			expect(t.acceptsModel).toHaveBeenCalledTimes(2);
+			expect(t.acceptsModel.mock.calls[1]?.[0]).toHaveLength(1);
 		});
 
 		it("W7: acceptsModel recibe los trazos cerrados del intento", () => {
