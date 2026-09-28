@@ -142,6 +142,42 @@ const LANE_OPACITY: Record<GuideLevel, string> = {
 };
 
 /**
+ * Distancia a la que se retrasa la flecha estática de fin de trazo, a lo largo de la dirección
+ * de llegada de su propio último segmento, cuando el punto final coincide con el inicio (sin
+ * desplazar) de cualquier trazo de la letra — incluido el propio, para un trazo cerrado como la
+ * O (revisión final de la rama, Important #1: pasaba en O, L, E y M). El círculo del marcador de
+ * inicio mide 0.07 de radio y la flecha se extiende hasta ~0.08 desde su centro, así que hacen
+ * falta ≥0.15 entre los dos centros para que no se toquen — mismo razonamiento que
+ * `START_MARKER_OFFSET`.
+ */
+const ARROW_RETREAT_DISTANCE = 0.15;
+
+/**
+ * Posición de pintado de la flecha estática de fin de trazo del trazo `i` de `glyph`: la de su
+ * punto final, o retrasada `ARROW_RETREAT_DISTANCE` a lo largo de la dirección de llegada
+ * (`strokeAngleDeg`) si ese final coincide con el inicio de cualquier trazo de la letra. No hace
+ * falta acotar el retroceso a la longitud real del último segmento: un solape residual pequeño
+ * si ese segmento fuera más corto es aceptable, solo visual.
+ */
+function arrowPosition(glyph: Glyph, i: number): GlyphPoint | undefined {
+	const stroke = glyph.strokes[i];
+	if (stroke === undefined) return undefined;
+	const end = stroke[stroke.length - 1];
+	if (end === undefined) return undefined;
+	const overlapsAnyStart = glyph.strokes.some((other) => {
+		const otherStart = other[0];
+		return otherStart !== undefined && sameStart(otherStart, end);
+	});
+	if (!overlapsAnyStart) return end;
+	const rad = (strokeAngleDeg(stroke) * Math.PI) / 180;
+	const dir = { x: Math.cos(rad), y: Math.sin(rad) };
+	return {
+		x: end.x - ARROW_RETREAT_DISTANCE * dir.x,
+		y: end.y - ARROW_RETREAT_DISTANCE * dir.y,
+	};
+}
+
+/**
  * Triángulo compartido por la flecha estática de fin de trazo (`guide-arrow-{n}`) y la guía de
  * dirección animada (`animation === "dot"`, Tarea 6). Crece de ~0.03-0.05 a ~0.06-0.08 unidades
  * (la prueba manual de la Tarea 5 la pidió más grande; mismo color `calm-border`, ya al mínimo
@@ -306,6 +342,9 @@ export function TraceCanvas(props: {
 		glyph.strokes.length === 0 ? 0 : animationMs(glyph) / glyph.strokes.length;
 	const dotMs = dotDurationMs ?? animationMs(glyph);
 	const markerPositions = startMarkerPositions(glyph);
+	const arrowPositions = glyph.strokes.map((_stroke, i) =>
+		arrowPosition(glyph, i),
+	);
 
 	return (
 		<svg
@@ -383,10 +422,10 @@ export function TraceCanvas(props: {
 					</g>
 				);
 			})}
-			{level === 1 &&
+			{(level === 1 || animation === "dot") &&
 				glyph.strokes.map((stroke, i) => {
-					const end = stroke[stroke.length - 1];
-					if (end === undefined) return null;
+					const posicion = arrowPositions[i];
+					if (posicion === undefined) return null;
 					const angle = strokeAngleDeg(stroke);
 					return (
 						<polygon
@@ -394,8 +433,12 @@ export function TraceCanvas(props: {
 							key={`arrow-${i}`}
 							data-testid={`guide-arrow-${i + 1}`}
 							points={TRACE_ARROW_POINTS}
-							className="fill-calm-border"
-							transform={`translate(${end.x} ${end.y}) rotate(${angle})`}
+							className={
+								level === 1
+									? "fill-calm-border"
+									: "fill-calm-border hidden motion-reduce:block"
+							}
+							transform={`translate(${posicion.x} ${posicion.y}) rotate(${angle})`}
 						/>
 					);
 				})}

@@ -506,6 +506,136 @@ describe("TraceCanvas", () => {
 		});
 		expect(onAnimationEnd).toHaveBeenCalledTimes(1);
 	});
+
+	it("T7-1 (revisión final de la rama, Important #1): en las 9 letras, ninguna guide-arrow-N queda a menos de 0.14 de ningún guide-start-N de la misma letra (O, L, E y M tienen un final de trazo que coincide con un inicio)", () => {
+		const letras = letrasConTrazo();
+		expect(letras).toHaveLength(9);
+		for (const [nombre, glyph] of letras) {
+			const { container } = montar({ glyph, level: 1 });
+			const flechas = Array.from(
+				container.querySelectorAll('[data-testid^="guide-arrow-"]'),
+			);
+			const marcadores = Array.from(
+				container.querySelectorAll('[data-testid^="guide-start-"] circle'),
+			);
+			for (const flecha of flechas) {
+				const transform = flecha.getAttribute("transform") ?? "";
+				// Los componentes pueden salir en notación científica (p. ej. "-9.18e-18") cuando
+				// cos/sin de un ángulo recto no dan un cero exacto en punto flotante.
+				const numero = "-?\\d+(?:\\.\\d+)?(?:e[-+]?\\d+)?";
+				const match = new RegExp(
+					`translate\\((${numero})\\s+(${numero})\\)`,
+					"i",
+				).exec(transform);
+				expect(
+					match,
+					`${nombre}: transform sin translate() legible — "${transform}"`,
+				).not.toBeNull();
+				const fx = Number(match?.[1]);
+				const fy = Number(match?.[2]);
+				for (const marcador of marcadores) {
+					const mx = Number(marcador.getAttribute("cx"));
+					const my = Number(marcador.getAttribute("cy"));
+					const distancia = Math.hypot(fx - mx, fy - my);
+					expect(
+						distancia,
+						`${nombre}: flecha en (${fx},${fy}) y marcador en (${mx},${my}) a ${distancia.toFixed(4)}`,
+					).toBeGreaterThanOrEqual(0.14);
+				}
+			}
+			cleanup();
+		}
+	});
+
+	it("T7-1b (revisión final de la rama, Important #1 — refuerzo tras prueba por mutación: la sola distancia no detecta invertir el signo del retroceso): cuando el final de un trazo coincide con el inicio de alguno, la flecha se mueve hacia atrás a lo largo de su propio último segmento, nunca hacia delante", () => {
+		const letras = letrasConTrazo();
+		for (const [nombre, glyph] of letras) {
+			const { container } = montar({ glyph, level: 1 });
+			glyph.strokes.forEach((stroke, i) => {
+				const end = stroke[stroke.length - 1];
+				const antesDelFinal = stroke[Math.max(0, stroke.length - 2)];
+				if (end === undefined || antesDelFinal === undefined) return;
+				const coincideConAlgunInicio = glyph.strokes.some((otro) => {
+					const inicio = otro[0];
+					return (
+						inicio !== undefined &&
+						Math.abs(inicio.x - end.x) < 1e-6 &&
+						Math.abs(inicio.y - end.y) < 1e-6
+					);
+				});
+				// Sin solape, la flecha se queda en `end`: nada que comprobar sobre dirección aquí.
+				if (!coincideConAlgunInicio) return;
+				const flecha = container.querySelector(
+					`[data-testid="guide-arrow-${i + 1}"]`,
+				);
+				const transform = flecha?.getAttribute("transform") ?? "";
+				const numero = "-?\\d+(?:\\.\\d+)?(?:e[-+]?\\d+)?";
+				const match = new RegExp(
+					`translate\\((${numero})\\s+(${numero})\\)`,
+					"i",
+				).exec(transform);
+				expect(
+					match,
+					`${nombre} trazo ${i + 1}: sin translate() legible — "${transform}"`,
+				).not.toBeNull();
+				const fx = Number(match?.[1]);
+				const fy = Number(match?.[2]);
+				// Dirección de llegada al final (mismos dos puntos que usa `strokeAngleDeg`) y
+				// desplazamiento real de la flecha respecto a `end`: su producto escalar debe ser
+				// negativo (retrocede, contra la dirección de llegada) y no positivo (avanzaría).
+				const llegada = {
+					x: end.x - antesDelFinal.x,
+					y: end.y - antesDelFinal.y,
+				};
+				const desplazamiento = { x: fx - end.x, y: fy - end.y };
+				const producto =
+					llegada.x * desplazamiento.x + llegada.y * desplazamiento.y;
+				expect(
+					producto,
+					`${nombre} trazo ${i + 1}: el retroceso avanza en vez de retroceder (flecha en (${fx},${fy}), final en (${end.x},${end.y}))`,
+				).toBeLessThan(-1e-6);
+			});
+			cleanup();
+		}
+	});
+
+	it("T7-2 (revisión final de la rama, Minor #4): con animation:'dot' y guía de nivel 2, las flechas estáticas se pintan ocultas por defecto y visibles solo con motion-reduce; a nivel 1 siguen siempre visibles; con 'none' o 'full' a nivel 2 siguen en 0 (refuerzo tras prueba por mutación: 'none' sola no distingue 'animation !== \"none\"' de 'animation === \"dot\"', porque en ambos casos da 0; 'full' sí lo distingue)", () => {
+		const glyph = letra("letter:e"); // 4 trazos
+
+		const { container: c2 } = montar({ glyph, level: 2, animation: "dot" });
+		const flechasN2 = Array.from(
+			c2.querySelectorAll('[data-testid^="guide-arrow-"]'),
+		);
+		expect(flechasN2).toHaveLength(4);
+		for (const flecha of flechasN2) {
+			const clase = flecha.getAttribute("class") ?? "";
+			expect(clase).toContain("fill-calm-border");
+			expect(clase).toContain("hidden");
+			expect(clase).toContain("motion-reduce:block");
+		}
+		cleanup();
+
+		const { container: c1 } = montar({ glyph, level: 1, animation: "dot" });
+		const flechasN1 = Array.from(
+			c1.querySelectorAll('[data-testid^="guide-arrow-"]'),
+		);
+		expect(flechasN1).toHaveLength(4);
+		for (const flecha of flechasN1) {
+			expect(flecha.getAttribute("class")).toBe("fill-calm-border");
+		}
+		cleanup();
+
+		const { container: c3 } = montar({ glyph, level: 2, animation: "none" });
+		expect(c3.querySelectorAll('[data-testid^="guide-arrow-"]')).toHaveLength(
+			0,
+		);
+		cleanup();
+
+		const { container: c4 } = montar({ glyph, level: 2, animation: "full" });
+		expect(c4.querySelectorAll('[data-testid^="guide-arrow-"]')).toHaveLength(
+			0,
+		);
+	});
 });
 
 describe("animationMs", () => {
