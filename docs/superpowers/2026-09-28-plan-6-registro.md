@@ -1,7 +1,7 @@
 # Plan 6: registro de ejecución
 
 Rama: `feat/plan-6-padres-recompensas` (desde `main` en `d70d997`, tras fusionar el Plan 5).
-Plan: `docs/superpowers/plans/2026-09-28-silabin-padres-recompensas.md` (**por redactar**).
+Plan: `docs/superpowers/plans/2026-09-28-silabin-padres-recompensas.md` (11 tareas).
 
 Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el tramo final).
 
@@ -10,8 +10,8 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Fase | Estado |
 |---|---|
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
-| Rulings de planificación (S1-S16) | **borrador** (abajo): el plan los fija o los corrige |
-| Redacción del plan | **pendiente**: sesión nueva en `/model opus` |
+| Rulings de planificación (S1-S23) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
+| Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
 | Ejecución | pendiente: `/model sonnet`, `superpowers:subagent-driven-development` |
 
 ## Decisiones tomadas con el autor (2026-09-28)
@@ -27,7 +27,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | D30 | **Dependencias nuevas:** Playwright (e2e del spec §10 con viewport de iPhone y trazos táctiles en la Fase 1; R25 la dejó para este plan), Framer Motion (celebraciones y rastro de dedo) y Serwist (service worker con precaché; integración para Turbopack) |
 | D31 | **Entran las dos ideas de la deuda 10:** (a) avance dentro de la unidad activa en el mapa, contador de estrellas con barra al próximo hito (§7) y señal discreta de «guardado»; (b) botones de **borrar** y **confirmar** en `trace`, además de la detección automática del toque accidental (D19) |
 
-## Rulings de planificación (borrador, prefijo S)
+## Rulings de planificación (prefijo S)
 
 El prefijo S no choca con R (Planes 2-3) ni con P (Plan 5). Al redactar el plan se fijan o se
 corrigen; lo que cambie queda anotado aquí.
@@ -109,7 +109,7 @@ corrigen; lo que cambie queda anotado aquí.
 - **S16 · `childName`** solo se ve en la interfaz del adulto (panel y nombre del fichero
   exportado). El niño no ve texto (§9).
 
-## Reparto de tareas propuesto (borrador)
+## Reparto de tareas
 
 Once tareas. `Effort` según CLAUDE.md: `high` para lógica nueva, contratos y máquinas de
 estado; `medium` para el resto.
@@ -131,6 +131,18 @@ estado; `medium` para el resto.
 **Review Focus (semillas):** importar un fichero equivocado (D27); primer uso con
 `pinHash: null`; reiniciar con `readFailed`; SW viejo tras un despliegue (S11); rastro encima
 de `trace` y de `build` (S10); `equipped` con un id bloqueado o desconocido tras importar (S5).
+
+Añadidos al redactar el plan (texto completo en su sección «Decisiones»): S17 (el avance de
+la unidad solo enseña lo ganado), S18 (importar conserva el PIN del dispositivo), S19 (el fondo
+nunca dentro de un ejercicio), S20 (cursor de PC por rastro → Plan 7, `minor (deferred)`), S21
+(iconos provisionales con emoji), S22 (e2e con `Math.random` sembrado por `addInitScript`),
+S23 (revisión de la precaché con `VERCEL_GIT_COMMIT_SHA`).
+
+## Progreso de ejecución
+
+| Tarea | Estado | Rondas | Mutaciones supervivientes |
+|---|---|---|---|
+| 1-11 | pendientes | | |
 
 **Recordatorios para el plan:** en la tarea de identidad (Plan 7) instalar entonces
 `frontend-design@claude-plugins-official`, no antes (memoria del autor). El cierre actualiza
