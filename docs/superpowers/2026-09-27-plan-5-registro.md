@@ -245,6 +245,19 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
 - Ruling: la deuda 2 del README ya no menciona `SessionScreen.resolver`; M4 va al archivo y no al
   README para respetar el tope de 10 deudas.
 
+- Post-PR (2026-09-28, prueba manual del autor en iPhone/Safari): el micrófono real no
+  oía nunca (rms plano ~0,005, bajo `SPEECH_RMS=0,02`), pese a `ctx.state=running` y
+  `track.muted=false`. Diagnosticado con log temporal en `/dev/plantillas` (quitado, no
+  commiteado). Causa: fallo conocido de WebKit — un `AnalyserNode` no procesa audio si el
+  grafo no llega conectado a `ctx.destination`. Arreglo: `analyser -> GainNode(0) ->
+  destination` en `src/speech/capture.ts` (commit ab8910b). Test de cableado nuevo en
+  `capture.test.ts`; 2 mutaciones (quitar la conexión, `gain.value=1`) detectadas por el
+  implementador y confirmadas de nuevo por el revisor. Revisión: ADDRESSED, sin hallazgos.
+  1135 tests + 1 omitido; typecheck y lint en verde.
+- Ruling: el fallo de iOS no se reprodujo en Chrome/Edge de Windows, coherente con que solo
+  WebKit exige el grafo conectado a `destination` — si fuera equivocado, se vería en la
+  prueba manual del punto 7/8 al reintentar.
+
 ## Prueba manual del autor (antes del PR)
 
 Con la receta HTTPS del README (`mkcert` con la IP de la LAN, `DEV_ORIGINS` y `-H 0.0.0.0`; ver «Cómo ejecutarlo» del
