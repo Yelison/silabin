@@ -257,6 +257,30 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
 - Ruling: el fallo de iOS no se reprodujo en Chrome/Edge de Windows, coherente con que solo
   WebKit exige el grafo conectado a `destination` — si fuera equivocado, se vería en la
   prueba manual del punto 7/8 al reintentar.
+- **Corrección (2026-09-28):** la causa de ab8910b no era la dominante. Instrumentado de
+  nuevo (timestamps, sin commitear) en 7 repeticiones seguidas: el hueco entre
+  `fase = "listening"` (botón azul) y `getUserMedia()` resuelto de verdad fue de 800 a
+  1700 ms cada vez, sumado a los `COUNTDOWN_MS = 900` que ya corrían antes de llamar a
+  `listener.listen()`. 5 de 7 palabras cortas dichas al ver el azul dieron «No te oí»: el
+  niño hablaba contra un micrófono que la UI ya daba por listo pero que aún no lo estaba.
+  El `rms` plano de antes de ab8910b (0,0044-0,0063) variaba con el ruido de fondo, no era
+  un cero de grafo no tirado — así que esa causa no explicaba el síntoma real. ab8910b se
+  mantiene (inofensivo, puede seguir haciendo falta en otros dispositivos), pero el defecto
+  que de verdad impedía oír al niño era este.
+- Post-PR (3): `src/speech/capture.ts` y `VoiceTurn.tsx` (commit f2374a4). `listen()` gana
+  `warmupMs` y `onReady()`: el colchón arranca en paralelo con `getUserMedia` (no después), y
+  `onReady` solo llega cuando se cumplen las dos condiciones (colchón agotado y micrófono
+  listo); `VoiceTurn` llama a `listen()` de inmediato al pulsar y solo pasa a `listening`
+  dentro de `onReady`. P6 y P7 se mantienen (el `finally` cierra siempre; ningún frame de
+  antes de `onReady` llega al VAD). 5 mutaciones dirigidas, las 5 cerradas. Revisión:
+  ADDRESSED, sin hallazgos; el revisor reprodujo 2 de las 5 mutaciones él mismo. 1141 tests +
+  1 omitido; typecheck y lint en verde.
+- Ruling: se descartó partir `Listener` en `prepare()`/`listen()` (como sugería el brief) a
+  favor de extender `listen()` con `warmupMs`/`onReady` — más simple, no toca
+  `createScriptedListener` — si fuera equivocado, costaría una refactorización de la
+  interfaz, pero el contrato observable (cuándo se pasa a `listening`) es el mismo.
+- Pendiente: el autor debe repetir la prueba manual con este arreglo antes del PR
+  (puntos 1-4 y, sobre todo, palabras cortas dichas nada más ver el azul).
 
 ## Prueba manual del autor (antes del PR)
 
