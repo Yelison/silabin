@@ -10,6 +10,9 @@ export const MIN_PRECISION = 0.8;
 /** Paso de remuestreo, en alturas de letra. */
 export const SAMPLE_STEP = 0.02;
 
+/** Fracción de la longitud del glifo por debajo de la cual la tinta se considera un toque sin querer. */
+export const ACCIDENTAL_INK_RATIO = 0.1;
+
 export type TraceStroke = GlyphPoint[];
 export type TraceScore = {
 	correct: boolean;
@@ -144,6 +147,36 @@ export function scoreTrace(
 		coverage.every((c) => c >= MIN_COVERAGE) && precision >= MIN_PRECISION;
 
 	return { correct, coverage, precision };
+}
+
+/** Longitud de una polilínea; los puntos no finitos se descartan antes de medir. */
+function polylineLength(stroke: readonly GlyphPoint[]): number {
+	const points = stroke.filter(isFinitePoint);
+	let total = 0;
+	for (let i = 1; i < points.length; i += 1) {
+		const a = points[i - 1];
+		const b = points[i];
+		if (a === undefined || b === undefined) continue;
+		total += Math.hypot(b.x - a.x, b.y - a.y);
+	}
+	return total;
+}
+
+/**
+ * D19: un toque sin querer no debe gastar un intento ni una pista. La tinta total (suma de las
+ * longitudes de las polilíneas, solo con puntos finitos) es despreciable si es estrictamente
+ * menor que `ACCIDENTAL_INK_RATIO` veces la longitud total de los trazos del glifo.
+ */
+export function isNegligibleTrace(
+	glyph: Glyph,
+	strokes: readonly TraceStroke[],
+): boolean {
+	const ink = strokes.reduce((sum, s) => sum + polylineLength(s), 0);
+	const reference = glyph.strokes.reduce(
+		(sum, s) => sum + polylineLength(s),
+		0,
+	);
+	return ink < ACCIDENTAL_INK_RATIO * reference;
 }
 
 export type GuideLevel = 1 | 2 | 3;

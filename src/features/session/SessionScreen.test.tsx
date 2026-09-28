@@ -427,6 +427,14 @@ describe("SessionScreen", () => {
 			source: "active-unit",
 		};
 
+		// D19: un trazo vacío ya no es un fallo sino un toque ignorado; el fallo lleva tinta.
+		const TRAZO_MALO = [
+			[
+				{ x: 5, y: 5 },
+				{ x: 6, y: 6 },
+			],
+		];
+
 		function glifoA(): Glyph {
 			const item = curriculum.items.get(LETTER_A_ID);
 			if (item === undefined) throw new Error("falta letter:a");
@@ -477,7 +485,7 @@ describe("SessionScreen", () => {
 							<button
 								type="button"
 								aria-label="fallar"
-								onClick={() => p.trace?.onTrace([])}
+								onClick={() => p.trace?.onTrace(TRAZO_MALO)}
 							/>
 						</div>
 					);
@@ -542,7 +550,7 @@ describe("SessionScreen", () => {
 			if (onTrace === undefined) throw new Error("sin trace.onTrace");
 
 			await act(async () => {
-				onTrace([]);
+				onTrace(TRAZO_MALO);
 			});
 			await waitFor(() => expect(claves()).toContain("feedback:retry"));
 			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));

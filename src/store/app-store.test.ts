@@ -276,13 +276,72 @@ describe("answerTrace", () => {
 		store.getState().beginSession();
 		store.setState({ run: trazoRun(store.getState().progress) });
 
-		const fallo = await store.getState().answerTrace([]);
+		const fallo = await store.getState().answerTrace([
+			[
+				{ x: 5, y: 5 },
+				{ x: 6, y: 6 },
+			],
+		]);
 		expect(fallo.resolution).toBeNull();
 		expect(escrituras()).toBe(0);
 
 		const acierto = await store.getState().answerTrace(TRAZO_CORRECTO);
 		expect(acierto.resolution).not.toBeNull();
 		expect(escrituras()).toBe(1);
+	});
+});
+
+const SAY_IT_EXERCISE: PlannedExercise = {
+	id: "ex-say-it",
+	kind: "evaluation",
+	templateId: "say-it",
+	itemId: "syllable:ma",
+	optionIds: [],
+	correctOptionId: null,
+	source: "active-unit",
+};
+
+describe("answerSpeech", () => {
+	it("M9: retry en el 1.er intento no guarda; ok resuelve, guarda y da mastery-credit", async () => {
+		const { adapter, escrituras } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		store.setState({
+			run: {
+				...trazoRun(store.getState().progress),
+				exercises: [SAY_IT_EXERCISE],
+			},
+		});
+
+		const fallo = await store.getState().answerSpeech("retry");
+		expect(fallo.resolution).toBeNull();
+		expect(fallo.hint?.rung).toBe("reduce");
+		expect(escrituras()).toBe(0);
+
+		// Un fallo previo: el acierto es correct-with-hint; se prueba mastery-credit aparte.
+		store.setState({
+			run: {
+				...trazoRun(store.getState().progress),
+				exercises: [SAY_IT_EXERCISE],
+			},
+		});
+		const acierto = await store.getState().answerSpeech("ok");
+		expect(acierto.resolution).toEqual({ status: "mastery-credit" });
+		expect(escrituras()).toBe(1);
+		expect(store.getState().doc.counters.syllablesVoiced).toBe(1);
+	});
+
+	it("M9b: answerTrace con un punto no guarda y devuelve ignored", async () => {
+		const { adapter, escrituras } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		store.setState({ run: trazoRun(store.getState().progress) });
+		const feedback = await store.getState().answerTrace([[{ x: 0.5, y: 0.5 }]]);
+		expect(feedback).toEqual({ hint: null, resolution: null, ignored: true });
+		expect(escrituras()).toBe(0);
+		expect(store.getState().run?.attempt.attempt).toBe(1);
 	});
 });
 

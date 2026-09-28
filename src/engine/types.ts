@@ -26,6 +26,8 @@ export type Counters = {
 	sessions: number;
 	voiceOk: number;
 	wordsRead: number;
+	/** Sílabas dichas con `say-it` y resueltas sin asistencia (condición de first-syllable-voice). */
+	syllablesVoiced: number;
 };
 
 export type ProgressState = {
@@ -83,6 +85,12 @@ export function emptyProgressState(): ProgressState {
 		items: {},
 		units: {},
 		sessionCounter: 0,
-		counters: { traces: 0, sessions: 0, voiceOk: 0, wordsRead: 0 },
+		counters: {
+			traces: 0,
+			sessions: 0,
+			voiceOk: 0,
+			wordsRead: 0,
+			syllablesVoiced: 0,
+		},
 	};
 }

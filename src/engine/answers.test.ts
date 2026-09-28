@@ -3,6 +3,7 @@ import { curriculum } from "@/content/index";
 import {
 	expectedAnswer,
 	expectedPieces,
+	firstSyllableAudioKey,
 	reducedPieces,
 } from "@/engine/answers";
 import { checkAnswer } from "@/engine/session";
@@ -176,5 +177,23 @@ describe("checkAnswer usa expectedAnswer", () => {
 		});
 		expect(checkAnswer(ex, ma, "ma")).toBe("correct");
 		expect(checkAnswer(ex, ma, "am")).toBe("wrong");
+	});
+});
+
+describe("firstSyllableAudioKey", () => {
+	it("M8: la sílaba si existe como ítem, la vocal si la sílaba es una vocal sola", () => {
+		expect(firstSyllableAudioKey(curriculum, item("word:mapa"))).toBe(
+			item("syllable:ma").audioKey,
+		);
+		expect(firstSyllableAudioKey(curriculum, item("word:mama"))).toBe(
+			item("syllable:ma").audioKey,
+		);
+		expect(firstSyllableAudioKey(curriculum, item("word:ala"))).toBe(
+			item("phoneme:a").audioKey,
+		);
+	});
+
+	it("M8b: lanza si el ítem no es una palabra", () => {
+		expect(() => firstSyllableAudioKey(curriculum, item("letter:a"))).toThrow();
 	});
 });

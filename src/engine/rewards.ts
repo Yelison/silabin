@@ -71,7 +71,7 @@ const BASE_REWARDS: Reward[] = [
 		name: "Estrellitas",
 		kind: "trail",
 		requirement: "Decir una sílaba en voz alta correctamente por primera vez.",
-		isEarned: ({ state }) => state.counters.voiceOk >= 1,
+		isEarned: ({ state }) => state.counters.syllablesVoiced >= 1,
 	},
 	{
 		id: "steady-hand",

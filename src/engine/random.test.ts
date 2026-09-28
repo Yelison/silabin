@@ -102,7 +102,13 @@ describe("estados iniciales", () => {
 			items: {},
 			units: {},
 			sessionCounter: 0,
-			counters: { traces: 0, sessions: 0, voiceOk: 0, wordsRead: 0 },
+			counters: {
+				traces: 0,
+				sessions: 0,
+				voiceOk: 0,
+				wordsRead: 0,
+				syllablesVoiced: 0,
+			},
 		});
 	});
 

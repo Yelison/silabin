@@ -22,6 +22,7 @@ describe("estado vacío", () => {
 		expect(state.settings.sessionLength).toBe(5);
 		expect(state.settings.speechMode).toBe("parent");
 		expect(state.settings.reducedCelebrations).toBe(false);
+		expect(state.settings.hideMic).toBe(false);
 	});
 
 	it("empieza sin progreso, sin sesiones y sin premios", () => {
@@ -87,6 +88,7 @@ describe("límites de los contadores", () => {
 		"sessions",
 		"voiceOk",
 		"wordsRead",
+		"syllablesVoiced",
 	] as const;
 
 	it("rechaza un contador negativo", () => {
@@ -149,6 +151,28 @@ describe("límites de los contadores", () => {
 			masteredAt: null,
 		};
 		expect(persistedStateSchema.safeParse(state).success).toBe(false);
+	});
+});
+
+describe("migrate: campos nuevos con default (P10)", () => {
+	it("M10: un documento v1 sin hideMic ni syllablesVoiced carga sin recuperar y conserva el acento", () => {
+		const doc = structuredClone(emptyPersistedState()) as Record<
+			string,
+			unknown
+		>;
+		const settings = { ...(doc.settings as Record<string, unknown>) };
+		settings.hideMic = undefined;
+		settings.accent = "mx";
+		const counters = { ...(doc.counters as Record<string, unknown>) };
+		counters.syllablesVoiced = undefined;
+		const v1 = JSON.parse(JSON.stringify({ ...doc, settings, counters }));
+		expect(v1.settings).not.toHaveProperty("hideMic");
+		expect(v1.counters).not.toHaveProperty("syllablesVoiced");
+		const result = migrate(v1);
+		expect(result.recovered).toBe(false);
+		expect(result.state.settings.hideMic).toBe(false);
+		expect(result.state.settings.accent).toBe("mx");
+		expect(result.state.counters.syllablesVoiced).toBe(0);
 	});
 });
 

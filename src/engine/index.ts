@@ -15,6 +15,7 @@ export type { Item, Unit } from "@/content/types";
 export {
 	expectedAnswer,
 	expectedPieces,
+	firstSyllableAudioKey,
 	reducedPieces,
 } from "@/engine/answers";
 export {
@@ -51,9 +52,11 @@ export type {
 	AttemptFeedback,
 	SessionRun,
 	SessionSummary,
+	SpokenVerdict,
 	TraceGuide,
 } from "@/engine/session";
 export {
+	acceptsModelTrace,
 	checkAnswer,
 	completePresentation,
 	currentExercise,
@@ -62,6 +65,7 @@ export {
 	nextExercise,
 	startSession,
 	submitAnswer,
+	submitSpeech,
 	submitTrace,
 	traceGuide,
 } from "@/engine/session";

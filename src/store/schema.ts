@@ -22,6 +22,8 @@ export const settingsSchema = z.object({
 	sessionLength: z.union([z.literal(5), z.literal(6)]),
 	speechMode: z.enum(["auto", "parent"]),
 	reducedCelebrations: z.boolean(),
+	// Ajustes nuevos con default: un documento v1 anterior sin ellos debe cargar sin recuperar (P10).
+	hideMic: z.boolean().default(false),
 	childName: z.string().nullable(),
 	pinHash: z.string().nullable(),
 });
@@ -75,6 +77,7 @@ const countersSchema = z.object({
 	sessions: z.number().int().min(0),
 	voiceOk: z.number().int().min(0),
 	wordsRead: z.number().int().min(0),
+	syllablesVoiced: z.number().int().min(0).default(0),
 }) satisfies z.ZodType<Counters>;
 
 export const persistedStateSchema = z.object({
@@ -99,6 +102,7 @@ export function emptyPersistedState(): PersistedState {
 			// Hasta que existan Azure y la API del navegador, el adulto es el evaluador real.
 			speechMode: "parent",
 			reducedCelebrations: false,
+			hideMic: false,
 			childName: null,
 			pinHash: null,
 		},
