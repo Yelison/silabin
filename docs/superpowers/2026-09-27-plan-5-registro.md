@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-2 completas; siguiente, Tarea 3.**
+**Fase: ejecución (2026-09-28). Tareas 1-3 completas; siguiente, Tarea 4.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -14,7 +14,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 |---|---|---|---|
 | 1 | `*.test.tsx` en jsdom (trampa 8), trampa 4 por test | configuración | **completa** (e91db39, revisión limpia) |
 | 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | **completa** (fefe69f, 1229fbe) |
-| 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | pendiente |
+| 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | **completa** (0b82285, 9c19e0c) |
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | pendiente |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | pendiente |
 | 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | pendiente |
@@ -76,3 +76,23 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
   equivocado, se debilitaría la cobertura del fallo real de `trace`.
 - Nota de proceso: el implementador escribió la implementación antes de ver el RED; lo
   verificó después con `git stash` (28 fallos). Sin consecuencia en el resultado.
+- Tarea 3: fix round 1/2 (1 addressed, 0 open — un aborto durante `await ctx.resume()` se perdía y
+  dejaba el micrófono abierto hasta 3 s (P6); ahora el listener de `abort` se registra en cuanto hay
+  micrófono y `resume` va en `Promise.race` contra la cancelación; commits 0b82285..9c19e0c).
+- Tarea 3: complete (commits 7d9f91f..9c19e0c, review clean tras 1 ronda). 18 mutaciones del
+  implementador (2 equivalentes: `runMs` no se usa tras `heard`) + 7 del revisor + 4 sobre el
+  arreglo; la única que sobrevivió (aborto durante `resume`) era el defecto real y se cerró.
+  984 pasan + 1 omitido antes de la corrección; tras ella, 44 en los ficheros de `speech/`.
+- Tarea 3: minor (deferred): sin `AudioContext` en el navegador, `createMicListener` devuelve
+  `unavailable/error` (no `no-api`) y solo después de abrir el micrófono (`capture.ts`, comprobarlo
+  antes de `getUserMedia` lo arreglaría; el `finally` ya lo deja cerrado).
+- Tarea 3: minor (deferred): S15 solo cubre `letter:a`; `speechTarget` copia `item.text` y
+  `item.phonemes` sin adaptar. **La Tarea 4 debe confirmar qué `text` espera el reconocedor para
+  sílabas y palabras** (solo importa con `browser`/`azure`, no con `parent`).
+- Tarea 3: minor (deferred): el test «aborto con `resume` pendiente y luego liberado» promete más de
+  lo que ejerce (`listen` ya resuelve `aborted` al hacer `abort()`, antes de liberar el `resume`).
+- Tarea 3: minor (deferred): comportamiento real de `AudioContext` en Safari/iOS (`suspended`,
+  `webkitAudioContext`) solo se verá en la prueba manual con dispositivo (D11).
+- Nota de proceso: S16 quedó en `src/features/speech-context.test.tsx` (importa de `features/`, y
+  `speech/` corre en node). El implementador citó un SHA erróneo (0dc0a5e) para la corrección; el
+  real es 9c19e0c.
