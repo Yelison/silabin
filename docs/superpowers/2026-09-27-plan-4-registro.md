@@ -349,9 +349,35 @@ puntos de arriba.
 Los cuatro confirman el comportamiento esperado — nada nuevo que corregir. **Tarea 5: cierra
 formalmente.**
 
+## Tarea 6: implementación y revisión (2026-09-27, sesión nueva tras `/clear`)
+
+Implementador (sonnet): commits `7a5fcd6` (punto 1, motion-safe) y `375c3b6` (puntos 2-5).
+908/908 tests, typecheck y lint en verde. Reporte completo:
+`.superpowers/sdd/2026-09-27-silabin-trazo/task-6-report.md`.
+
+Revisor de tarea (sonnet), diff `f693a72..375c3b6`: Spec ✅ con una salvedad. 4 mutaciones
+obligatorias del brief probadas y revertidas en el checkout; 3 confirman que el fix correcto
+falla al mutarlo (offset a 0, umbral bajado a un valor que sí distingue el bug real,
+`motion-reduce:transition-none` quitado de cada uno de los dos elementos). La cuarta
+(dirección del desplazamiento en `startMarkerPositions`, `TraceCanvas.tsx:118-135`) **sobrevive**
+en las dos variantes probadas (usar `strokeAngleDeg` del final en vez del inicio; invertir el
+signo): `T6-2` solo comprueba distancia ≥0.14 entre marcadores, no la dirección, así que un
+futuro refactor que invierta el signo o tome el extremo equivocado pasaría la suite entera con
+el marcador apuntando "hacia atrás". Hallazgo Important, no Critical (el código de hoy es
+correcto; falta el ancla del test).
+
+Minor (deferred): `START_MARKER_OFFSET = 0.24` deja solo ~8.4% de margen sobre el mínimo real
+de M (0.2214) — vigilar si el Plan 6 añade glifos con trazos muy alineados. El tamaño de
+`Presentation.tsx` en 768×1024 (61.9% según aritmética, misma fórmula ya validada contra el
+47.6% original) no se reconfirmó con `browser-qa`/Playwright tras el fix — el propio brief lo
+clasifica como cumplimiento sin mutación, así que queda como nota informativa, no bloqueante.
+
+**Fix round 1/5:** se resume al implementador original con el hallazgo Important (añadir una
+aserción que fije la posición exacta esperada de al menos un marcador desplazado, no solo la
+distancia mínima).
+
 ## Estado
 
-Plan escrito y aprobado (2026-09-27). Tareas 1-5 completas (Tarea 5: automatizada clean +
-prueba manual confirmada por el autor, ver arriba). Tarea 6 añadida al plan con todo lo que
-decidió el autor durante la prueba manual — brief y dispatch en esta sesión. Después de la
-Tarea 6: revisión final de la rama (opus).
+Plan escrito y aprobado (2026-09-27). Tareas 1-5 completas. Tarea 6: implementada y revisada;
+un hallazgo Important en fix round 1/5 (ver arriba), dos minor deferred anotados. Después de
+cerrar la Tarea 6: revisión final de la rama (opus).
