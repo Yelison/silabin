@@ -20,6 +20,7 @@ function montar(
 	const close = vi.fn(async () => {});
 	const analyser = {
 		fftSize: 0,
+		connect: vi.fn(),
 		getFloatTimeDomainData(buf: Float32Array) {
 			llamadas += 1;
 			if (llamadas === opciones.fallaEnFrame)
@@ -27,6 +28,8 @@ function montar(
 			buf.fill(nivel);
 		},
 	};
+	const gainNode = { gain: { value: 1 }, connect: vi.fn() };
+	const destination = {} as AudioDestinationNode;
 	let liberarResume: () => void = () => {};
 	const ctx = {
 		state: opciones.suspendido ? "suspended" : "running",
@@ -38,6 +41,8 @@ function montar(
 		),
 		createMediaStreamSource: vi.fn(() => ({ connect: vi.fn() })),
 		createAnalyser: vi.fn(() => analyser),
+		createGain: vi.fn(() => gainNode),
+		destination,
 		close,
 	} as unknown as AudioContext;
 	const getUserMedia = vi.fn(async (_c: MediaStreamConstraints) => stream);
@@ -61,6 +66,8 @@ function montar(
 		pistas,
 		close,
 		ctx,
+		analyser,
+		gainNode,
 		getUserMedia,
 		tick,
 		ticks,
@@ -97,6 +104,18 @@ describe("createMicListener", () => {
 				autoGainControl: true,
 			},
 		});
+	});
+
+	it("conecta el analizador a un gain mudo hasta destination, para que iOS Safari sí procese el audio", async () => {
+		const m = montar();
+		const p = m.listener.listen();
+		await dejarAbierto();
+		await m.ticks(0.001, 60);
+		await p;
+		expect(m.ctx.createGain).toHaveBeenCalledTimes(1);
+		expect(m.gainNode.gain.value).toBe(0);
+		expect(m.analyser.connect).toHaveBeenCalledWith(m.gainNode);
+		expect(m.gainNode.connect).toHaveBeenCalledWith(m.ctx.destination);
 	});
 
 	it("solo silencio termina en silence a los 3 s", async () => {

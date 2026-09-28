@@ -62,7 +62,9 @@ function getUserMediaDelNavegador():
 /**
  * Escucha el micrófono lo justo para saber si el niño habló. El micrófono se abre y se cierra en
  * cada turno (P6): el `finally` para el intervalo, las pistas y el contexto pase lo que pase.
- * No se graba nada: solo se mide la energía de cada frame y se descarta.
+ * No se graba nada: solo se mide la energía de cada frame y se descarta. El analizador se conecta
+ * a `ctx.destination` (en silencio) porque en WebKit/iOS Safari un `AnalyserNode` fuera del grafo
+ * que llega hasta destination no procesa audio real y siempre mide silencio.
  */
 export function createMicListener(deps?: {
 	getUserMedia?: (c: MediaStreamConstraints) => Promise<MediaStream>;
@@ -122,6 +124,13 @@ export function createMicListener(deps?: {
 				const analyser = ctx.createAnalyser();
 				analyser.fftSize = FFT_SIZE;
 				ctx.createMediaStreamSource(stream).connect(analyser);
+				// WebKit/iOS Safari no procesa audio real en un AnalyserNode cuyo grafo no llega
+				// conectado hasta destination; se enlaza a través de un gain mudo para que el
+				// analizador sí reciba datos, sin que se oiga el propio micrófono.
+				const silencioso = ctx.createGain();
+				silencioso.gain.value = 0;
+				analyser.connect(silencioso);
+				silencioso.connect(ctx.destination);
 				const buffer = new Float32Array(analyser.fftSize);
 				return await new Promise<ListenResult>((resolve, reject) => {
 					let vad = createVad(now());
