@@ -12,9 +12,10 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > adulto como respaldo siempre disponible) y desbloquea **la Fase 1 y la Fase 2**, así que hoy
 > **son jugables las tres fases**. Además cierra la decisión abierta del toque accidental en
 > `trace` (D19). 1134 tests (1 omitido), y `typecheck`, `lint` y `pnpm build` en verde.
-> **Falta** la revisión final de la rama (Opus), la **prueba manual del autor** (lista en
+> La revisión final de la rama (Opus, 0 críticos) y la **prueba manual del autor** (lista en
 > `docs/superpowers/2026-09-27-plan-5-registro.md`, sección «Prueba manual del autor (antes
-> del PR)») y el PR (ver [siguientes pasos](#siguientes-pasos-concretos)).
+> del PR)») ya están completas, los 8 puntos confirmados en dispositivo real. **Falta** solo
+> abrir el PR (ver [siguientes pasos](#siguientes-pasos-concretos)).
 
 ---
 
@@ -355,7 +356,8 @@ ofrecía `trace` (D14); desde el Plan 5 la ofrecen la Fase 1 y la 2.
 Plan 5 = **la voz: `say-it` y `read-word`**, en la rama `feat/plan-5-voz` (7 tareas; ledger en
 `docs/superpowers/2026-09-27-plan-5-registro.md`, con los rulings P1-P15 en el plan). Cada
 tarea pasó su revisión y la revisión final de la rama, con Opus, se hizo y se aplicaron sus
-correcciones. **Faltan** la prueba manual del autor y el PR. D19-D23 están [en la tabla](#decisiones-tomadas).
+correcciones. La prueba manual del autor en dispositivo real también está completa, los 8
+puntos confirmados. **Falta** solo el PR. D19-D23 están [en la tabla](#decisiones-tomadas).
 
 - **Motor y store:** `submitSpeech(verdict)` en `engine/session.ts` es el camino de evaluación
   de voz (como `submitTrace`, D17): el evaluador da un `"ok"`/`"retry"` y el motor aplica las
@@ -422,14 +424,13 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 5 cerrado en código (2026-09-28):** ledger en
-`docs/superpowers/2026-09-27-plan-5-registro.md`. Las 7 tareas pasaron revisión de tarea; la revisión final de la rama la hizo Opus y se aplicaron sus correcciones. Queda:
+**Plan 5 cerrado (2026-09-28):** ledger en
+`docs/superpowers/2026-09-27-plan-5-registro.md`. Las 7 tareas pasaron revisión de tarea; la
+revisión final de la rama la hizo Opus y se aplicaron sus correcciones; la **prueba manual del
+autor** en dispositivo real también está completa, los 8 puntos de la lista confirmados.
+Queda:
 
-1. La **prueba manual del autor** con
-   la lista del registro (sección «Prueba manual del autor (antes del PR)»: micrófono en
-   Safari iOS, audio tras abrirlo, la voz de un niño frente al televisor, permiso denegado,
-   la boca y el toque accidental en `trace`). Para el móvil hace falta HTTPS, ver
-   [Cómo ejecutarlo](#cómo-ejecutarlo). Después, el PR.
+1. **Abrir el PR** de `feat/plan-5-voz` contra `main`.
 2. **Escribir el Plan 6** (recompensas, panel de padres con PIN, `importState`, PWA, identidad
    visual, lista de verificación en iPad) con `superpowers:writing-plans`, en
    `docs/superpowers/plans/`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo con
@@ -518,11 +519,11 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 [`docs/archivo-trampas-y-deuda.md`](docs/archivo-trampas-y-deuda.md) y en los registros
 (busca `minor (deferred)`). Notas visuales en [`docs/diseno-visual.md`](docs/diseno-visual.md).
 
-1. **Prueba en dispositivos reales (lista del Plan 6):** iPhone/iPad, Safari iOS y Firefox
-   (sobre todo el arrastre de `build`), pantallas de 360 × 640, los adaptadores reales
-   (`createIdbAdapter`, `createSpeechPlayer`, `downloadInBrowser`), y **el micrófono, el VAD y
-   `AudioContext` en Safari iOS** (`suspended`, `webkitAudioContext`), más **la prueba con niños
-   de la boca** (D21, y que desaparezca en la pista 2). Todo visto solo en Chromium.
+1. **Prueba en dispositivos reales (lista del Plan 6):** iPhone/iPad y Firefox (sobre todo el
+   arrastre de `build`), pantallas de 360 × 640, los adaptadores reales (`createIdbAdapter`,
+   `createSpeechPlayer`, `downloadInBrowser`), y **la prueba con niños de la boca** (D21, y que
+   desaparezca en la pista 2). Todo visto solo en Chromium. El micrófono, el VAD y
+   `AudioContext` en Safari iOS ya se probaron en dispositivo real (autor, Plan 5): resuelto.
 2. **`AudioPlayer` debe resolver o rechazar siempre:** si `play` se queda colgado, las
    presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan (`say-it`,
    `read-word` y `SessionScreen.resolver` ya usan `playCapped`).
@@ -541,7 +542,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    el caso `do` → `es-US`, P14). Solo importa con evaluadores `browser`/`azure`, que aún no
    existen.
 10. **Para el Plan 6:** el mapa no enseña avance hasta completar una unidad y nadie ve que se
-    guarda.
+    guarda; y, del `trace` (D19, prueba manual del Plan 5), evaluar un botón de borrar y otro
+    de confirmar el trazo, en vez de (o además de) la detección automática de toque accidental.
 
 ---
 

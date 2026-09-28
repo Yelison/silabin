@@ -299,15 +299,24 @@ README: el micrófono exige HTTPS, y el móvil debe confiar en el certificado au
    atrás.
 8. La receta HTTPS del README (`mkcert` con la IP de la LAN) funciona desde el móvil con esa IP.
 
-**Estado (2026-09-28), a media prueba — el móvil se quedó sin batería:**
-- Punto 3 (voz a distancia normal, palabra corta al ver el micrófono azul): **bien**, tras
-  f2374a4. Confirmado en el dispositivo real, varias veces seguidas.
-- Punto 8: **bien** (la receta HTTPS funcionó para entrar a la app).
-- Duda abierta, sin resolver: recargar la página vuelve a pedir el permiso de micrófono cada
-  vez, en pestaña normal (no privada). Sin determinar si (a) es el comportamiento esperado de
-  Safari con un certificado autofirmado y no afecta al punto 1 (que es sobre no repetir el
-  permiso turno a turno **dentro** de la misma carga de página), o (b) hay un problema real.
-  Pendiente: mirar qué dice el ajuste de sitio para «Micrófono» (Preguntar/Permitir) y probar
-  varios ejercicios seguidos **sin recargar** para ver si ahí solo lo pide una vez.
-- Sin probar todavía: puntos 1 (turno a turno sin recargar), 2, 4, 5, 6, 7.
-- No se abre el PR hasta terminar esta lista.
+**Estado (2026-09-28): prueba completa, los 8 puntos confirmados bien.**
+- Punto 1: bien. Turno a turno, sin recargar, el permiso de micrófono no se repite y el
+  indicador de grabación se apaga entre turnos. Recargar la página sí vuelve a pedir el
+  permiso (pestaña normal, certificado autofirmado) — comportamiento esperado de Safari y
+  fuera del alcance del punto 1, que es sobre no repetirlo dentro de la misma carga. Duda
+  anterior resuelta: no es un problema real.
+- Punto 2: bien. La instrucción y el modelo se siguen oyendo bien tras abrir el micrófono.
+- Punto 3: bien (confirmado antes, tras f2374a4).
+- Punto 4: bien. Denegar el permiso muestra los botones del adulto, sin pantalla muerta.
+- Punto 5: bien. La boca (D21, placeholder) se reconoce como una boca que cambia mientras
+  habla el modelo en la presentación.
+- Punto 6: bien. Un toque accidental en `trace` desaparece sin gastar pista.
+- Punto 7: bien. Con `resume` colgado, salen los botones del adulto dentro del tope.
+- Punto 8: bien (confirmado antes, receta HTTPS desde el móvil).
+
+Idea del autor, fuera del alcance de esta prueba: añadir a `trace` un botón de borrar y otro
+de confirmar el trazo, en vez de (o además de) la detección automática. **minor (deferred):**
+no bloquea el PR; valorar al llegar la identidad visual del Plan 6, que sustituye los
+placeholders de `trace` y `Mouth`.
+
+**Prueba manual completa. El PR ya puede abrirse.**
