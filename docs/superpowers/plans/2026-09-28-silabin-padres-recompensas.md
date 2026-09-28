@@ -43,7 +43,7 @@ Library, Biome 2. **Nuevas (D30):** Framer Motion (T8), Serwist para Turbopack (
 - §10, pruebas.
 
 El ledger es `docs/superpowers/2026-09-28-plan-6-registro.md`. Contiene las decisiones del
-autor D24-D31 y los rulings de planificación S1-S23.
+autor D24-D31 y los rulings de planificación S1-S24.
 
 **Modo económico (CLAUDE.md):** el plan fija contratos, casos de test y criterios de
 aceptación, no la implementación. El implementador la escribe con TDD. **Ejecución:**
@@ -74,6 +74,9 @@ al ledger:
   botón lleva siempre `aria-label`.
 - **S22 · El e2e es determinista sin tocar el código de producción:** `page.addInitScript`
   sustituye `Math.random` por un PRNG con semilla antes de que cargue la app.
+- **S24 · Cada minúscula ocupa su caja entera** (detalle en la T3). La tolerancia de `trace`
+  se mide en alturas de caja, así que una pauta común la haría unas 2,5 veces más generosa y
+  las letras saldrían pequeñas. Coste si fuera un error: rehacer los 9 glifos, que son datos.
 - **S23 · La revisión de la precaché** sale de `VERCEL_GIT_COMMIT_SHA` y, si no existe, de
   `git rev-parse HEAD`. En Vercel no conviene contar con `git`.
 
@@ -451,33 +454,42 @@ export const LOWER_GLYPHS: Readonly<Record<string, Glyph>>;   // a e i o u m l s
 export const LOWER_CONFUSABLE_PAIRS: ReadonlyArray<readonly [string, string]>;
 
 // engine/session.ts
-SessionRun.traceCase: LetterCase;               // fijo desde startSession (S8)
-startSession(input: { …; traceCase: LetterCase }): SessionRun;
+SessionRun.traceCase?: LetterCase;              // fijo desde startSession (S8); se lee con ?? "upper"
+startSession(input: { …; traceCase?: LetterCase }): SessionRun;
 ```
 
 `submitTrace`, `acceptsModelTrace` y `traceGuide` usan `run.traceCase`. Las vistas lo leen
 con `useApp((s) => s.run?.traceCase ?? "upper")`. `beginSession` pasa
 `doc.settings.lowercaseTracing ? "lower" : "upper"`.
 
-**Geometría de las minúsculas** (misma caja de altura 1, con `y` hacia abajo):
-- pauta: ascendente en `y = 0`, altura x de `0.35` a `0.75`, línea base en `0.75` y
-  descendente hasta `1`;
-- `l` sube a la ascendente;
-- `p` baja a la descendente;
-- el punto de la `i` es un trazo corto propio (`0.18` a `0.24`), no un punto aislado;
-- la `a` es de un solo piso (óvalo más palo), como en Andika;
-- trazos en orden escolar.
+**Geometría de las minúsculas (S24).** Cada glifo **ocupa su propia caja entera**, de 0 a
+1 de alto, igual que las mayúsculas; no hay una pauta común de cuatro líneas. `TOLERANCE`
+se mide en alturas de caja (`trace.ts:4`), así que con una pauta común la `a`, la `e` o la
+`o` ocuparían un 40 % del alto: la tolerancia sería unas 2,5 veces más generosa, habría más
+pares confundibles y las letras saldrían pequeñas en el lienzo. En el lienzo solo hay una
+letra cada vez, así que la pauta común no aporta nada.
+- La `a` es de un solo piso (óvalo más palo), como en Andika.
+- En la `p`, el palo va de `0` a `1` y la panza de `0` a `≈0.55`.
+- El punto de la `i` es un trazo corto propio, de `y = 0` a `0.1`, y el palo va de `0.3` a
+  `1`: el hueco (0,2) es mayor que `TOLERANCE` (0,15), así que el punto no queda dentro del
+  halo del palo.
+- Trazos en orden escolar.
 
 Construye los glifos con los `line`/`arc` existentes y sigue el estilo de `UPPER_GLYPHS`.
-`TraceCanvas` escala por la caja completa, así que no necesita cambios. Compruébalo en
+`TraceCanvas` escala por la caja, así que no necesita cambios. Compruébalo en
 `/dev/plantillas`.
+
+**Corrida sin cambios en los tests viejos:** `startSession` recibe `traceCase?: LetterCase`
+(por defecto `"upper"`), y `SessionRun.traceCase?: LetterCase` se lee siempre como
+`run.traceCase ?? "upper"`. Así, las corridas escritas a mano en los tests existentes siguen
+compilando. L6 detecta si `beginSession` no lo pasa.
 
 **Casos de test:**
 - L1 las 9 minúsculas existen:
   - `glyphFor(letter, "lower")` no lanza;
   - todos los puntos están en `[0, width] × [0, 1]`;
-  - las letras de altura x no pasan de `0.3` por arriba;
-  - `l` llega a `y ≤ 0.05`, y `p` a `y ≥ 0.95`.
+  - cada glifo llega a `y ≤ 0.02` y a `y ≥ 0.98` (ocupa su caja, S24);
+  - en la `i`, la distancia mínima entre el trazo del punto y el del palo es `> TOLERANCE`.
 - L2 cada minúscula trazada con sus propios trazos → `scoreTrace(...).correct`. Con el ruido
   y el desplazamiento que usan los tests de mayúsculas, sigue siendo correcta.
 - L3 matriz de pares, como G15:
@@ -611,6 +623,10 @@ llena las otras dos):
 **Acento en vivo (S3):** `App` se suscribe a `doc.settings.accent`. Al cambiar, llama a
 `stop()` del reproductor anterior y crea uno nuevo con `createAudio(accent)`. Los tests
 siguen pudiendo inyectar el reproductor: con `props.audio`, el acento no lo recrea.
+
+**Entorno de los tests:** jsdom puede no traer `crypto.subtle`. Los tests de la puerta
+inyectan `webcrypto` de `node:crypto` en `globalThis.crypto`, y solo N1 lo quita.
+`pinSupported` no se afloja para que los tests pasen.
 
 **Casos de test:**
 - N1 sin `crypto.subtle` (se simula en el test) sale el mensaje y «Volver» lleva al mapa.

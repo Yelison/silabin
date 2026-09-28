@@ -10,7 +10,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Fase | Estado |
 |---|---|
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
-| Rulings de planificación (S1-S23) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
+| Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
 | Ejecución | pendiente: `/model sonnet`, `superpowers:subagent-driven-development` |
 
@@ -136,7 +136,8 @@ Añadidos al redactar el plan (texto completo en su sección «Decisiones»): S1
 la unidad solo enseña lo ganado), S18 (importar conserva el PIN del dispositivo), S19 (el fondo
 nunca dentro de un ejercicio), S20 (cursor de PC por rastro → Plan 7, `minor (deferred)`), S21
 (iconos provisionales con emoji), S22 (e2e con `Math.random` sembrado por `addInitScript`),
-S23 (revisión de la precaché con `VERCEL_GIT_COMMIT_SHA`).
+S23 (revisión de la precaché con `VERCEL_GIT_COMMIT_SHA`) y S24 (cada minúscula ocupa su
+caja entera, porque `TOLERANCE` se mide en alturas de caja).
 
 ## Progreso de ejecución
 
