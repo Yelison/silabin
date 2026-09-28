@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-5 completas; siguiente, Tarea 6.**
+**Fase: ejecución (2026-09-28). Tareas 1-6 completas; siguiente, Tarea 7 (cierre).**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -17,7 +17,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 | 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | **completa** (0b82285, 9c19e0c) |
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | **completa** (c966a90, 5132eb2, 3a6a6c9) |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | **completa** (a31d41c, 4d71af1) |
-| 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | pendiente |
+| 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | **completa** (7d7973e, 63ef0ad, 231f10b) |
 | 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | pendiente |
 
 Rulings de planificación: P1-P15, en la sección «Decisiones» del plan. Los más delicados son
@@ -174,3 +174,34 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
 - Nota de proceso: el implementador quedó BLOQUEADO una vez por fallos del clasificador de Bash (no de
   la tarea; ~9 fallos seguidos); se reanudó con `SendMessage` y terminó. El revisor dejó una mutación viva
   un momento por cortar un script con `| head`; la restauró y repitió la tanda; `git status` limpio.
+- Tarea 6: fix round 1/2 (1 addressed, 0 open — la mutación «no vaciar `strokesRef` al rechazar un
+  intento en el modelo» sobrevivía (74/74); ahora W7 comprueba que la 2.ª llamada a `acceptsModel`
+  recibe 1 trazo; solo test, sin cambio de producción; commits 63ef0ad..231f10b).
+- Tarea 6: complete (commits c677eaa..231f10b, review clean tras 1 ronda). 16 mutaciones del
+  implementador (segunda pasada; la primera se invalidó, ver nota) + 7 del revisor + 1 del re-revisor;
+  la única superviviente (D) era la laguna real y se cerró. 1125 pasan + 1 omitido; typecheck y lint
+  limpios. Navegador (Chromium propio): sin scroll en 360×640 (máx. 378 px de 528; micrófono 96 px,
+  objetivos ≥ 72 px) ni en 1024×768; `/dev/plantillas` desborda 11 px en apaisado por su rejilla de
+  dos columnas (a ancho de sesión, 992 px, cabe).
+- Ruling: las sílabas separadas (`split`) se quedan visibles hasta el modelo (las pistas suben, no se
+  retiran); si fuera equivocado, es una condición en `read-word/Evaluation.tsx`.
+- Ruling: la imagen de `read-word` se revela con cualquier `resolution !== null` (también `assisted`),
+  como pide el brief; si fuera equivocado, se acota a `mastery-credit`.
+- Ruling: en `/dev/plantillas`, `acceptsModel = strokes.length > 0` (D19 en el modelo no se simula allí,
+  sin corrida no hay motor) y se añade «Micrófono real» como cuarta opción del selector; solo afecta a
+  la página de desarrollo.
+- Ruling: `read-word/Palabra.tsx` (fichero nuevo, fuera del brief) comparte la palabra entre
+  Presentation y Evaluation; `Picture md` (96 px) en la evaluación, igual que la tarjeta tapada, para
+  que no haya salto de layout. Si fuera equivocado, se inlinea.
+- Tarea 6: minor (deferred): `read-word/Evaluation` y `say-it/Evaluation` repiten estructura
+  (`hintBusy`, `VoiceTurn`); extraer un hook común solo si aparece una tercera plantilla de voz.
+- Tarea 6: minor (deferred): si una palabra no tiene imagen (las 35 `img:<palabra>` siguen sin
+  resolver), `imageFor` devuelve null y la tarjeta tapada desaparece al resolver sin sustituto.
+- Tarea 6: minor (deferred): `Palabra.tsx` usa `text-[min(8rem,26vw)]`; no se ha comprobado que
+  coincida con `Written size="lg"` (pulido).
+- Tarea 6: minor (deferred): `/dev/plantillas` desborda 11 px en apaisado (rejilla de dos columnas).
+- Nota de proceso: la primera tanda de mutaciones de la Tarea 6 restauró con `git checkout --`, que no
+  restaura ficheros sin seguimiento y **revirtió trabajo sin commitear** (`SessionScreen.tsx`,
+  `trace/Evaluation.tsx`); el implementador lo reaplicó, repitió la pasada con copias de respaldo y lo
+  declaró. Lección: en los despachos con mutaciones, exigir copia de respaldo con `cp` (no
+  `git checkout --`) mientras haya trabajo sin commitear, y no cortar scripts con `| head`.
