@@ -48,6 +48,17 @@ const atenuados = () =>
 	evaluacion().querySelectorAll('button[data-state="dimmed"]');
 
 describe("PlantillasDev", () => {
+	it("say-it: se monta con el micrófono y el rung 1 enseña la boca", () => {
+		montar();
+		elegirPlantilla("say-it");
+		expect(
+			within(evaluacion()).getByRole("button", { name: "Micrófono" }),
+		).toBeTruthy();
+		expect(evaluacion().querySelector("svg[data-shape]")).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
+		expect(evaluacion().querySelector("svg[data-shape]")).not.toBeNull();
+	});
+
 	it("ofrece listen-tap y build, que ninguna unidad ofrece todavía, además de las de la Fase 0", () => {
 		montar();
 		const opciones = within(screen.getByRole("combobox", { name: "Plantilla" }))

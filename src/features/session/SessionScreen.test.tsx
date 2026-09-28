@@ -806,4 +806,183 @@ describe("SessionScreen", () => {
 			expect(container.querySelector("[data-celebrating]")).toBeNull();
 		});
 	});
+	describe("evaluación de voz", () => {
+		const VOZ: PlannedExercise = {
+			id: "ex-voz",
+			kind: "evaluation",
+			templateId: "say-it",
+			itemId: "letter:a",
+			optionIds: [],
+			correctOptionId: null,
+			source: "active-unit",
+		};
+		const TOQUE: PlannedExercise = {
+			...VOZ,
+			id: "ex-toque",
+			templateId: "listen-tap",
+			optionIds: ["letter:a", "letter:e"],
+			correctOptionId: "letter:a",
+		};
+
+		function vistaVozFalsa() {
+			const pintados: EvaluationProps[] = [];
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: (p: EvaluationProps) => {
+					pintados.push(p);
+					return (
+						<div data-view="evaluation" data-exercise={p.exercise.id}>
+							<button
+								type="button"
+								aria-label="decir bien"
+								onClick={() => p.speech?.onVerdict("ok")}
+							/>
+							<button
+								type="button"
+								aria-label="decir mal"
+								onClick={() => p.speech?.onVerdict("retry")}
+							/>
+							<button
+								type="button"
+								aria-label="modelo"
+								onClick={p.onModelDone}
+							/>
+						</div>
+					);
+				},
+			};
+			return { views, pintados, ultimo: () => pintados[pintados.length - 1] };
+		}
+
+		async function montarVoz(ejercicios: PlannedExercise[]) {
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			const progress = store.getState().progress;
+			store.setState({
+				run: {
+					sessionIndex: progress.sessionCounter,
+					unitId: null,
+					exercises: ejercicios,
+					cursor: 0,
+					attempt: createAttemptState(),
+					resolutions: [],
+					progress,
+				},
+			});
+			// Después del último `setState`, que reemplaza el objeto de estado: la pantalla toma
+			// la acción de ese objeto al pintar.
+			const espia = vi.spyOn(store.getState(), "answerSpeech");
+			const audio = fakeAudio();
+			const vistas = vistaVozFalsa();
+			render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={vi.fn()}
+						onExit={vi.fn()}
+						views={{ "say-it": vistas.views, "listen-tap": vistas.views }}
+						celebrationMs={0}
+					/>,
+				),
+			);
+			const run = () => {
+				const r = store.getState().run;
+				if (r === null) throw new Error("sin corrida");
+				return r;
+			};
+			const claves = () => audio.play.mock.calls.map((c) => c[0].key);
+			return { store, audio, vistas, run, claves, espia };
+		}
+
+		it("Y4: al montar un say-it suena la instrucción y NO el ítem (P8)", async () => {
+			const { claves, vistas } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(claves()).toEqual(["instruction:say-it"]);
+		});
+
+		it("Y4: con un listen-tap siguen sonando la instrucción y el ítem (la regla vieja no se rompe)", async () => {
+			const { claves, vistas } = await montarVoz([
+				TOQUE,
+				{ ...TOQUE, id: "t2" },
+			]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(claves()).toEqual(["instruction:listen-tap", "phoneme:a"]);
+		});
+
+		it("solo las evaluaciones de voz reciben props.speech", async () => {
+			const voz = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(voz.vistas.ultimo()).toBeDefined());
+			expect(voz.vistas.ultimo()?.speech).toBeDefined();
+			cleanup();
+			const toque = await montarVoz([TOQUE, { ...TOQUE, id: "t2" }]);
+			await waitFor(() => expect(toque.vistas.ultimo()).toBeDefined());
+			expect(toque.vistas.ultimo()?.speech).toBeUndefined();
+		});
+
+		it("onVerdict llama a answerSpeech, y dos veredictos seguidos dan una sola llamada (guarda busy)", async () => {
+			const { vistas, run, espia } = await montarVoz([
+				VOZ,
+				{ ...VOZ, id: "v2" },
+			]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			const onVerdict = vistas.ultimo()?.speech?.onVerdict;
+			if (onVerdict === undefined) throw new Error("sin speech.onVerdict");
+			await act(async () => {
+				onVerdict("ok");
+				onVerdict("ok");
+			});
+			await waitFor(() => expect(run().resolutions.length).toBe(1));
+			expect(run().resolutions).toEqual([{ status: "mastery-credit" }]);
+			expect(espia).toHaveBeenCalledTimes(1);
+		});
+
+		it("un retry suena feedback:retry, sube attemptKey y la vista recibe la pista de la boca", async () => {
+			const { vistas, claves } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("retry");
+			});
+			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
+			expect(claves()).toContain("feedback:retry");
+			expect(vistas.ultimo()?.feedback?.hint?.action).toBe(
+				"show-mouth+replay-instruction",
+			);
+		});
+
+		it("tres retry resuelven como asistido, y onModelDone (no un veredicto más) avanza", async () => {
+			const { vistas, run } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			for (let i = 1; i <= 2; i++) {
+				await act(async () => {
+					vistas.ultimo()?.speech?.onVerdict("retry");
+				});
+				await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(i));
+			}
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("retry");
+			});
+			await waitFor(() =>
+				expect(run().resolutions.at(-1)?.status).toBe("assisted"),
+			);
+			expect(vistas.ultimo()?.feedback?.hint?.action).toBe(
+				"play-full+accept-any-speech",
+			);
+			// Con el modelo en curso, un veredicto más no cuenta.
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("ok");
+			});
+			expect(run().resolutions).toHaveLength(1);
+			expect(run().cursor).toBe(0);
+			await act(async () => {
+				vistas.ultimo()?.onModelDone();
+			});
+			expect(run().cursor).toBe(1);
+		});
+	});
 });

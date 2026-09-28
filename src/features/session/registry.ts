@@ -6,6 +6,7 @@ import {
 	type Item,
 	type PlannedExercise,
 	type ProgressState,
+	type SpokenVerdict,
 	type TemplateId,
 	type TraceGuide,
 	type TraceStroke,
@@ -23,6 +24,8 @@ import { Evaluation as ListenTapEvaluation } from "@/features/session/listen-tap
 import { Presentation as ListenTapPresentation } from "@/features/session/listen-tap/Presentation";
 import { Evaluation as RhymeEvaluation } from "@/features/session/rhyme/Evaluation";
 import { Presentation as RhymePresentation } from "@/features/session/rhyme/Presentation";
+import { Evaluation as SayItEvaluation } from "@/features/session/say-it/Evaluation";
+import { Presentation as SayItPresentation } from "@/features/session/say-it/Presentation";
 import { Evaluation as TraceEvaluation } from "@/features/session/trace/Evaluation";
 import { Presentation as TracePresentation } from "@/features/session/trace/Presentation";
 
@@ -37,6 +40,11 @@ export type PresentationProps = {
 export type TraceInput = {
 	guide: TraceGuide;
 	onTrace(strokes: TraceStroke[]): void;
+};
+
+/** Lo que necesita la evaluación de voz: adónde mandar el veredicto final del turno. */
+export type SpeechInput = {
+	onVerdict(verdict: SpokenVerdict): void;
 };
 
 /** Lo que recibe la vista de evaluación. La interfaz pinta; el motor decide. */
@@ -54,6 +62,8 @@ export type EvaluationProps = {
 	onModelDone(): void;
 	/** Solo en la evaluación `trace`, que la exige (lanza si falta). */
 	trace?: TraceInput;
+	/** Solo en las evaluaciones de voz (`say-it`), que la exigen (lanza si falta). */
+	speech?: SpeechInput;
 };
 
 export type TemplateViews = {
@@ -82,6 +92,7 @@ export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
 	},
 	build: { Presentation: BuildPresentation, Evaluation: BuildEvaluation },
 	trace: { Presentation: TracePresentation, Evaluation: TraceEvaluation },
+	"say-it": { Presentation: SayItPresentation, Evaluation: SayItEvaluation },
 };
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
@@ -94,6 +105,7 @@ export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
 		"listen-tap",
 		"build",
 		"trace",
+		"say-it",
 	]);
 
 /**

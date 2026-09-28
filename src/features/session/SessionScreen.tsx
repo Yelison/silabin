@@ -9,8 +9,10 @@ import {
 	isSessionOver,
 	type PlannedExercise,
 	type SessionRun,
+	type SpokenVerdict,
 	type TemplateId,
 	type TraceStroke,
+	templates,
 	traceGuide,
 } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
@@ -81,8 +83,14 @@ function ExerciseView(props: {
 	const presentationDone = useApp((s) => s.presentationDone);
 	const answer = useApp((s) => s.answer);
 	const answerTrace = useApp((s) => s.answerTrace);
+	const answerSpeech = useApp((s) => s.answerSpeech);
 	const next = useApp((s) => s.next);
 	const item = curriculum.items.get(exercise.itemId);
+	// P8: el dato del contenido decide, no la vista. En una evaluación de voz oír el ítem es
+	// darle la respuesta al niño.
+	const porVoz =
+		exercise.kind === "evaluation" &&
+		templates[exercise.templateId].evaluation === "voice";
 
 	const [attemptKey, setAttemptKey] = useState(0);
 	const [feedback, setFeedback] = useState<AttemptFeedback | null>(null);
@@ -115,15 +123,16 @@ function ExerciseView(props: {
 			void sonar(`instruction:${exercise.templateId}`);
 			// Un repaso no tiene presentación: sin oír la palabra el niño le pondría nombre al
 			// dibujo («balón» o «pelota») y fallaría el primer intento. La cola ordena las dos.
-			if (item !== undefined) void sonar(item.audioKey);
+			// En voz no: la instrucción sola, el niño dice lo que ve (P8).
+			if (item !== undefined && !porVoz) void sonar(item.audioKey);
 		}
 		// Solo al montar el ejercicio: un reintento no repite ni la instrucción ni la palabra.
 	}, []);
 
 	/**
-	 * Lo que hoy hacen `answer` y `answerTrace` en cuanto el motor ya ha respondido: el mismo
+	 * Lo que hoy hacen `answer`, `answerTrace` y `answerSpeech` en cuanto el motor ya ha respondido: el mismo
 	 * paso a pista, modelo o celebración, sea cual sea la plantilla. `llamar` es `() =>
-	 * answer(a)` o `() => answerTrace(trazos)`.
+	 * answer(a)`, `() => answerTrace(trazos)` o `() => answerSpeech(v)`.
 	 */
 	async function resolver(llamar: () => Promise<AttemptFeedback>) {
 		const fb = await llamar();
@@ -190,6 +199,18 @@ function ExerciseView(props: {
 					modelPending.current = false;
 					next();
 				}}
+				{...(porVoz
+					? {
+							speech: {
+								onVerdict: (v: SpokenVerdict) => {
+									if (busy.current) return;
+									busy.current = true;
+									setLocked(true);
+									void resolver(() => answerSpeech(v));
+								},
+							},
+						}
+					: {})}
 				{...(exercise.templateId === "trace"
 					? {
 							trace: {

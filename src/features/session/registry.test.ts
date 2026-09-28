@@ -179,7 +179,7 @@ describe("isSessionPlayable", () => {
 		).toBe(true);
 	});
 
-	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap, build y trace", () => {
+	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap, build, trace y say-it", () => {
 		expect([...IMPLEMENTED_TEMPLATES].sort()).toEqual([
 			"build",
 			"count-syllables",
@@ -187,11 +187,12 @@ describe("isSessionPlayable", () => {
 			"initial-sound",
 			"listen-tap",
 			"rhyme",
+			"say-it",
 			"trace",
 		]);
 	});
 
-	it("P5/L5: con phase0:hear-it activa hay sesión jugable; con phase1:vowel-a, aún no: falta say-it (D14)", () => {
+	it("Y8: con phase0:hear-it y la Fase 0 hechas, la primera unidad de la Fase 1 ya es jugable", () => {
 		const hearIt = conUnidadesHechasHasta("phase0:initial");
 		expect(hearIt.units["phase0:hear-it"]?.status).toBe("active");
 		expect(isSessionPlayable(curriculum, hearIt, IMPLEMENTED_TEMPLATES)).toBe(
@@ -199,17 +200,13 @@ describe("isSessionPlayable", () => {
 		);
 		const vocal = conUnidadesHechasHasta("phase0:hear-it");
 		expect(vocal.units["phase1:vowel-a"]?.status).toBe("active");
-		// trace ya cuenta (esta tarea): lo único que aún falta es say-it, del Plan 5.
 		expect(isSessionPlayable(curriculum, vocal, IMPLEMENTED_TEMPLATES)).toBe(
-			false,
+			true,
 		);
-		expect(
-			isSessionPlayable(
-				curriculum,
-				vocal,
-				new Set<TemplateId>([...IMPLEMENTED_TEMPLATES, "say-it"]),
-			),
-		).toBe(true);
+		// Sin say-it, la misma unidad seguiría atenuada (D14): es lo que esta tarea desbloquea.
+		const sinVoz = new Set<TemplateId>(IMPLEMENTED_TEMPLATES);
+		sinVoz.delete("say-it");
+		expect(isSessionPlayable(curriculum, vocal, sinVoz)).toBe(false);
 	});
 
 	it("X13: con phase0:rhyme activa y las plantillas reales, sí hay sesión jugable", () => {

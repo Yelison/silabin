@@ -19,6 +19,7 @@ import {
 	type PlannedExercise,
 	planSession,
 	recordAttempt,
+	type SpokenVerdict,
 	scoreTrace,
 	type TemplateId,
 	type TraceStroke,
@@ -262,6 +263,14 @@ function Panel(props: {
 								onAnswer={(a) => setSuceso(`Respuesta: ${a}`)}
 								onModelDone={() => setSuceso("Modelo completado")}
 								{...(trace !== undefined ? { trace } : {})}
+								{...(templates[templateId].evaluation === "voice"
+									? {
+											speech: {
+												onVerdict: (v: SpokenVerdict) =>
+													setSuceso(`Veredicto: ${v}`),
+											},
+										}
+									: {})}
 							/>
 							{templateId === "trace" && (
 								<p
