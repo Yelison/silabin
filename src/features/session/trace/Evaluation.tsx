@@ -12,6 +12,30 @@ import { traceEffect } from "@/features/session/trace/hint-effects";
 export const TRACE_IDLE_MS = 1500;
 
 /**
+ * Botón de «Borrar»/«Listo»: misma forma y tamaño que `ReplayButton`, con un emoji provisional
+ * como contenido en vez de un `Icon`. S21 (registro del Plan 6) fija iconos provisionales con
+ * emoji para borrar/listo hasta el Plan 7: darles una entrada en `ICON_NAMES` ahora exigiría un
+ * PNG real que ese plan va a reemplazar de todos modos.
+ */
+function BotonAccion(props: {
+	emoji: string;
+	"aria-label": string;
+	onClick: () => void;
+}) {
+	const { emoji, onClick, ...rest } = props;
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-action p-4 text-action-ink shadow-md active:scale-95"
+			{...rest}
+		>
+			<span aria-hidden="true">{emoji}</span>
+		</button>
+	);
+}
+
+/**
  * «Repasa la letra»: el niño traza con el dedo sobre la guía que manda el motor. No puntúa ni
  * decide el nivel de guía (eso es del motor, D17): guarda los trazos cerrados del intento y,
  * tras `TRACE_IDLE_MS` sin tocar, los manda con `trace.onTrace` — o avisa con `onModelDone` si
@@ -169,6 +193,30 @@ export function Evaluation(props: EvaluationProps) {
 		idleTimer.current = setTimeout(cerrarIntento, TRACE_IDLE_MS);
 	}
 
+	// Los dos botones cancelan el temporizador de inactividad antes de tocar nada: si no, el
+	// `setTimeout` que ya estaba armado (con el `cerrarIntento` de un pintado anterior, que
+	// cerró sobre `submitted = false` de entonces) vuelve a dispararse más tarde y manda un
+	// segundo envío, esta vez con la tinta que dejó «Borrar» o «Listo» tras de sí.
+	function cancelarTemporizador() {
+		if (idleTimer.current !== null) {
+			clearTimeout(idleTimer.current);
+			idleTimer.current = null;
+		}
+	}
+
+	/** «Borrar»: vacía el intento en curso. No es un envío: no toca el motor ni el audio. */
+	function handleBorrar() {
+		cancelarTemporizador();
+		strokesRef.current = [];
+		setInk([]);
+	}
+
+	/** «Listo»: el mismo camino que el temporizador, pero en el acto. */
+	function handleListo() {
+		cancelarTemporizador();
+		cerrarIntento();
+	}
+
 	function handleStrokeStart() {
 		// Un trazo nuevo cancela la cuenta de inactividad (mutación 1): recolocarse entre
 		// trazos, o tardar en empezar el siguiente, no debe cerrar el intento a medio gesto.
@@ -185,28 +233,59 @@ export function Evaluation(props: EvaluationProps) {
 	}
 
 	const disabled = locked || animating || submitted;
+	// Borrar/Listo (D31b, S9): solo con algo que borrar o confirmar, y nunca mientras el
+	// lienzo está bloqueado, se anima una pista o el intento ya se envió — momentos en los que
+	// tocarlos no tendría nada que hacer, o («Borrar» sobre la celebración) borraría el acierto
+	// que el niño está mirando.
+	const mostrarBotones = ink.length > 0 && !disabled;
 
 	return (
 		<div className="flex flex-col items-center justify-center gap-4 landscape:flex-row landscape:gap-4">
-			<ReplayButton
-				aria-label="Oír otra vez"
-				disabled={locked}
-				onReplay={() => {
-					audio.play({ key: item.audioKey }).catch(() => {
-						// Sin voz también se puede jugar.
-					});
-				}}
-			/>
+			{/*
+			 * Repetir, Borrar y Listo van juntos, en la franja que antes solo tenía Repetir: fila
+			 * en vertical, columna en horizontal (`landscape:`), la orientación contraria a la
+			 * del contenedor de fuera. Borrar y Listo se pintan dentro de un hueco de 72×72
+			 * SIEMPRE montado (aparezcan o no) para que la franja no cambie de tamaño al soltar
+			 * el primer trazo: si cambiara, el lienzo —que este mismo `flex` centra al lado—
+			 * saltaría justo cuando el niño va a hacer el siguiente trazo.
+			 */}
+			<div className="flex flex-row items-center justify-center gap-4 landscape:flex-col">
+				<ReplayButton
+					aria-label="Oír otra vez"
+					disabled={locked}
+					onReplay={() => {
+						audio.play({ key: item.audioKey }).catch(() => {
+							// Sin voz también se puede jugar.
+						});
+					}}
+				/>
+				<div className="flex h-18 w-18 items-center justify-center">
+					{mostrarBotones && (
+						<BotonAccion
+							emoji="🧽"
+							aria-label="Borrar"
+							onClick={handleBorrar}
+						/>
+					)}
+				</div>
+				<div className="flex h-18 w-18 items-center justify-center">
+					{mostrarBotones && (
+						<BotonAccion emoji="👍" aria-label="Listo" onClick={handleListo} />
+					)}
+				</div>
+			</div>
 			{/*
 			 * El lienzo mide directamente contra el viewport (no contra el padre: la cadena de
 			 * flex de SessionScreen centra sin estirar, así que un `h-full` aquí no tendría
-			 * nada que llenar). En vertical, el botón va encima y el lienzo tiene todo el ancho
-			 * corto para sí, así que lo que decide el tamaño es el ancho (88vw), no el alto: por
-			 * eso el alto se recorta a 65vh, lo justo para que el botón + el hueco no empujen la
-			 * página a hacer scroll en 360×640, sin que la letra pierda nada (sigue limitada por
-			 * el ancho). En horizontal (`landscape:`) el botón se pone al lado para no comerle
-			 * alto al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el
-			 * spec (apaisado 768 px de alto es más estrecho que ancho).
+			 * nada que llenar). En vertical, la franja de botones va encima y el lienzo tiene
+			 * todo el ancho corto para sí, así que lo que decide el tamaño es el ancho (88vw),
+			 * no el alto: por eso el alto se recorta a 65vh, lo justo para que la franja (72 px,
+			 * igual con uno o con tres botones: el ancho de la franja no consume alto) + el
+			 * hueco no empujen la página a hacer scroll en 360×640, sin que la letra pierda nada
+			 * (sigue limitada por el ancho). En horizontal (`landscape:`) la franja se pone al
+			 * lado, ahora de tres botones en columna (3×72 + 2×16 = 248 px, dentro de los ~328 px
+			 * que quedan libres de los 360 px de alto en apaisado 640×360) para no comerle alto
+			 * al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el spec.
 			 */}
 			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
 				<TraceCanvas
