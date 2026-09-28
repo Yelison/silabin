@@ -31,6 +31,7 @@ import {
 	Evaluation as RealTraceEvaluation,
 	TRACE_IDLE_MS,
 } from "@/features/session/trace/Evaluation";
+import { HINT_AUDIO_MAX_MS } from "@/features/session/voice/hint-audio";
 import {
 	conProveedores,
 	crearStore,
@@ -295,6 +296,26 @@ describe("SessionScreen", () => {
 		});
 		await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
 		expect(run().attempt.attempt).toBe(2);
+	});
+
+	it("M1: con un play que nunca resuelve, el feedback de fallo y la celebración llegan igualmente", async () => {
+		const { run, audio, vistas } = await montar();
+		const user = userEvent.setup();
+		await hastaEvaluacion(user);
+		audio.play.mockImplementation(() => new Promise<void>(() => {}));
+		vi.useFakeTimers();
+		const cursor = run().cursor;
+		fireEvent.click(mal());
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(HINT_AUDIO_MAX_MS);
+		});
+		expect(vistas.ultimo()?.locked).toBe(false);
+		expect(vistas.ultimo()?.feedback?.hint?.rung).toBe("reduce");
+		fireEvent.click(bien());
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(HINT_AUDIO_MAX_MS);
+		});
+		expect(run().cursor).toBe(cursor + 1);
 	});
 
 	it("E6: un toque corto en salir no hace nada; mantenerlo 1,5 s vuelve al mapa y run es null", async () => {

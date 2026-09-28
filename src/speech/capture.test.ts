@@ -3,6 +3,7 @@ import {
 	createMicListener,
 	createScriptedListener,
 	type ListenResult,
+	RESUME_MAX_MS,
 } from "@/speech/capture";
 
 const FRAME = 50;
@@ -144,6 +145,18 @@ describe("createMicListener", () => {
 		await expect(p).resolves.toEqual({ kind: "aborted" });
 		for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
 		expect(m.close).toHaveBeenCalledTimes(1);
+	});
+
+	it("I1: un ctx.resume() que nunca termina y sin aborto da unavailable/error tras el tope, y lo cierra todo", async () => {
+		const m = montar({ suspendido: true });
+		const p = m.listener.listen();
+		await dejarAbierto();
+		await vi.advanceTimersByTimeAsync(RESUME_MAX_MS);
+		await expect(p).resolves.toEqual({ kind: "unavailable", reason: "error" });
+		for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
+		expect(m.close).toHaveBeenCalledTimes(1);
+		expect(m.ctx.createAnalyser).not.toHaveBeenCalled();
+		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it("con el contexto suspendido y sin aborto, tras el resume escucha con normalidad", async () => {

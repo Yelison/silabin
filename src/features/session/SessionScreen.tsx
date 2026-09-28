@@ -18,6 +18,7 @@ import {
 } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
 import { type TemplateViews, templateViews } from "@/features/session/registry";
+import { playCapped } from "@/features/session/voice/hint-audio";
 
 /** Lo que hay que mantener la esquina para salir. Un niño no lo hace sin querer. */
 export const EXIT_HOLD_MS = 1500;
@@ -112,13 +113,9 @@ function ExerciseView(props: {
 		};
 	}, []);
 
-	/** El sonido acompaña, no manda: si falla o no suena, la sesión sigue. */
-	async function sonar(key: string) {
-		try {
-			await audio.play({ key });
-		} catch {
-			// Sin voz también se puede jugar.
-		}
+	/** El sonido acompaña, no manda: si falla, no suena o se cuelga, la sesión sigue (tope). */
+	function sonar(key: string): Promise<void> {
+		return playCapped(audio, { key });
 	}
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: efecto de montaje

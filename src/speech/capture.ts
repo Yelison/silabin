@@ -24,6 +24,13 @@ const CONSTRAINTS: MediaStreamConstraints = {
 
 const FFT_SIZE = 1024;
 
+/**
+ * Lo máximo que se espera a `ctx.resume()`. En iOS Safari el contexto se crea fuera del gesto y
+ * `resume()` puede no resolverse nunca: pasado este tiempo se da el micrófono por no disponible
+ * y se ofrecen los botones del adulto (P4/P6).
+ */
+export const RESUME_MAX_MS = 1500;
+
 function razonDeFallo(e: unknown): "denied" | "error" {
 	const nombre =
 		typeof e === "object" && e !== null && "name" in e ? e.name : undefined;
@@ -98,8 +105,19 @@ export function createMicListener(deps?: {
 				if (signal?.aborted) return { kind: "aborted" };
 				ctx = (deps?.createAudioContext ?? contextoDelNavegador)();
 				// Si `resume()` no termina, el aborto también libera la espera.
-				if (ctx.state === "suspended")
-					await Promise.race([ctx.resume(), cancelacion]);
+				if (ctx.state === "suspended") {
+					let tope: ReturnType<typeof setTimeout> | undefined;
+					const sinResume = new Promise<"tope">((res) => {
+						tope = setTimeout(() => res("tope"), RESUME_MAX_MS);
+					});
+					const espera = await Promise.race([
+						ctx.resume().then(() => "listo" as const),
+						cancelacion.then(() => "aborto" as const),
+						sinResume,
+					]).finally(() => clearTimeout(tope));
+					if (espera === "tope" && !abortado)
+						return { kind: "unavailable", reason: "error" };
+				}
 				if (abortado) return { kind: "aborted" };
 				const analyser = ctx.createAnalyser();
 				analyser.fftSize = FFT_SIZE;
