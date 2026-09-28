@@ -70,6 +70,13 @@ export function choiceEffect(input: {
 			};
 		case "dim-one-distractor+replay-phoneme":
 		case "dim-one-distractor+replay": {
+			// R29 (D15): con 2 opciones, atenuar la única distractora dejaría una sola opción
+			// tocable, delatando la respuesta sin que el niño la reconozca. Con 2 se repite el
+			// audio; con 3 (el nivel fácil, o phase0:initial con sus opciones fijas del dato)
+			// sigue atenuando una.
+			if (exercise.optionIds.length <= 2) {
+				return { kind: "replay", request: { key: item.audioKey } };
+			}
 			const distractor = exercise.optionIds.find((id) => id !== expected);
 			if (distractor === undefined) return { kind: "none" };
 			return {

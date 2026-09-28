@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rimeOf } from "@/content/audio-keys";
+import { glyphFor } from "@/content/glyphs";
 import { buildCurriculum, curriculum } from "@/content/index";
 import {
 	accentIsFinalOnly,
@@ -275,5 +276,42 @@ describe("trampa 9: expectedAnswer nunca deja lanzar a tap, taps o drag", () => 
 				[...combos].sort(),
 			]);
 		}
+	});
+});
+
+describe("trazo: toda letra que introduce una unidad con plantilla trace tiene un glifo válido", () => {
+	it("G17: glyphFor no lanza y cada trazo cae dentro de la caja de la letra", () => {
+		let revisadas = 0;
+		for (const unitId of curriculum.unitOrder) {
+			const unit = curriculum.units.get(unitId);
+			if (unit === undefined) continue;
+			if (!unit.exercises.some((e) => e.templateId === "trace")) continue;
+			for (const itemId of unit.introduces) {
+				const item = curriculum.items.get(itemId);
+				if (item === undefined || item.kind !== "letter") continue;
+				revisadas += 1;
+
+				let glyph: ReturnType<typeof glyphFor> | undefined;
+				expect(() => {
+					glyph = glyphFor(item, "upper");
+				}).not.toThrow();
+				if (glyph === undefined) continue;
+
+				for (const stroke of glyph.strokes) {
+					expect([item.id, stroke.length >= 2]).toEqual([item.id, true]);
+					for (const point of stroke) {
+						expect([item.id, point.x >= 0 && point.x <= glyph.width]).toEqual([
+							item.id,
+							true,
+						]);
+						expect([item.id, point.y >= 0 && point.y <= 1]).toEqual([
+							item.id,
+							true,
+						]);
+					}
+				}
+			}
+		}
+		expect(revisadas).toBeGreaterThan(0);
 	});
 });

@@ -7,8 +7,8 @@ import {
 	screen,
 	within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { curriculum } from "@/engine";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { curriculum, type Glyph, type GlyphPoint, glyphFor } from "@/engine";
 import {
 	itemsDe,
 	PLANTILLAS,
@@ -17,7 +17,23 @@ import {
 } from "@/features/dev/PlantillasDev";
 import { fakeAudio } from "@/features/test-support";
 
-afterEach(cleanup);
+beforeEach(() => {
+	// jsdom no implementa la captura de puntero: un método vacío que los tests pueden espiar,
+	// como en `TraceCanvas.test.tsx`. `trace` es la única plantilla que dibuja con el dedo.
+	if (!("setPointerCapture" in Element.prototype)) {
+		Object.defineProperty(Element.prototype, "setPointerCapture", {
+			configurable: true,
+			writable: true,
+			value: () => {},
+		});
+	}
+});
+
+afterEach(() => {
+	cleanup();
+	vi.useRealTimers();
+	vi.restoreAllMocks();
+});
 
 const montar = () => render(<PlantillasDev audio={fakeAudio()} />);
 const evaluacion = () => screen.getByRole("region", { name: "Evaluation" });
@@ -79,12 +95,14 @@ describe("PlantillasDev", () => {
 		expect(evaluacion().querySelectorAll("button").length).toBeGreaterThan(0);
 	});
 
-	it("rung 1 atenúa un distractor; rung 3 marca el modelo (listen-tap)", () => {
+	it("R29/D15: con el ítem de arranque (2 opciones) rung 1 repite el audio sin atenuar; rung 3 marca el modelo (listen-tap)", () => {
 		montar();
 		elegirPlantilla("listen-tap");
+		// El ítem de arranque (caja 0, nivel fácil) trae 2 opciones: R29 hace que la pista 1
+		// repita el audio en vez de atenuar (dejaría una sola opción tocable).
 		expect(atenuados()).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
-		expect(atenuados().length).toBe(1);
+		expect(atenuados()).toHaveLength(0);
 		expect(marcados()).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "Rung 3" }));
 		expect(marcados().length).toBe(1);
@@ -124,6 +142,171 @@ describe("PlantillasDev", () => {
 		});
 		expect(screen.getByRole("status").textContent).toMatch(/^Respuesta: /);
 		expect(container.querySelector("[data-screen]")).toBeNull();
+	});
+
+	function svgDeEvaluacion(): SVGSVGElement {
+		const svg = evaluacion().querySelector("svg");
+		if (svg === null) throw new Error("sin <svg> en Evaluation");
+		return svg;
+	}
+
+	it("D1: trace ofrece las 9 letras y un selector de nivel 1/2/3 que cambia el data-level de la evaluación", () => {
+		montar();
+		elegirPlantilla("trace");
+		const ids = within(screen.getByRole("combobox", { name: "Ítem" }))
+			.getAllByRole("option")
+			.map((o) => o.getAttribute("value"));
+		expect(ids).toEqual(
+			[...curriculum.items.values()]
+				.filter((i) => i.kind === "letter")
+				.map((i) => i.id),
+		);
+		expect(ids).toHaveLength(9);
+		// Nivel 1 por defecto (caja 0, sin pistas): el mismo nivel que la Presentación, que
+		// siempre enseña el nivel 1 (T4).
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("1");
+		fireEvent.click(screen.getByRole("button", { name: "Nivel 2" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("2");
+		fireEvent.click(screen.getByRole("button", { name: "Nivel 3" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("3");
+		fireEvent.click(screen.getByRole("button", { name: "Nivel 1" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("1");
+		// El nivel también baja con las pistas del rung simulado, no solo con la caja
+		// (guideLevel(caja, pistas)): caja 2 (nivel 3 base) con 1 pista muestra nivel 2.
+		fireEvent.click(screen.getByRole("button", { name: "Nivel 3" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("3");
+		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
+		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("2");
+	});
+
+	// La misma conversión de coordenadas que TraceCanvas usa por dentro (viewBoxOf +
+	// toLetterSpace), invertida: de un punto del glifo a un punto de pantalla. Con un
+	// rect de 400×400 no hay bandas que compensar salvo el propio ajuste de aspecto.
+	function clientDe(
+		p: GlyphPoint,
+		glyph: Glyph,
+		rect: { left: number; top: number; width: number; height: number },
+	) {
+		const MARGIN = 0.2;
+		const vb = {
+			x: -MARGIN,
+			y: -MARGIN,
+			w: glyph.width + 2 * MARGIN,
+			h: 1 + 2 * MARGIN,
+		};
+		const s = Math.min(rect.width / vb.w, rect.height / vb.h);
+		const ox = rect.left + (rect.width - vb.w * s) / 2;
+		const oy = rect.top + (rect.height - vb.h * s) / 2;
+		return { clientX: ox + (p.x - vb.x) * s, clientY: oy + (p.y - vb.y) * s };
+	}
+
+	function trazarGlifo(svg: SVGSVGElement, glyph: Glyph) {
+		const rect = { left: 0, top: 0, width: 400, height: 400 };
+		vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+			...rect,
+			right: rect.width,
+			bottom: rect.height,
+			x: 0,
+			y: 0,
+			toJSON: () => rect,
+		});
+		let pointerId = 1;
+		for (const stroke of glyph.strokes) {
+			const [first, ...resto] = stroke;
+			if (first === undefined) continue;
+			const c0 = clientDe(first, glyph, rect);
+			fireEvent.pointerDown(svg, {
+				pointerId,
+				isPrimary: true,
+				clientX: c0.clientX,
+				clientY: c0.clientY,
+			});
+			for (const p of resto) {
+				const c = clientDe(p, glyph, rect);
+				fireEvent.pointerMove(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: c.clientX,
+					clientY: c.clientY,
+				});
+			}
+			const last = resto.at(-1) ?? first;
+			const cLast = clientDe(last, glyph, rect);
+			fireEvent.pointerUp(svg, {
+				pointerId,
+				isPrimary: true,
+				clientX: cLast.clientX,
+				clientY: cLast.clientY,
+			});
+			pointerId += 1;
+		}
+	}
+
+	function marcadorTrace(): string {
+		const el = evaluacion().querySelector('[data-testid="marcador-trace"]');
+		return el?.textContent ?? "";
+	}
+
+	it("D2: un trazo sintético sobre la A y 1500 ms: el marcador enseña los números exactos de scoreTrace y «vale»", () => {
+		vi.useFakeTimers();
+		montar();
+		elegirPlantilla("trace");
+		const item = curriculum.items.get("letter:a");
+		if (item === undefined) throw new Error("Falta letter:a");
+		const glyph = glyphFor(item, "upper");
+		trazarGlifo(svgDeEvaluacion(), glyph);
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		// Trazo exacto sobre los puntos del glifo: cobertura y precisión perfectas.
+		expect(marcadorTrace()).toBe(
+			`cobertura ${glyph.strokes.map(() => "100%").join(", ")} · precisión 100% · vale`,
+		);
+	});
+
+	it("D2: un trazo fuera de la letra dice «no vale»; reintentar con un trazo bueno cambia a «vale» (attemptKey)", () => {
+		vi.useFakeTimers();
+		montar();
+		elegirPlantilla("trace");
+		const svg = svgDeEvaluacion();
+		const rect = { left: 0, top: 0, width: 400, height: 400 };
+		vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+			...rect,
+			right: rect.width,
+			bottom: rect.height,
+			x: 0,
+			y: 0,
+			toJSON: () => rect,
+		});
+		fireEvent.pointerDown(svg, {
+			pointerId: 1,
+			isPrimary: true,
+			clientX: 399,
+			clientY: 399,
+		});
+		fireEvent.pointerUp(svg, {
+			pointerId: 1,
+			isPrimary: true,
+			clientX: 399,
+			clientY: 399,
+		});
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(marcadorTrace()).toContain("no vale");
+
+		// Sin el attemptKey + 1 de Panel, el intento seguiría `submitted` y el lienzo
+		// deshabilitado: este segundo trazo no llegaría a puntuarse ni a cambiar el marcador.
+		const item = curriculum.items.get("letter:a");
+		if (item === undefined) throw new Error("Falta letter:a");
+		const glyph = glyphFor(item, "upper");
+		trazarGlifo(svg, glyph);
+		act(() => {
+			vi.advanceTimersByTime(1500);
+		});
+		expect(marcadorTrace()).toBe(
+			`cobertura ${glyph.strokes.map(() => "100%").join(", ")} · precisión 100% · vale`,
+		);
 	});
 });
 

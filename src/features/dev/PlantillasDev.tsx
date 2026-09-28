@@ -8,20 +8,25 @@ import {
 } from "@/audio";
 import {
 	type AttemptFeedback,
+	type Box,
 	type CurriculumIndex,
 	createAttemptState,
 	curriculum,
 	emptyProgressState,
+	glyphFor,
+	guideLevel,
 	type Item,
 	type PlannedExercise,
 	planSession,
 	recordAttempt,
+	scoreTrace,
 	type TemplateId,
+	type TraceStroke,
 	templates,
 	type Unit,
 } from "@/engine";
 import { AppProviders } from "@/features/app-context";
-import { templateViews } from "@/features/session/registry";
+import { type TraceInput, templateViews } from "@/features/session/registry";
 import { createAppStore, createMemoryAdapter } from "@/store";
 
 const UNIT_ID = "dev:plantilla";
@@ -144,27 +149,62 @@ function Panel(props: {
 	const [attemptKey, setAttemptKey] = useState(0);
 	const [locked, setLocked] = useState(false);
 	const [suceso, setSuceso] = useState("");
+	// Solo para trace: nivel de guía (T2) según la caja elegida y las pistas del rung simulado.
+	const [rung, setRung] = useState<0 | 1 | 2 | 3>(0);
+	const [caja, setCaja] = useState<Box>(0);
+	const [marcador, setMarcador] = useState("");
 
 	if (vistas === undefined) return <p>Sin vista para {templateId}.</p>;
 
-	function simular(rung: 0 | 1 | 2 | 3) {
-		setFeedback(rung === 0 ? null : feedbackDelRung(templateId, rung));
+	function simular(nuevoRung: 0 | 1 | 2 | 3) {
+		setRung(nuevoRung);
+		setFeedback(
+			nuevoRung === 0 ? null : feedbackDelRung(templateId, nuevoRung),
+		);
 		// Solo un fallo con pista abre un intento nuevo; el modelo no (como en la sesión).
-		if (rung < 3) setAttemptKey((k) => k + 1);
-		setSuceso(rung === 0 ? "Sin feedback" : `Simulado el rung ${rung}`);
+		if (nuevoRung < 3) setAttemptKey((k) => k + 1);
+		setSuceso(
+			nuevoRung === 0 ? "Sin feedback" : `Simulado el rung ${nuevoRung}`,
+		);
 	}
+
+	// `glyphFor`/`guideLevel`/`scoreTrace` solo se usan en `features/dev/`: aquí, donde está
+	// permitido explícitamente (T4). El marcador es texto para el adulto, solo en desarrollo.
+	const trace: TraceInput | undefined =
+		templateId === "trace"
+			? {
+					guide: {
+						glyph: glyphFor(item, "upper"),
+						level: guideLevel(caja, rung),
+					},
+					onTrace: (strokes: TraceStroke[]) => {
+						const score = scoreTrace(glyphFor(item, "upper"), strokes);
+						const cobertura = score.coverage
+							.map((c) => `${Math.round(c * 100)}%`)
+							.join(", ");
+						const precision = Math.round(score.precision * 100);
+						setMarcador(
+							`cobertura ${cobertura} · precisión ${precision}% · ${
+								score.correct ? "vale" : "no vale"
+							}`,
+						);
+						// Deja repasar: un intento nuevo limpia la tinta, como en la sesión real.
+						setAttemptKey((k) => k + 1);
+					},
+				}
+			: undefined;
 
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex flex-wrap items-center gap-3">
-				{([0, 1, 2, 3] as const).map((rung) => (
+				{([0, 1, 2, 3] as const).map((rungBoton) => (
 					<button
-						key={rung}
+						key={rungBoton}
 						type="button"
 						className={BOTON}
-						onClick={() => simular(rung)}
+						onClick={() => simular(rungBoton)}
 					>
-						{rung === 0 ? "Sin feedback" : `Rung ${rung}`}
+						{rungBoton === 0 ? "Sin feedback" : `Rung ${rungBoton}`}
 					</button>
 				))}
 				<button
@@ -176,6 +216,21 @@ function Panel(props: {
 					locked
 				</button>
 			</div>
+			{templateId === "trace" && (
+				<div className="flex flex-wrap items-center gap-3">
+					{([0, 1, 2] as const).map((c) => (
+						<button
+							key={c}
+							type="button"
+							aria-pressed={caja === c}
+							className={BOTON}
+							onClick={() => setCaja(c)}
+						>
+							{`Nivel ${c + 1}`}
+						</button>
+					))}
+				</div>
+			)}
 			<p role="status" className="text-ink-soft">
 				{suceso}
 			</p>
@@ -197,15 +252,26 @@ function Panel(props: {
 					{evaluacion === undefined ? (
 						<p>El motor no planificó evaluación.</p>
 					) : (
-						<vistas.Evaluation
-							exercise={evaluacion}
-							item={item}
-							attemptKey={attemptKey}
-							feedback={feedback}
-							locked={locked}
-							onAnswer={(a) => setSuceso(`Respuesta: ${a}`)}
-							onModelDone={() => setSuceso("Modelo completado")}
-						/>
+						<>
+							<vistas.Evaluation
+								exercise={evaluacion}
+								item={item}
+								attemptKey={attemptKey}
+								feedback={feedback}
+								locked={locked}
+								onAnswer={(a) => setSuceso(`Respuesta: ${a}`)}
+								onModelDone={() => setSuceso("Modelo completado")}
+								{...(trace !== undefined ? { trace } : {})}
+							/>
+							{templateId === "trace" && (
+								<p
+									data-testid="marcador-trace"
+									className="mt-4 text-sm text-ink-soft"
+								>
+									{marcador}
+								</p>
+							)}
+						</>
 					)}
 				</section>
 			</div>

@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { UPPER_GLYPHS } from "@/content/glyphs";
 import {
+	type AttemptState,
+	type Box,
 	checkAnswer,
 	completePresentation,
+	createAttemptState,
 	currentExercise,
 	curriculum,
 	emptyProgressState,
 	finishSession,
+	glyphFor,
 	isSessionOver,
 	itemProgressOf,
 	nextExercise,
@@ -15,6 +20,9 @@ import {
 	starsForSession,
 	startSession,
 	submitAnswer,
+	submitTrace,
+	type TraceStroke,
+	traceGuide,
 } from "@/engine";
 
 const NOW = "2026-09-26T12:00:00.000Z";
@@ -80,6 +88,75 @@ function jugarTodo(
 		evaluacion += 1;
 	}
 	return actual;
+}
+
+const LETTER_A_ID = "letter:a";
+const TRACE_EXERCISE: PlannedExercise = {
+	id: "ex-trace",
+	kind: "evaluation",
+	templateId: "trace",
+	itemId: LETTER_A_ID,
+	optionIds: [],
+	correctOptionId: null,
+	source: "active-unit",
+};
+const LISTEN_TAP_EXERCISE: PlannedExercise = {
+	id: "ex-listen-tap",
+	kind: "evaluation",
+	templateId: "listen-tap",
+	itemId: LETTER_A_ID,
+	optionIds: ["a", "b"],
+	correctOptionId: "a",
+	source: "active-unit",
+};
+
+const GLYPH_A = UPPER_GLYPHS.a;
+if (GLYPH_A === undefined) throw new Error("falta UPPER_GLYPHS.a");
+/** El propio trazo de referencia de la A: puntúa correcto (G14 en glyphs.test.ts). */
+const TRAZO_CORRECTO: TraceStroke[] = GLYPH_A.strokes;
+/** Sin tinta: puntúa incorrecto (G6 en trace.test.ts). */
+const TRAZO_VACIO: TraceStroke[] = [];
+
+/** Monta a mano una sesión de un solo ejercicio, sin pasar por el planificador. */
+function runCon(
+	exercise: PlannedExercise,
+	progress: ProgressState = emptyProgressState(),
+	attempt: AttemptState = createAttemptState(),
+): SessionRun {
+	return {
+		sessionIndex: progress.sessionCounter,
+		unitId: null,
+		exercises: [exercise],
+		cursor: 0,
+		attempt,
+		resolutions: [],
+		progress,
+	};
+}
+
+function trazoDesde(
+	progress: ProgressState = emptyProgressState(),
+	attempt: AttemptState = createAttemptState(),
+): SessionRun {
+	return runCon(TRACE_EXERCISE, progress, attempt);
+}
+
+function trazar(run: SessionRun, strokes: readonly TraceStroke[]) {
+	return submitTrace({ content: curriculum, run, strokes, now: NOW });
+}
+
+function conCaja(
+	progress: ProgressState,
+	itemId: string,
+	box: Box,
+): ProgressState {
+	return {
+		...progress,
+		items: {
+			...progress.items,
+			[itemId]: { ...itemProgressOf(progress, itemId), box },
+		},
+	};
 }
 
 describe("startSession", () => {
@@ -276,6 +353,103 @@ describe("submitAnswer", () => {
 		const { feedback } = responder(run, ` ${respuestaCorrecta(run)}`);
 		expect(feedback.hint?.rung).toBe("reduce");
 		expect(feedback.resolution).toBeNull();
+	});
+
+	it("C5: sobre un ejercicio de trazo lanza nombrando submitTrace, no el mensaje de checkAnswer", () => {
+		expect(() => responder(trazoDesde(), "a")).toThrow(/submitTrace/);
+	});
+});
+
+describe("submitTrace", () => {
+	it("C1: acierto al primer intento da mastery-credit, resuelve y suma counters.traces", () => {
+		const { run, feedback } = trazar(trazoDesde(), TRAZO_CORRECTO);
+		expect(feedback).toEqual({
+			hint: null,
+			resolution: { status: "mastery-credit" },
+		});
+		expect(run.attempt.resolved).toBe(true);
+		expect(run.progress.counters.traces).toBe(1);
+	});
+
+	it("C2: trazo vacío en el 1.er intento da la pista reduce, sin resolver, y deja el 2.o intento con 1 pista mostrada", () => {
+		const { run, feedback } = trazar(trazoDesde(), TRAZO_VACIO);
+		expect(feedback.resolution).toBeNull();
+		expect(feedback.hint?.rung).toBe("reduce");
+		expect(feedback.hint?.action).toBe("restore-previous-guide-level");
+		expect(run.attempt).toEqual({ attempt: 2, hintsShown: 1, resolved: false });
+	});
+
+	it("C3: tres fallos seguidos dan las pistas reduce, sound y model, y resuelven asistido con counters.traces +1 una sola vez", () => {
+		let run = trazoDesde();
+		const pistas: (string | undefined)[] = [];
+		const resoluciones: (string | undefined)[] = [];
+		for (let i = 0; i < 3; i++) {
+			const paso = trazar(run, TRAZO_VACIO);
+			pistas.push(paso.feedback.hint?.rung);
+			resoluciones.push(paso.feedback.resolution?.status);
+			run = paso.run;
+		}
+		expect(pistas).toEqual(["reduce", "sound", "model"]);
+		expect(resoluciones).toEqual([undefined, undefined, "assisted"]);
+		expect(run.progress.counters.traces).toBe(1);
+	});
+
+	it("C4: fallo y después acierto es correct-with-hint con hintsUsed 1", () => {
+		const fallo = trazar(trazoDesde(), TRAZO_VACIO);
+		const acierto = trazar(fallo.run, TRAZO_CORRECTO);
+		expect(acierto.feedback.resolution).toEqual({
+			status: "correct-with-hint",
+			hintsUsed: 1,
+		});
+	});
+
+	it("C6: sobre otra plantilla, sobre una presentación, ya resuelto o con la sesión acabada, lanza", () => {
+		// Otra plantilla (no trazo): nombra submitAnswer.
+		expect(() => trazar(runCon(LISTEN_TAP_EXERCISE), TRAZO_CORRECTO)).toThrow(
+			/submitAnswer/,
+		);
+		// Presentación.
+		expect(() => trazar(empezar(), TRAZO_CORRECTO)).toThrow();
+		// Ya resuelto.
+		const resuelto = trazar(trazoDesde(), TRAZO_CORRECTO).run;
+		expect(() => trazar(resuelto, TRAZO_CORRECTO)).toThrow();
+		// Sesión acabada.
+		const acabada = jugarTodo(empezar(), () => 0);
+		expect(() => trazar(acabada, TRAZO_CORRECTO)).toThrow();
+	});
+});
+
+describe("traceGuide", () => {
+	const letraA = curriculum.items.get(LETTER_A_ID);
+	if (letraA === undefined) throw new Error(`falta ${LETTER_A_ID}`);
+
+	it("C7: nivel según la caja del ítem y las pistas ya mostradas", () => {
+		const caja0 = trazoDesde(conCaja(emptyProgressState(), LETTER_A_ID, 0));
+		expect(traceGuide(curriculum, caja0)).toEqual({
+			glyph: glyphFor(letraA, "upper"),
+			level: 1,
+		});
+
+		const caja2 = trazoDesde(conCaja(emptyProgressState(), LETTER_A_ID, 2));
+		expect(traceGuide(curriculum, caja2).level).toBe(3);
+
+		const caja2Fallo1 = trazoDesde(
+			conCaja(emptyProgressState(), LETTER_A_ID, 2),
+			{ attempt: 2, hintsShown: 1, resolved: false },
+		);
+		expect(traceGuide(curriculum, caja2Fallo1).level).toBe(2);
+
+		const caja2Fallo3 = trazoDesde(
+			conCaja(emptyProgressState(), LETTER_A_ID, 2),
+			{ attempt: 3, hintsShown: 3, resolved: true },
+		);
+		expect(traceGuide(curriculum, caja2Fallo3).level).toBe(1);
+	});
+
+	it("C8: sin una evaluación de trazo en curso, o con la sesión terminada, lanza", () => {
+		expect(() => traceGuide(curriculum, runCon(LISTEN_TAP_EXERCISE))).toThrow();
+		const acabada = jugarTodo(empezar(), () => 0);
+		expect(() => traceGuide(curriculum, acabada)).toThrow();
 	});
 });
 

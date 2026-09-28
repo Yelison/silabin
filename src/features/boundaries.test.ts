@@ -73,6 +73,26 @@ describe("fronteras de la interfaz", () => {
 		expect(violaciones).toEqual([]);
 	});
 
+	it("U9: ninguna vista fuera de features/dev decide si el trazo vale (scoreTrace, guideLevel)", () => {
+		const yo = resolve(__filename);
+		const excluida = resolve(join(SRC, "features", "dev")) + sep;
+		const violaciones: string[] = [];
+		let revisados = 0;
+		for (const carpeta of CARPETAS) {
+			for (const fichero of ficheros(join(SRC, carpeta))) {
+				const ruta = resolve(fichero);
+				if (ruta === yo || ruta.startsWith(excluida)) continue;
+				revisados += 1;
+				const codigo = readFileSync(fichero, "utf8");
+				if (codigo.includes("scoreTrace") || codigo.includes("guideLevel"))
+					violaciones.push(relative(SRC, fichero));
+			}
+		}
+		// Igual que en U8: sin ficheros revisados esto pasaría en verde sin vigilar nada.
+		expect(revisados).toBeGreaterThan(5);
+		expect(violaciones).toEqual([]);
+	});
+
 	describe("el detector detecta", () => {
 		const aqui = join(SRC, "features", "map", "X.tsx");
 		const prohibidos = [

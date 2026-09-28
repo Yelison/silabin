@@ -26,12 +26,13 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 4. [Lo que ya está hecho: Plan 1](#lo-que-ya-está-hecho-plan-1)
 5. [Lo que ya está hecho: Plan 2](#lo-que-ya-está-hecho-plan-2)
 6. [Lo que ya está hecho: Plan 3](#lo-que-ya-está-hecho-plan-3)
-7. [Lo que falta: planes 4 a 6](#lo-que-falta-planes-4-a-6)
-8. [Siguientes pasos concretos](#siguientes-pasos-concretos)
-9. [Decisiones tomadas](#decisiones-tomadas)
-10. [Trampas conocidas](#trampas-conocidas)
-11. [Deuda menor aceptada](#deuda-menor-aceptada)
-12. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
+7. [Lo que ya está hecho: Plan 4](#lo-que-ya-está-hecho-plan-4)
+8. [Lo que falta: planes 4 a 6](#lo-que-falta-planes-4-a-6)
+9. [Siguientes pasos concretos](#siguientes-pasos-concretos)
+10. [Decisiones tomadas](#decisiones-tomadas)
+11. [Trampas conocidas](#trampas-conocidas)
+12. [Deuda menor aceptada](#deuda-menor-aceptada)
+13. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
 
 ---
 
@@ -41,19 +42,26 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 817 tests + 1 omitido (el de ficheros de audio)
+pnpm test        # Vitest: 900 tests + 1 omitido (el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src
 pnpm dev         # Next.js: la aplicación, con las 4 unidades de la Fase 0 jugables
 ```
 
 Las tres puertas (`test`, `typecheck` y `lint`) y `pnpm build` están en verde en la rama del
-Plan 3.
+Plan 4.
+
+**Probar desde otro dispositivo en la red local** (móvil o tableta, para la prueba manual de
+`trace`): `DEV_ORIGINS=<ip-lan> pnpm dev -H 0.0.0.0`, con la IP sola, sin esquema ni puerto.
+Next 16 bloquea en desarrollo las peticiones de origen cruzado a sus recursos de dev; sin
+`DEV_ORIGINS` la página se pinta pero **no se hidrata** (el lienzo no respondería, y parecería
+un fallo de las constantes de trazo en vez de un artefacto del arnés).
 
 **`/dev/plantillas`** (solo con `pnpm dev`; en producción da 404): un selector de plantilla e
 ítem que monta la presentación y la evaluación con un ejercicio planificado por el motor, y
-botones para simular el rung 1, 2 o 3 y el bloqueo. Sirve para ver `listen-tap` y `build`, que
-ninguna unidad ofrece aún (las unidades de la Fase 1 y la 2 esperan a `trace` y `say-it`).
+botones para simular el rung 1, 2 o 3 y el bloqueo. Sirve para ver `listen-tap`, `build` y
+`trace`, que ninguna unidad ofrece aún (las unidades de la Fase 1 y la 2 esperan a `say-it`,
+D14).
 
 El test omitido comprueba que los ficheros de audio existen en disco en los 3 acentos. Solo
 corre con `SILABIN_CHECK_AUDIO_FILES=1`, que se enciende cuando lleguen los audios reales.
@@ -262,6 +270,63 @@ final de la rama y el PR. Resultado: **la Fase 0 entera es jugable** (`phase0:cl
 
 ---
 
+## Lo que ya está hecho: Plan 4
+
+Plan 4 = **la plantilla `trace`: escribir letras con el dedo**, en la rama
+`feat/plan-4-trace` (6 tareas; ledger en `docs/superpowers/2026-09-27-plan-4-registro.md`).
+Cada tarea pasó revisión, y también la revisión final de la rama (Opus): devolvió "con
+correcciones", y los hallazgos de código de esa revisión (la flecha estática tapando el
+marcador de inicio en O/L/E/M, y la pista 2 sin respaldo visual quieto bajo movimiento
+reducido en niveles de guía 2 y 3) ya están resueltos en el mismo commit del fix wave. La
+prueba manual del autor en un dispositivo táctil real también se hizo (ver
+`docs/superpowers/2026-09-27-plan-4-registro.md`, sección "Confirmación del autor — los
+cuatro puntos pendientes de la Tarea 5"): traza torpe pero completa → pasa; garabato completo
+→ falla; tiempo de espera de 1.5 s → se siente bien; letra distinta dibujada encima de la
+guía → rechazada con feedback neutro. Sigue faltando el PR, y queda una decisión abierta para
+el autor sobre el toque accidental (ver [más abajo](#lo-que-falta-planes-4-a-6)) antes de que
+el Plan 5 desbloquee la Fase 1. `trace` no la ofrece todavía ninguna unidad real (D14): se ve
+en `/dev/plantillas` y en el test de integración.
+
+- **Motor:** `content/glyphs.ts` (`UPPER_GLYPHS`, la geometría de referencia de las 9 letras
+  mayúsculas de las Fases 1 y 2 — a, e, i, o, u, m, l, s, p — y `glyphFor`) y
+  `engine/trace.ts` (`scoreTrace`: cobertura por trazo y precisión sobre el total, con
+  `TOLERANCE`/`MIN_COVERAGE`/`MIN_PRECISION`, sin exigir orden ni dirección, D12; y
+  `guideLevel`, el nivel de guía según la caja Leitner del ítem, D13). `submitTrace` y
+  `traceGuide` en `engine/session.ts` le dan a `trace` su propio camino de evaluación,
+  paralelo a `submitAnswer`/`checkAnswer` (D17; cierra la trampa 9 para esta plantilla).
+- **Interfaz:** `components/TraceCanvas.tsx` (el lienzo SVG: guía de 1 a 3 niveles, tinta con
+  eventos `pointer`, solo el puntero primario dibuja y `pointerup`/`pointercancel` cierran
+  igual), `session/trace/Evaluation.tsx` (pistas 1-2-3: guía al nivel anterior, animación con
+  sonido, y modelo que no puntúa) y `session/trace/Presentation.tsx` (la mayúscula se dibuja
+  sola en nivel 1 antes de pedir que se trace — introducción sin error, D12 del spec §2).
+  `/dev/plantillas` amplía su selector con las 9 letras y los 3 niveles de guía.
+- **R29 resuelto (D15):** con solo 2 opciones (nivel fácil de `listen-tap`/`initial-sound`
+  con ítems `phoneme`), la pista 1 se limita a repetir el audio en vez de dejar solo la
+  respuesta correcta.
+- **Cierre (Tarea 5):** `Trace.integration.test.tsx` juega una sesión de punta a punta sobre
+  un currículo de prueba con `letter:a` (un trazo correcto sube de caja, tres trazos lejos
+  llegan al modelo y repasarlo avanza, y los contadores del fin de sesión cuentan bien);
+  `allowedDevOrigins` en `next.config.ts` (desde `DEV_ORIGINS`) para poder probar `trace` a
+  mano desde un móvil o una tableta en la red local.
+- **Solo mayúsculas (D16):** las minúsculas y el interruptor `lowercaseTracing` llegan en el
+  Plan 6. Los pares que se confunden con las constantes de partida (E sobre S, E sobre P, S
+  sobre E, O sobre U, U sobre O) están fijados en `CONFUSABLE_PAIRS` como dato conocido del
+  prototipo.
+- **Cierre (Tarea 6):** arreglado un bug de movimiento reducido en `TraceCanvas.tsx`
+  (`transitionDuration`/`transitionDelay` en línea seguían animando aunque
+  `prefers-reduced-motion: reduce` estuviera activo) con `motion-reduce:transition-none` en
+  los dos elementos animados (`anim-full`, `anim-dot`). D18: los marcadores de inicio
+  superpuestos (A, E, M y P, que tienen dos trazos empezando en el mismo punto exacto) ahora
+  se separan visualmente, desplazados a lo largo de la dirección inicial de su propio trazo.
+  La pista 2 (antes un punto simple viajando por el trazo) ahora usa el mismo triángulo que la
+  flecha estática de fin de trazo, viajando por `offsetPath`/`offset-rotate: auto`; esa misma
+  guía animada se reproduce también tras `Presentation.tsx`, después de que la letra se dibuje
+  sola entera (encadenada, no simultánea). Fix wave sobre la revisión final de la rama: la
+  flecha estática ya no tapa el marcador de inicio en O/L/E/M, y la pista 2 tiene respaldo
+  visual quieto bajo movimiento reducido también en niveles de guía 2 y 3.
+
+---
+
 ## Lo que falta: planes 4 a 6
 
 La hoja de ruta original está al final del Plan 1. Esta es la **versión revisada y
@@ -271,14 +336,25 @@ confirmada con el autor** (D7), ya con los planes 2 y 3 construidos.
 |---|---|---|
 | ~~2~~ | ~~Capa `audio/`, Zustand sobre `store/`, inicio, mapa, sesión, fin y `count-syllables` de punta a punta~~ **hecho** | Un niño juega una sesión real de `phase0:clap` |
 | ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (PR #4 fusionado a `main`) | La Fase 0 entera es jugable; `listen-tap` y `build` se ven en `/dev/plantillas` |
-| 4 | `trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía. Es el componente más difícil del proyecto | Escribir letras con el dedo |
+| ~~4~~ | ~~`trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía~~ **hecho** | Escribir letras con el dedo; se ve en `/dev/plantillas`, ninguna unidad la ofrece aún (D14) |
 | 5 | Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word` | Leer en voz alta con validación del adulto |
 | 6 | Recompensas y cosméticos, panel de padres con PIN, importar el progreso (`importState`, con el contrato de D9), PWA y service worker, lista de verificación en iPad | Primera versión completa |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 
-**La Fase 1 y la 2 siguen atenuadas en el mapa tras el Plan 3.** Todas sus unidades declaran
-`trace` y `say-it` (la Fase 2 también `read-word`), así que esperan a los Planes 4 y 5; `listen-tap`
-y `build` ya están construidas, pero ninguna unidad las ofrece hasta entonces (D10).
+**La Fase 1 y la 2 siguen atenuadas en el mapa tras el Plan 4.** Todas sus unidades declaran
+`trace` y `say-it` (la Fase 2 también `read-word`); `listen-tap`, `build` y `trace` ya están
+construidas, pero `isSessionPlayable` exige que **todas** las plantillas que declara una
+unidad tengan vista, así que la Fase 1 entera espera a `say-it`, que llega en el Plan 5
+(D10, D14).
+
+**Toque accidental en `trace` (decisión abierta, pendiente para el Plan 5).** Hoy un solo
+toque accidental (un único punto de tinta, sin querer) cuenta como intento fallido: gasta un
+escalón de pista y afecta los contadores. No es un bug — el spec calla sobre este caso — sino
+una decisión de producto sin tomar todavía. No bloquea este merge porque D14 protege: ninguna
+unidad real ofrece `trace` todavía, así que ningún niño llega a esta pantalla antes del Plan
+5. Debe resolverse antes de que el Plan 5 desbloquee la Fase 1. Detalle completo del hallazgo
+en `docs/superpowers/2026-09-27-plan-4-registro.md`, sección "Revisión final de toda la
+rama", "Important #3".
 
 **Voz, en «Después».** Antes de generar el lote entero, una **prueba de Azure con unos 10
 audios en `do` y `mx`**. Y **los fonemas sueltos («mmm», «sss», «p») hay que grabarlos con voz
@@ -300,19 +376,25 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 3 cerrado (2026-09-27):** revisión final de la rama (Opus, Approved con Minors, 7
-mutaciones dirigidas todas muertas) y PR #4 fusionado a `main`. Un hallazgo de la revisión
-final quedó como decisión abierta para el Plan 4 (R29 del registro): con nivel `easy` (2
-opciones), la pista 1 dejaría solo la respuesta correcta en `listen-tap`/`initial-sound` con
-ítems `phoneme`; no es alcanzable hoy porque esas unidades siguen bloqueadas, pero hay que
-resolverlo antes de desbloquearlas.
+**Plan 4 cerrado (2026-09-27):** ledger en
+`docs/superpowers/2026-09-27-plan-4-registro.md`. Cada tarea pasó revisión (R29 del registro
+del Plan 3 se resolvió en la Tarea 4, D15), y también la revisión final de la rama (Opus,
+"con correcciones", resuelta en el fix wave) y la **prueba manual del autor en un dispositivo
+táctil real** (`/dev/plantillas`, con `DEV_ORIGINS` — ver
+[Cómo ejecutarlo](#cómo-ejecutarlo) — o con la emulación táctil de Chrome si no hay ninguno a
+mano). Falta el PR, y queda abierta la decisión sobre el toque accidental (ver
+[arriba](#lo-que-falta-planes-4-a-6)) antes de que el Plan 5 desbloquee la Fase 1.
 
-1. **Escribir el Plan 4** (`trace`) con `superpowers:writing-plans`, en
-   `docs/superpowers/plans/`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo
-   con `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
+1. **Escribir el Plan 5** (`say-it`, `read-word`, y el desbloqueo de la Fase 1 con `say-it`
+   según D14) con `superpowers:writing-plans`, en `docs/superpowers/plans/`, en una rama
+   nueva desde `main`, con `/model opus`; ejecutarlo con
+   `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
    [cómo se trabaja](#cómo-se-trabaja-en-este-repo). Antes de escribirlo, revisa las
-   [trampas vivas](#trampas-conocidas), sobre todo la 9, y la decisión R29 de arriba.
-   Pregunta al autor las decisiones abiertas que queden.
+   [trampas vivas](#trampas-conocidas) (la 9 sigue abierta para `say-it` y `read-word`) y, si
+   `say-it` necesita distinguir sonidos parecidos, los pares confundibles que dejó `trace`
+   como dato conocido y ya confirmado por la prueba manual (E sobre S, E sobre P, S sobre E,
+   O sobre U, U sobre O; con las constantes de partida, sin cambios). Pregunta al autor las
+   decisiones abiertas que queden.
 2. Llevar el ledger del plan **versionado desde el primer día** en
    `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
    sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
@@ -324,7 +406,8 @@ resolverlo antes de desbloquearlas.
 Las cuatro decisiones que el Plan 1 dejó abiertas, más las de producto del Plan 2, se
 resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 [Plan 2](docs/superpowers/plans/2026-09-26-silabin-sesion.md). D8-D11 son del
-[Plan 3](docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md).
+[Plan 3](docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md). D12-D17 son del
+[Plan 4](docs/superpowers/plans/2026-09-27-silabin-trazo.md).
 
 | # | Decisión |
 |---|---|
@@ -340,10 +423,27 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D9 | `importState` **va al Plan 6** con el contrato fijado: un import deliberado del adulto **sustituye `doc` entero y quita `readFailed`** (y `recovered`), porque el adulto ha elegido qué documento vale. Hasta entonces no se cablea |
 | D10 | Las 5 plantillas de toque (`rhyme`, `initial-sound`, `hear-it`, `listen-tap`, `build`). Tras el Plan 3 **solo la Fase 0 es jugable**: las unidades de Fase 1 y 2 declaran `trace` y `say-it`, y el mapa las atenúa hasta los Planes 4 y 5. `listen-tap` y `build` se prueban con tests y con `/dev/plantillas` |
 | D11 | La prueba manual del Plan 2 la hizo el autor **antes** de ejecutar el Plan 3 (Edge y Chrome, sin fallos salvo la pausa larga entre sílabas en Edge, atendida en la Tarea 1) |
+| D12 | `trace` se evalúa **solo por la forma del trazo**: cobertura por trazo más precisión sobre el total, con tolerancia generosa. No exige orden ni dirección |
+| D13 | El nivel de guía de `trace` sigue la **caja Leitner del ítem**: caja 0 → guía 1, caja 1 → guía 2, cajas 2 y 3 → guía 3. El nivel 3 conserva un carril muy tenue, nunca desaparece del todo |
+| D14 | La **Fase 1 se desbloquea en el Plan 5**, con `say-it`. Nada provisional en el planificador mientras tanto: `trace` queda construida pero sin unidad que la ofrezca hasta entonces |
+| D15 | Resuelve R29 del registro del Plan 3: con solo 2 opciones, la pista 1 se limita a **repetir el audio** (no puede quitar un distractor sin dejar solo la respuesta correcta). El nivel fácil sigue ofreciendo 2 opciones |
+| D16 | `trace` **solo mayúsculas**; las minúsculas y el interruptor `lowercaseTracing` quedan para el Plan 6 |
+| D17 | El trazo entra al motor por `submitTrace`, y lo puntúa el motor (`scoreTrace`), nunca la interfaz; la interfaz pinta con SVG y eventos `pointer` |
+| D18 | Los marcadores de inicio superpuestos (A, E, M, P) se separan desplazándolos a lo largo de la dirección de su propio trazo; la pista 2 pasa de un punto simple a una **flecha de dirección animada** (mismo mecanismo `offsetPath`/`offset-rotate:auto`), que también se reproduce una vez tras la presentación completa de la letra (encadenada, no simultánea) |
+
+**Pares confundibles de `trace` (dato conocido, del prototipo de la Tarea 1 del Plan 4):** con
+las constantes de partida (`TOLERANCE`, `MIN_COVERAGE`, `MIN_PRECISION`) que trae hoy el
+código, estos pares también pasan como válidos, no solo la letra correcta: E sobre S, E sobre
+P, S sobre E, O sobre U y U sobre O (confirmado en `pnpm test`, G15 de `glyphs.test.ts`, sin
+pares nuevos respecto al prototipo). Es una consecuencia aceptada de D12 (tolerancia generosa,
+solo forma). La **prueba manual del Plan 4 ya se hizo**, y de sus cuatro confirmaciones
+ninguna llevó a mover ninguna constante: el autor dejó esta lista de pares tal cual estaba.
+Queda **confirmada**, no pendiente.
 
 Los rulings tomados durante la ejecución están en los registros:
-[Plan 2](docs/superpowers/2026-09-26-plan-2-registro.md) (R1-R12) y
-[Plan 3](docs/superpowers/2026-09-26-plan-3-registro.md).
+[Plan 2](docs/superpowers/2026-09-26-plan-2-registro.md) (R1-R12),
+[Plan 3](docs/superpowers/2026-09-26-plan-3-registro.md) y
+[Plan 4](docs/superpowers/2026-09-27-plan-4-registro.md).
 
 ---
 
@@ -374,15 +474,18 @@ se ignoraba. Estado tras el Plan 2:
 8. ✅ **Los tests de componentes necesitan `jsdom`.** Resuelta: `jsdom` y Testing Library
    están instalados. `vitest.config.ts` sigue en entorno `node`, así que **cada test de
    interfaz debe llevar** `// @vitest-environment jsdom`.
-9. 🔴 **Viva (R6), acotada en el Plan 3: `checkAnswer` lanza para ítems `trace`, `say-it` y
-   `read-word`.** `expectedAnswer` (`src/engine/answers.ts`) es ya la única fuente de la
-   respuesta esperada y devuelve `null` solo para esas tres plantillas, sin evaluador propio
-   todavía; `checkAnswer` lanza ante `null`. El invariante M11 comprueba que las plantillas de
-   toque (incluida `build`, que dejó de ser un caso oculto) sí resuelven `correct` para cada
-   ítem que aceptan. Es inofensivo hoy porque la única fase jugable es la 0, pero hay que
-   tratarla cuando un plan active una unidad con esas plantillas (Planes 4 y 5): sin una guarda
-   o un camino propio de evaluación, el niño toparía con una excepción a mitad de sesión. Vale
-   también para una sesión de solo repaso con ítems de letras.
+9. ✅ **Cerrada para `trace` en el Plan 4; sigue 🔴 viva para `say-it` y `read-word`
+   (Plan 5).** `checkAnswer` lanza para un ítem sin respuesta que comparar
+   (`expectedAnswer` devuelve `null`), pero `trace` ya no pasa nunca por ahí: `submitTrace`
+   (`src/engine/session.ts`) es su propio camino de evaluación, con `scoreTrace` contra la
+   geometría de referencia de la letra (D17), y `submitAnswer` lanza explícitamente si se le
+   pasa un ejercicio `trace` («usa `submitTrace`, no `submitAnswer`»); `SessionScreen` solo
+   llama a `submitAnswer`/`answer` para las plantillas de toque. `say-it` y `read-word` siguen
+   sin evaluador propio (`expectedAnswer` les devuelve `null` igual que a `trace` antes de
+   esta tarea) y siguen siendo inofensivas solo porque la Fase 1 y la 2 aún no son jugables
+   (D14): hay que resolverlas en el Plan 5 antes de desbloquearlas, con una guarda o un camino
+   de evaluación propio como el de `trace`, o el niño topará con una excepción a mitad de
+   sesión.
 
 ---
 

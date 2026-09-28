@@ -9,9 +9,28 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { curriculum } from "@/engine";
-import type { TemplateViews } from "@/features/session/registry";
+import {
+	type Box,
+	createAttemptState,
+	curriculum,
+	emptyItemProgress,
+	type Glyph,
+	glyphFor,
+	type PlannedExercise,
+	type ProgressState,
+	type SessionRun,
+	traceGuide,
+} from "@/engine";
+import type {
+	EvaluationProps,
+	PresentationProps,
+	TemplateViews,
+} from "@/features/session/registry";
 import { SessionScreen } from "@/features/session/SessionScreen";
+import {
+	Evaluation as RealTraceEvaluation,
+	TRACE_IDLE_MS,
+} from "@/features/session/trace/Evaluation";
 import {
 	conProveedores,
 	crearStore,
@@ -388,6 +407,248 @@ describe("SessionScreen", () => {
 		for (const c of audio.play.mock.calls)
 			expect(c[0].onSegment).toBeUndefined();
 	});
+
+	it("S3: una evaluación que no es trace no recibe props.trace", async () => {
+		const { vistas } = await montar();
+		const user = userEvent.setup();
+		await hastaEvaluacion(user);
+		expect(vistas.ultimo()?.trace).toBeUndefined();
+	});
+
+	describe("evaluación trace", () => {
+		const LETTER_A_ID = "letter:a";
+		const TRACE_EXERCISE: PlannedExercise = {
+			id: "ex-trace",
+			kind: "evaluation",
+			templateId: "trace",
+			itemId: LETTER_A_ID,
+			optionIds: [],
+			correctOptionId: null,
+			source: "active-unit",
+		};
+
+		function glifoA(): Glyph {
+			const item = curriculum.items.get(LETTER_A_ID);
+			if (item === undefined) throw new Error("falta letter:a");
+			return glyphFor(item, "upper");
+		}
+
+		/**
+		 * Monta a mano una corrida con 2 ejercicios de trazo, sin pasar por el planificador. Van
+		 * 2 y no 1: al acertar el primero, `cursor` avanza pero la sesión no termina, así que
+		 * `run` sigue sin ser null y el test puede seguir mirándolo.
+		 */
+		function trazoRun(progress: ProgressState, box: Box): SessionRun {
+			return {
+				sessionIndex: progress.sessionCounter,
+				unitId: null,
+				exercises: [TRACE_EXERCISE, { ...TRACE_EXERCISE, id: "ex-trace-2" }],
+				cursor: 0,
+				attempt: createAttemptState(),
+				resolutions: [],
+				progress: {
+					...progress,
+					items: {
+						...progress.items,
+						[LETTER_A_ID]: { ...emptyItemProgress(), box },
+					},
+				},
+			};
+		}
+
+		/** Vista falsa de `trace`: anota las props de cada pintado y ofrece "acertar"/"fallar". */
+		function vistaTraceFalsa() {
+			const pintados: EvaluationProps[] = [];
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" data-view="presentation" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: (p: EvaluationProps) => {
+					pintados.push(p);
+					return (
+						<div data-view="evaluation" data-exercise={p.exercise.id}>
+							<button
+								type="button"
+								aria-label="acertar"
+								onClick={() => p.trace?.onTrace(glifoA().strokes)}
+							/>
+							<button
+								type="button"
+								aria-label="fallar"
+								onClick={() => p.trace?.onTrace([])}
+							/>
+						</div>
+					);
+				},
+			};
+			return { views, pintados, ultimo: () => pintados[pintados.length - 1] };
+		}
+
+		async function montarTrace(box: Box) {
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			store.setState({ run: trazoRun(store.getState().progress, box) });
+			const audio = fakeAudio();
+			const vistas = vistaTraceFalsa();
+			const onEnd = vi.fn();
+			const onExit = vi.fn();
+			const { container } = render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={onEnd}
+						onExit={onExit}
+						views={{ trace: vistas.views }}
+						celebrationMs={0}
+					/>,
+				),
+			);
+			const run = () => {
+				const r = store.getState().run;
+				if (r === null) throw new Error("sin corrida");
+				return r;
+			};
+			const claves = () => audio.play.mock.calls.map((c) => c[0].key);
+			return { store, audio, vistas, onEnd, onExit, container, run, claves };
+		}
+
+		it("S1: la vista recibe trace.guide igual a traceGuide(curriculum, run); onTrace llama a answerTrace, y dos seguidos dan una sola llamada", async () => {
+			const { vistas, run } = await montarTrace(0);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(vistas.ultimo()?.trace?.guide).toEqual(
+				traceGuide(curriculum, run()),
+			);
+
+			const antes = run().resolutions.length;
+			const onTrace = vistas.ultimo()?.trace?.onTrace;
+			if (onTrace === undefined) throw new Error("sin trace.onTrace");
+			await act(async () => {
+				onTrace(glifoA().strokes);
+				onTrace(glifoA().strokes);
+			});
+			await waitFor(() => expect(run().resolutions.length).toBe(antes + 1));
+			expect(run().resolutions).toEqual([{ status: "mastery-credit" }]);
+		});
+
+		it("S2: un fallo con letter:a en caja 2 suena feedback:retry, sube attemptKey y la vista pasa del nivel 3 al 2 (más guía)", async () => {
+			const { vistas, claves, run } = await montarTrace(2);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(vistas.ultimo()?.trace?.guide.level).toBe(3);
+			const onTrace = vistas.ultimo()?.trace?.onTrace;
+			if (onTrace === undefined) throw new Error("sin trace.onTrace");
+
+			await act(async () => {
+				onTrace([]);
+			});
+			await waitFor(() => expect(claves()).toContain("feedback:retry"));
+			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
+			expect(vistas.ultimo()?.trace?.guide.level).toBe(2);
+			expect(run().resolutions).toEqual([]);
+		});
+
+		it("integración: la vista real de trace no salta a un nivel más tenue a media celebración, aunque el motor ya haya subido la caja", async () => {
+			// A diferencia de las demás plantillas (que responden a un toque, en el mismo
+			// evento), `onTrace` llega desde un `setTimeout` propio de la evaluación de
+			// trazo: `setLocked(true)` y la llamada al store no comparten turno de React con
+			// nada más. Si la guía congelada de `Evaluation` mirara `guide` en vez de a su
+			// propio ref, este es el hueco donde se colaría el nivel nuevo.
+			if (!("setPointerCapture" in Element.prototype)) {
+				Object.defineProperty(Element.prototype, "setPointerCapture", {
+					configurable: true,
+					writable: true,
+					value: () => {},
+				});
+			}
+			vi.useFakeTimers();
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			store.setState({ run: trazoRun(store.getState().progress, 0) });
+			const audio = fakeAudio();
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" data-view="presentation" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: RealTraceEvaluation,
+			};
+			const { container } = render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={vi.fn()}
+						onExit={vi.fn()}
+						views={{ trace: views }}
+						celebrationMs={700}
+					/>,
+				),
+			);
+			const svg = container.querySelector("svg");
+			if (svg === null) throw new Error("sin <svg>");
+			vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+				left: 0,
+				top: 0,
+				width: 400,
+				height: 400,
+				right: 400,
+				bottom: 400,
+				x: 0,
+				y: 0,
+				toJSON: () => ({}),
+			});
+			expect(svg.getAttribute("data-level")).toBe("1");
+
+			// Los 3 trazos de la A (coordenadas de pantalla ya convertidas a mano con la misma
+			// fórmula del lienzo, para un rect de 400×400 en (0,0) y `glyph.width` 0.8).
+			const trazos: [number, number, number, number][] = [
+				[200, 57.14, 85.71, 342.86],
+				[200, 57.14, 314.29, 342.86],
+				[129.14, 234.29, 270.86, 234.29],
+			];
+			let pointerId = 1;
+			for (const [x0, y0, x1, y1] of trazos) {
+				fireEvent.pointerDown(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x0,
+					clientY: y0,
+				});
+				fireEvent.pointerMove(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x1,
+					clientY: y1,
+				});
+				fireEvent.pointerUp(svg, {
+					pointerId,
+					isPrimary: true,
+					clientX: x1,
+					clientY: y1,
+				});
+				pointerId += 1;
+			}
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(TRACE_IDLE_MS);
+			});
+			// A media celebración: el motor ya acertó (la caja de letter:a subió de 0 a 1, y
+			// `traceGuide` daría nivel 2), pero la vista sigue mostrando el nivel con el que
+			// el niño trazó.
+			expect(store.getState().run?.progress.items[LETTER_A_ID]?.box).toBe(1);
+			expect(svg.getAttribute("data-level")).toBe("1");
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(700);
+			});
+		});
+	});
+
 	describe("guardias de desmontaje y pausa de celebración", () => {
 		/** Registra los rechazos sin capturar que ocurran mientras dure el test. */
 		function vigilarRechazos() {

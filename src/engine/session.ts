@@ -1,3 +1,4 @@
+import { type Glyph, glyphFor } from "@/content/glyphs";
 import type { CurriculumIndex } from "@/content/index";
 import type { HintStep } from "@/content/templates";
 import type { Item } from "@/content/types";
@@ -13,9 +14,16 @@ import {
 	createAttemptState,
 	recordAttempt,
 } from "@/engine/attempts";
+import { itemProgressOf } from "@/engine/mastery";
 import { planSession } from "@/engine/planner";
 import { newlyEarnedRewardIds, totalStars } from "@/engine/rewards";
 import { starsForSession } from "@/engine/stars";
+import {
+	type GuideLevel,
+	guideLevel,
+	scoreTrace,
+	type TraceStroke,
+} from "@/engine/trace";
 import type {
 	ExerciseResolution,
 	PlannedExercise,
@@ -135,27 +143,18 @@ export function checkAnswer(
 }
 
 /**
- * No avanza el cursor aunque el ejercicio quede resuelto: la interfaz todavía tiene que
- * celebrar o mostrar el modelo, y pasa al siguiente con `nextExercise`.
+ * Lo que hoy hacen `submitAnswer` y `submitTrace` en cuanto ya tienen el desenlace del
+ * intento (`outcome`): registrar el intento y, si resuelve, aplicar la resolución al
+ * progreso. Vive en un solo sitio para que ninguno de los dos pueda dar crédito o pistas de
+ * una forma distinta al otro.
  */
-export function submitAnswer(input: {
-	content: CurriculumIndex;
-	run: SessionRun;
-	answer: string;
-	now: string;
-}): { run: SessionRun; feedback: AttemptFeedback } {
-	const { content, run, answer, now } = input;
-	const exercise = currentExercise(run);
-	if (exercise === null) throw new Error("La sesión ya ha terminado");
-	if (exercise.kind !== "evaluation")
-		throw new Error(`El ejercicio ${exercise.id} no es una evaluación`);
-	if (run.attempt.resolved)
-		throw new Error(`El ejercicio ${exercise.id} ya está resuelto`);
-	const item = content.items.get(exercise.itemId);
-	if (item === undefined)
-		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
-
-	const outcome = checkAnswer(exercise, item, answer);
+function resolveAttempt(
+	content: CurriculumIndex,
+	run: SessionRun,
+	exercise: PlannedExercise,
+	outcome: AttemptOutcome,
+	now: string,
+): { run: SessionRun; feedback: AttemptFeedback } {
 	const step = recordAttempt(exercise.templateId, run.attempt, outcome);
 	const feedback: AttemptFeedback = {
 		hint: step.hint,
@@ -181,6 +180,100 @@ export function submitAnswer(input: {
 			progress,
 		},
 		feedback,
+	};
+}
+
+/**
+ * No avanza el cursor aunque el ejercicio quede resuelto: la interfaz todavía tiene que
+ * celebrar o mostrar el modelo, y pasa al siguiente con `nextExercise`.
+ */
+export function submitAnswer(input: {
+	content: CurriculumIndex;
+	run: SessionRun;
+	answer: string;
+	now: string;
+}): { run: SessionRun; feedback: AttemptFeedback } {
+	const { content, run, answer, now } = input;
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("La sesión ya ha terminado");
+	if (exercise.kind !== "evaluation")
+		throw new Error(`El ejercicio ${exercise.id} no es una evaluación`);
+	if (exercise.templateId === "trace")
+		throw new Error(
+			`El ejercicio ${exercise.id} es de trazo: usa submitTrace, no submitAnswer`,
+		);
+	if (run.attempt.resolved)
+		throw new Error(`El ejercicio ${exercise.id} ya está resuelto`);
+	const item = content.items.get(exercise.itemId);
+	if (item === undefined)
+		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
+
+	const outcome = checkAnswer(exercise, item, answer);
+	return resolveAttempt(content, run, exercise, outcome, now);
+}
+
+/**
+ * Igual que `submitAnswer`, pero para la plantilla `trace`: el trazo no tiene una respuesta de
+ * texto que comparar, así que el desenlace sale de `scoreTrace` contra la geometría de
+ * referencia de la letra. `glyphFor` siempre pide la mayúscula (D16): la minúscula llega en el
+ * Plan 6.
+ */
+export function submitTrace(input: {
+	content: CurriculumIndex;
+	run: SessionRun;
+	strokes: readonly TraceStroke[];
+	now: string;
+}): { run: SessionRun; feedback: AttemptFeedback } {
+	const { content, run, strokes, now } = input;
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("La sesión ya ha terminado");
+	if (exercise.kind !== "evaluation")
+		throw new Error(`El ejercicio ${exercise.id} no es una evaluación`);
+	if (exercise.templateId !== "trace")
+		throw new Error(
+			`El ejercicio ${exercise.id} no es de trazo: usa submitAnswer, no submitTrace`,
+		);
+	if (run.attempt.resolved)
+		throw new Error(`El ejercicio ${exercise.id} ya está resuelto`);
+	const item = content.items.get(exercise.itemId);
+	if (item === undefined)
+		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
+
+	const glyph = glyphFor(item, "upper");
+	const outcome: AttemptOutcome = scoreTrace(glyph, strokes).correct
+		? "correct"
+		: "wrong";
+	return resolveAttempt(content, run, exercise, outcome, now);
+}
+
+/** Lo que la interfaz necesita para pintar la guía del trazo: el glifo de referencia y cuánto
+ * enseñar de él. */
+export type TraceGuide = { glyph: Glyph; level: GuideLevel };
+
+/**
+ * Nivel de guía del ejercicio de trazo en curso, según la caja del ítem y las pistas ya
+ * mostradas en este intento. Lanza si no hay ejercicio en curso, o si el que hay no es una
+ * evaluación de trazo: pedir la guía de otra plantilla es un error de quien llama.
+ */
+export function traceGuide(
+	content: CurriculumIndex,
+	run: SessionRun,
+): TraceGuide {
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("La sesión ya ha terminado");
+	if (exercise.kind !== "evaluation" || exercise.templateId !== "trace")
+		throw new Error(
+			`El ejercicio ${exercise.id} no es una evaluación de trazo`,
+		);
+	const item = content.items.get(exercise.itemId);
+	if (item === undefined)
+		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
+	return {
+		glyph: glyphFor(item, "upper"),
+		level: guideLevel(
+			itemProgressOf(run.progress, exercise.itemId).box,
+			run.attempt.hintsShown,
+		),
 	};
 }
 

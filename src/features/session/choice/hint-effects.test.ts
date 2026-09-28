@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	curriculum,
+	emptyProgressState,
 	expectedAnswer,
 	type Item,
 	type PlannedExercise,
+	planSession,
 } from "@/engine";
 import {
 	choiceEffect,
@@ -298,6 +300,90 @@ describe("choiceEffect: listen-tap", () => {
 				e.kind === "dim" ? e.replay : e.kind === "pulse" ? e.request : null;
 			expect(request).not.toBeNull();
 			expect(request?.key.startsWith("letter:")).toBe(false);
+		}
+	});
+});
+
+// R29 (D15): con solo 2 opciones no queda nada que atenuar sin dejar una única opción tocable,
+// así que la pista 1 repite el audio en vez de apagar un distractor.
+const FONEMA_A = item("phoneme:a");
+const EV_FONEMA_2 = ejercicio(
+	FONEMA_A,
+	"initial-sound",
+	["picture:oso", "picture:avión"],
+	"picture:avión",
+);
+
+describe("choiceEffect: R29 (D15)", () => {
+	it("X1: listen-tap con 2 opciones, pista 1: repite el audio del ítem, no atenúa", () => {
+		expect(efecto("dim-one-distractor+replay", SILABA, EV_SILABA)).toEqual({
+			kind: "replay",
+			request: { key: "syllable:ma" },
+		});
+	});
+
+	it("X2: initial-sound con un ítem fonema y 2 opciones, pista 1: repite el audio del ítem", () => {
+		expect(
+			efecto("dim-one-distractor+replay-phoneme", FONEMA_A, EV_FONEMA_2),
+		).toEqual({
+			kind: "replay",
+			request: { key: "phoneme:a" },
+		});
+	});
+
+	it("X3: con 3 opciones (listen-tap letter:a) sigue atenuando un distractor, nunca la correcta", () => {
+		const e = efecto("dim-one-distractor+replay", LETRA, EV_LETRA);
+		expect(e.kind).toBe("dim");
+		if (e.kind === "dim") expect(e.optionId).not.toBe("letter:a");
+	});
+
+	it("X3: initial-sound con un ítem fonema y 3 opciones tampoco cambia nada", () => {
+		const ev3 = ejercicio(
+			FONEMA_A,
+			"initial-sound",
+			["picture:oso", "picture:avión", "picture:uva"],
+			"picture:avión",
+		);
+		const e = efecto("dim-one-distractor+replay-phoneme", FONEMA_A, ev3);
+		expect(e.kind).toBe("dim");
+		if (e.kind === "dim") expect(e.optionId).not.toBe("picture:avión");
+	});
+
+	it("X3: phase0:initial por el planificador real siempre trae 3 opciones y nunca da replay (único ítem oral jugable hoy)", () => {
+		// No a mano: se planifica de verdad, como hace `buildOptions` al pasar
+		// `item.task.optionIds` completo a `exercise.optionIds`. Si algún día una unidad
+		// planificara este ítem con solo 2 opciones, este test lo notaría.
+		const evaluacionesIniciales: PlannedExercise[] = [];
+		for (const seed of [1, 2, 3, 4, 5]) {
+			const plan = planSession({
+				content: curriculum,
+				state: emptyProgressState(),
+				activeUnitId: "phase0:initial",
+				sessionLength: 6,
+				seed,
+			});
+			for (const ex of plan) {
+				if (ex.kind === "evaluation" && ex.templateId === "initial-sound")
+					evaluacionesIniciales.push(ex);
+			}
+		}
+		expect(evaluacionesIniciales.length).toBeGreaterThan(0);
+		for (const ex of evaluacionesIniciales) {
+			const it = curriculum.items.get(ex.itemId);
+			if (it === undefined) throw new Error(`Falta ${ex.itemId}`);
+			const expected = expectedAnswer(ex, it);
+			if (expected === null) throw new Error("sin respuesta");
+			expect(ex.optionIds).toHaveLength(3);
+			const e = choiceEffect({
+				action: "dim-one-distractor+replay-phoneme",
+				exercise: ex,
+				item: it,
+				optionIds: ex.optionIds,
+				expected,
+				lookup: (id) => curriculum.items.get(id),
+			});
+			expect(e.kind).toBe("dim");
+			if (e.kind === "dim") expect(e.optionId).not.toBe(expected);
 		}
 	});
 });

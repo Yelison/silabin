@@ -116,6 +116,15 @@ describe("listen-tap / Evaluation", () => {
 		expect(m.onAnswer).not.toHaveBeenCalled();
 	});
 
+	it("X4 (R29/D15): con 2 opciones, la pista 1 repite el audio y las dos siguen activas y tocables", () => {
+		const m = montar(SILABA(), conPista(1), 1);
+		expect(estado("pa")).toBe("idle");
+		expect(estado("ma")).toBe("idle");
+		expect(claves(m.audio)).toEqual([{ key: "syllable:ma" }]);
+		fireEvent.click(boton("pa"));
+		expect(m.onAnswer).toHaveBeenCalledWith("syllable:pa");
+	});
+
 	it("L3: pista 2 en syllable:ma pulsa la correcta (no la primera) y suena stretch:syllable:ma", () => {
 		const m = montar(SILABA(), conPista(2), 1);
 		expect(estado("ma")).toBe("pulsing");
