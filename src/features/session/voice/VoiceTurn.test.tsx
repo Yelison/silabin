@@ -11,6 +11,7 @@ import type { SpokenVerdict } from "@/engine";
 import { AppProviders, type SpeechDeps } from "@/features/app-context";
 import {
 	COUNTDOWN_MS,
+	EVALUATION_MAX_MS,
 	MAX_SILENT_TURNS,
 	TAP_GUARD_MS,
 	VoiceTurn,
@@ -497,5 +498,195 @@ describe("VoiceTurn: accesibilidad y tamaños", () => {
 		expect((boton("Otra vez") as HTMLElement).parentElement?.className).toMatch(
 			/\bgap-4\b/,
 		);
+	});
+});
+
+/** Una promesa que se resuelve cuando el test lo decide. */
+function diferida<T>() {
+	let resolver: (v: T) => void = () => {};
+	const promesa = new Promise<T>((res) => {
+		resolver = res;
+	});
+	return { promesa, resolver };
+}
+
+function evaluadorDiferido(id: SpeechEvaluator["id"] = "azure") {
+	const d = diferida<{
+		verdict: "ok" | "retry" | "unsure";
+		confidence: number;
+	}>();
+	const evaluator: SpeechEvaluator = {
+		id,
+		available: async () => true,
+		evaluate: () => d.promesa,
+	};
+	return { evaluator, terminar: d.resolver };
+}
+
+describe("VoiceTurn: disabled a mitad de turno (Ruling: se descarta el resultado y se vuelve a idle)", () => {
+	it.each(["attempt", "model"] as const)(
+		"disabled durante la escucha y llega heard (%s): sin veredicto, vuelve a idle y un toque nuevo abre otra escucha",
+		async (mode) => {
+			const t = await montar({
+				mode,
+				speechMode: "auto",
+				evaluators: [evaluador("azure", "ok"), createParentEvaluator()],
+			});
+			const escucha = diferida<ListenResult>();
+			t.listen.mockImplementationOnce(() => escucha.promesa);
+			await turno();
+			t.rerenderCon({ disabled: true });
+			await act(async () => {
+				escucha.resolver({ kind: "heard" });
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			t.rerenderCon({ disabled: false });
+			await avanzar(EVALUATION_MAX_MS);
+			expect(t.onVerdict).not.toHaveBeenCalled();
+			expect(t.onModelDone).not.toHaveBeenCalled();
+			expect(boton("Lo dijo bien")).toBeNull();
+			expect(t.listen).toHaveBeenCalledTimes(1);
+			await turno();
+			expect(t.listen).toHaveBeenCalledTimes(2);
+		},
+	);
+
+	it.each(["attempt", "model"] as const)(
+		"disabled durante la cuenta atrás y luego heard (%s): sin veredicto y vuelve a idle",
+		async (mode) => {
+			const t = await montar({
+				mode,
+				speechMode: "auto",
+				evaluators: [evaluador("azure", "ok"), createParentEvaluator()],
+			});
+			fireEvent.click(mic() as HTMLElement);
+			t.rerenderCon({ disabled: true });
+			await avanzar(COUNTDOWN_MS);
+			t.rerenderCon({ disabled: false });
+			expect(t.onVerdict).not.toHaveBeenCalled();
+			expect(t.onModelDone).not.toHaveBeenCalled();
+			await turno();
+			expect(t.listen).toHaveBeenCalledTimes(2);
+		},
+	);
+
+	it("un heard descartado por disabled no cuenta como silencio: tras MAX_SILENT_TURNS descartes no salen los botones", async () => {
+		const t = await montar({
+			speechMode: "auto",
+			evaluators: [evaluador("azure", "ok"), createParentEvaluator()],
+		});
+		for (let i = 0; i < MAX_SILENT_TURNS; i += 1) {
+			const escucha = diferida<ListenResult>();
+			t.listen.mockImplementationOnce(() => escucha.promesa);
+			await turno();
+			t.rerenderCon({ disabled: true });
+			await act(async () => {
+				escucha.resolver({ kind: "heard" });
+				await vi.advanceTimersByTimeAsync(0);
+			});
+			t.rerenderCon({ disabled: false });
+		}
+		expect(t.audio.play).not.toHaveBeenCalled();
+		expect(boton("Lo dijo bien")).toBeNull();
+		expect(mic()).not.toBeNull();
+	});
+
+	it("disabled durante la evaluación: al acabar se descarta el resultado (aunque sea ok) y se vuelve a idle", async () => {
+		const lento = evaluadorDiferido();
+		const t = await montar({
+			speechMode: "auto",
+			evaluators: [lento.evaluator, createParentEvaluator()],
+		});
+		await turno();
+		t.rerenderCon({ disabled: true });
+		await act(async () => {
+			lento.terminar({ verdict: "ok", confidence: 1 });
+			await vi.advanceTimersByTimeAsync(0);
+		});
+		t.rerenderCon({ disabled: false });
+		expect(t.onVerdict).not.toHaveBeenCalled();
+		await turno();
+		expect(t.listen).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("VoiceTurn: evaluador colgado o tardío (P4)", () => {
+	it("un evaluador que no acaba nunca: pasado EVALUATION_MAX_MS salen los botones del adulto", async () => {
+		expect(EVALUATION_MAX_MS).toBe(5000);
+		const colgado: SpeechEvaluator = {
+			id: "azure",
+			available: async () => true,
+			evaluate: () => new Promise(() => {}),
+		};
+		const t = await montar({ speechMode: "auto", evaluators: [colgado] });
+		await turno();
+		await avanzar(EVALUATION_MAX_MS - 1);
+		expect(boton("Lo dijo bien")).toBeNull();
+		await avanzar(1);
+		expect(boton("Lo dijo bien")).not.toBeNull();
+		expect(boton("Otra vez")).not.toBeNull();
+		expect(t.onVerdict).not.toHaveBeenCalled();
+	});
+
+	it("un available() que no acaba nunca también cae al tope", async () => {
+		const colgado: SpeechEvaluator = {
+			id: "azure",
+			available: () => new Promise(() => {}),
+			evaluate: async () => ({ verdict: "ok", confidence: 1 }),
+		};
+		await montar({ speechMode: "auto", evaluators: [colgado] });
+		await turno();
+		await avanzar(EVALUATION_MAX_MS);
+		expect(boton("Lo dijo bien")).not.toBeNull();
+	});
+
+	it("un evaluador que resuelve ok después de vencer el tope no da veredicto", async () => {
+		const lento = evaluadorDiferido();
+		const t = await montar({
+			speechMode: "auto",
+			evaluators: [lento.evaluator],
+		});
+		await turno();
+		await avanzar(EVALUATION_MAX_MS);
+		expect(boton("Lo dijo bien")).not.toBeNull();
+		await act(async () => {
+			lento.terminar({ verdict: "ok", confidence: 1 });
+			await vi.advanceTimersByTimeAsync(0);
+		});
+		expect(t.onVerdict).not.toHaveBeenCalled();
+		expect(boton("Lo dijo bien")).not.toBeNull();
+	});
+
+	it("un evaluador lento que resuelve ok tras desmontar no da veredicto", async () => {
+		const lento = evaluadorDiferido();
+		const t = await montar({
+			speechMode: "auto",
+			evaluators: [lento.evaluator],
+		});
+		await turno();
+		t.unmount();
+		await act(async () => {
+			lento.terminar({ verdict: "ok", confidence: 1 });
+			await vi.advanceTimersByTimeAsync(0);
+		});
+		expect(t.onVerdict).not.toHaveBeenCalled();
+	});
+
+	it("desmontar durante la evaluación no deja el temporizador del tope pendiente", async () => {
+		const lento = evaluadorDiferido();
+		const t = await montar({
+			speechMode: "auto",
+			evaluators: [lento.evaluator],
+		});
+		await turno();
+		t.unmount();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it("una evaluación a tiempo que pide al adulto no deja el temporizador del tope pendiente", async () => {
+		await montar({ speechMode: "parent" });
+		await turno();
+		expect(boton("Lo dijo bien")).not.toBeNull();
+		expect(vi.getTimerCount()).toBe(0);
 	});
 });

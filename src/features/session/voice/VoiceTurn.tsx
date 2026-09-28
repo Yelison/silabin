@@ -10,6 +10,11 @@ import { type ListenResult, pickEvaluator, type SpeechTarget } from "@/speech";
 export const COUNTDOWN_MS = 900;
 /** Silencios seguidos tras los que el adulto tiene los botones (P4). */
 export const MAX_SILENT_TURNS = 2;
+/**
+ * Lo máximo que se espera a que un evaluador conteste (P4). Al vencer se trata como si hubiera
+ * fallado: salen los botones del adulto. Los evaluadores por red (`browser`, `azure`) pueden colgarse.
+ */
+export const EVALUATION_MAX_MS = 5000;
 /** Tras un veredicto se ignoran los toques este tiempo: un doble toque no da dos veredictos. */
 export const TAP_GUARD_MS = 800;
 
@@ -65,6 +70,9 @@ export function VoiceTurn(props: Props) {
 		undefined,
 	);
 	const guarda = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const topeEvaluacion = useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	);
 	// Lo último que dicen las props y el contexto, para lo que se decide tras un `await`.
 	const vivo = useRef({ ...props, audio, listener, evaluators, speechMode });
 	useEffect(() => {
@@ -81,21 +89,37 @@ export function VoiceTurn(props: Props) {
 			control.current?.abort();
 			clearTimeout(cuentaAtras.current);
 			clearTimeout(guarda.current);
+			clearTimeout(topeEvaluacion.current);
 		},
 		[],
 	);
 
-	/** Da un veredicto una sola vez, corta lo que estuviera en curso y rearma tras la guarda. */
+	/**
+	 * Da un veredicto una sola vez, corta lo que estuviera en curso y rearma tras la guarda. No
+	 * mira `disabled`: eso lo hace quien llama. Los toques del adulto lo comprueban en el botón;
+	 * un resultado que llega con `disabled` se descarta antes (`descartar`), nunca aquí.
+	 */
 	const resolver = (dar: () => void) => {
-		if (vivo.current.disabled || faseRef.current === "resuelto") return;
+		if (faseRef.current === "resuelto") return;
 		control.current?.abort();
 		clearTimeout(cuentaAtras.current);
+		clearTimeout(topeEvaluacion.current);
 		ir("resuelto");
 		silenciosRef.current = 0;
 		setSilencios(0);
 		setNivel(0);
 		guarda.current = setTimeout(() => ir("idle"), TAP_GUARD_MS);
 		dar();
+	};
+
+	/**
+	 * Un resultado que llega con `disabled` no puede aceptarse: el motor está ocupado o suena
+	 * una pista, y la voz del dispositivo no debe contar como la del niño (P7). Se descarta y el
+	 * micrófono vuelve a estar listo. Nunca deja el turno atrapado.
+	 */
+	const descartar = () => {
+		setNivel(0);
+		ir("idle");
 	};
 
 	const alOir = async (c: AbortController) => {
@@ -105,12 +129,31 @@ export function VoiceTurn(props: Props) {
 		}
 		ir("evaluating");
 		try {
-			const evaluador = await pickEvaluator(
-				vivo.current.evaluators,
-				vivo.current.speechMode,
-			);
-			const v = await evaluador.evaluate({ target: vivo.current.target });
+			// El tope cubre `pickEvaluator` y `evaluate` juntos; un resultado tardío ya no cuenta.
+			const tope = new Promise<never>((_, rechazar) => {
+				topeEvaluacion.current = setTimeout(
+					() => rechazar(new Error("El evaluador no contestó a tiempo")),
+					EVALUATION_MAX_MS,
+				);
+			});
+			const evaluar = async () => {
+				const evaluador = await pickEvaluator(
+					vivo.current.evaluators,
+					vivo.current.speechMode,
+				);
+				return evaluador.evaluate({ target: vivo.current.target });
+			};
+			let v: Awaited<ReturnType<typeof evaluar>>;
+			try {
+				v = await Promise.race([evaluar(), tope]);
+			} finally {
+				clearTimeout(topeEvaluacion.current);
+			}
 			if (c.signal.aborted || faseRef.current !== "evaluating") return;
+			if (vivo.current.disabled) {
+				descartar();
+				return;
+			}
 			// P1: solo un `ok` se salta al adulto; `retry` y `unsure` se le piden.
 			if (v.verdict === "ok") resolver(() => vivo.current.onVerdict("ok"));
 			else ir("adulto");
@@ -140,6 +183,10 @@ export function VoiceTurn(props: Props) {
 		setNivel(0);
 		switch (resultado.kind) {
 			case "heard":
+				if (vivo.current.disabled) {
+					descartar();
+					return;
+				}
 				await alOir(c);
 				return;
 			case "silence": {
