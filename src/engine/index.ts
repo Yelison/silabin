@@ -9,6 +9,8 @@ export type { Glyph, GlyphPoint, LetterCase } from "@/content/glyphs";
 export { glyphFor } from "@/content/glyphs";
 export type { CurriculumIndex } from "@/content/index";
 export { curriculum } from "@/content/index";
+export type { MouthShape } from "@/content/mouths";
+export { mouthShapesFor } from "@/content/mouths";
 export type { HintStep, TemplateId } from "@/content/templates";
 export { templates } from "@/content/templates";
 export type { Item, Unit } from "@/content/types";
