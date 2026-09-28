@@ -103,13 +103,14 @@ describe("condiciones de los logros", () => {
 		);
 	});
 
-	it("el primer acierto de voz desbloquea el rastro de estrellitas", () => {
+	it("M7: el rastro de estrellitas pide una sílaba dicha, no letras ni palabras", () => {
 		const state = emptyProgressState();
-		state.counters.voiceOk = 0;
+		state.counters.voiceOk = 3;
+		state.counters.syllablesVoiced = 0;
 		expect(earnedRewardIds(context(state))).not.toContain(
 			"first-syllable-voice",
 		);
-		state.counters.voiceOk = 1;
+		state.counters.syllablesVoiced = 1;
 		expect(earnedRewardIds(context(state))).toContain("first-syllable-voice");
 	});
 

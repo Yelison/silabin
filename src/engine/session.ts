@@ -1,6 +1,6 @@
 import { type Glyph, glyphFor } from "@/content/glyphs";
 import type { CurriculumIndex } from "@/content/index";
-import type { HintStep } from "@/content/templates";
+import { type HintStep, templates } from "@/content/templates";
 import type { Item } from "@/content/types";
 import { expectedAnswer } from "@/engine/answers";
 import {
@@ -21,6 +21,7 @@ import { starsForSession } from "@/engine/stars";
 import {
 	type GuideLevel,
 	guideLevel,
+	isNegligibleTrace,
 	scoreTrace,
 	type TraceStroke,
 } from "@/engine/trace";
@@ -57,7 +58,12 @@ export type SessionRun = {
 export type AttemptFeedback = {
 	hint: HintStep | null;
 	resolution: ExerciseResolution | null;
+	/** Solo en `trace` con tinta despreciable (D19): no contó como intento. */
+	ignored?: true;
 };
+
+/** Veredicto final de un turno de voz: lo decide quien evalúa, el motor no ve audio. */
+export type SpokenVerdict = "ok" | "retry";
 
 export type SessionSummary = {
 	progress: ProgressState;
@@ -125,9 +131,9 @@ export function completePresentation(run: SessionRun): SessionRun {
 
 /**
  * Compara la respuesta con la esperada tal cual, sin normalizar: `"2"` y `" 2"` son distintas.
- * `expectedAnswer` es la única fuente de esa respuesta. Las plantillas de trazo y de voz
- * todavía no tienen evaluador propio y siguen dando `null`; un ítem sin respuesta esperable
- * lanza en vez de dar por buena o mala una respuesta a ciegas.
+ * `expectedAnswer` es la única fuente de esa respuesta. Las plantillas de trazo y de voz no
+ * comparan texto (tienen `submitTrace` y `submitSpeech`) y dan `null`; un ítem sin respuesta
+ * esperable lanza en vez de dar por buena o mala una respuesta a ciegas.
  */
 export function checkAnswer(
 	exercise: PlannedExercise,
@@ -198,9 +204,14 @@ export function submitAnswer(input: {
 	if (exercise === null) throw new Error("La sesión ya ha terminado");
 	if (exercise.kind !== "evaluation")
 		throw new Error(`El ejercicio ${exercise.id} no es una evaluación`);
-	if (exercise.templateId === "trace")
+	const evaluation = templates[exercise.templateId].evaluation;
+	if (evaluation === "trace")
 		throw new Error(
 			`El ejercicio ${exercise.id} es de trazo: usa submitTrace, no submitAnswer`,
+		);
+	if (evaluation === "voice")
+		throw new Error(
+			`El ejercicio ${exercise.id} es de voz: usa submitSpeech, no submitAnswer`,
 		);
 	if (run.attempt.resolved)
 		throw new Error(`El ejercicio ${exercise.id} ya está resuelto`);
@@ -240,10 +251,69 @@ export function submitTrace(input: {
 		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
 
 	const glyph = glyphFor(item, "upper");
+	// D19: un toque sin querer ni gasta el intento ni avanza la pista.
+	if (isNegligibleTrace(glyph, strokes))
+		return { run, feedback: { hint: null, resolution: null, ignored: true } };
 	const outcome: AttemptOutcome = scoreTrace(glyph, strokes).correct
 		? "correct"
 		: "wrong";
 	return resolveAttempt(content, run, exercise, outcome, now);
+}
+
+/**
+ * Igual que `submitTrace`, para las plantillas de voz (`say-it`, `read-word`): el motor no ve
+ * audio, solo el veredicto final. `ok` cuenta como acierto y `retry` como fallo, y de ahí
+ * `resolveAttempt` decide pista o resolución.
+ */
+export function submitSpeech(input: {
+	content: CurriculumIndex;
+	run: SessionRun;
+	verdict: SpokenVerdict;
+	now: string;
+}): { run: SessionRun; feedback: AttemptFeedback } {
+	const { content, run, verdict, now } = input;
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("La sesión ya ha terminado");
+	if (exercise.kind !== "evaluation")
+		throw new Error(`El ejercicio ${exercise.id} no es una evaluación`);
+	if (templates[exercise.templateId].evaluation !== "voice")
+		throw new Error(
+			`El ejercicio ${exercise.id} no es de voz: usa submitAnswer o submitTrace, no submitSpeech`,
+		);
+	if (run.attempt.resolved)
+		throw new Error(`El ejercicio ${exercise.id} ya está resuelto`);
+	if (!content.items.has(exercise.itemId))
+		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
+
+	const outcome: AttemptOutcome = verdict === "ok" ? "correct" : "wrong";
+	return resolveAttempt(content, run, exercise, outcome, now);
+}
+
+/**
+ * P12: ¿cierra este trazo el modelo del tercer rung? El niño repasa la guía animada y la
+ * vista pregunta al motor si vale; un toque sin querer no cierra el modelo. Lanza si el
+ * ejercicio en curso no es una evaluación `trace` resuelta como `assisted`.
+ */
+export function acceptsModelTrace(
+	content: CurriculumIndex,
+	run: SessionRun,
+	strokes: readonly TraceStroke[],
+): boolean {
+	const exercise = currentExercise(run);
+	if (exercise === null) throw new Error("La sesión ya ha terminado");
+	if (exercise.kind !== "evaluation" || exercise.templateId !== "trace")
+		throw new Error(
+			`El ejercicio ${exercise.id} no es una evaluación de trazo`,
+		);
+	const last = run.resolutions[run.resolutions.length - 1];
+	if (!run.attempt.resolved || last?.status !== "assisted")
+		throw new Error(
+			`El ejercicio ${exercise.id} no está resuelto como asistido: no hay modelo que repasar`,
+		);
+	const item = content.items.get(exercise.itemId);
+	if (item === undefined)
+		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
+	return !isNegligibleTrace(glyphFor(item, "upper"), strokes);
 }
 
 /** Lo que la interfaz necesita para pintar la guía del trazo: el glifo de referencia y cuánto

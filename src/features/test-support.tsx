@@ -131,3 +131,57 @@ export function vistasFalsas() {
 		ultimo: () => pintados[pintados.length - 1],
 	};
 }
+
+const DOMINADO = "2026-09-25T10:00:00.000Z";
+
+/**
+ * Un documento guardado como lo dejaría el disco, con todas las unidades anteriores a `hasta`
+ * dominadas (`null`: ninguna) y, si hace falta, ítems sueltos de la unidad activa ya dominados
+ * (`itemsExtra`), para que el planificador saque ejercicios de sílabas o palabras. Las
+ * `settings` que falten las rellena el esquema al cargar (`hideMic` sale `false`).
+ */
+export function documentoConUnidadesHechas(
+	hasta: string | null,
+	opciones: { hideMic?: boolean; itemsExtra?: readonly string[] } = {},
+) {
+	const ids: string[] = [];
+	if (hasta !== null)
+		for (const unitId of curriculum.unitOrder) {
+			if (unitId === hasta) break;
+			ids.push(...(curriculum.units.get(unitId)?.introduces ?? []));
+		}
+	ids.push(...(opciones.itemsExtra ?? []));
+	const items: Record<string, unknown> = {};
+	for (const id of ids)
+		items[id] = {
+			box: 1,
+			presented: true,
+			firstTryCorrect: 3,
+			assisted: 0,
+			lastSessionIndex: 0,
+			lastCreditSession: 0,
+			masteredAt: DOMINADO,
+		};
+	return {
+		version: 1,
+		settings: {
+			accent: "neutro",
+			lowercaseTracing: false,
+			sessionLength: 5,
+			speechMode: "parent",
+			reducedCelebrations: false,
+			hideMic: opciones.hideMic ?? false,
+			childName: null,
+			pinHash: null,
+		},
+		items,
+		units: {},
+		sessionCounter: ids.length === 0 ? 0 : 1,
+		counters: { traces: 0, sessions: 0, voiceOk: 0, wordsRead: 0 },
+		sessions: [],
+		rewards: {
+			unlockedAt: {},
+			equipped: { background: null, companion: null, trail: null },
+		},
+	};
+}

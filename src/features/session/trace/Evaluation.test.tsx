@@ -9,6 +9,7 @@ import {
 	glyphFor,
 	type Item,
 	type PlannedExercise,
+	type TraceStroke,
 	templates,
 } from "@/engine";
 import type { EvaluationProps } from "@/features/session/registry";
@@ -97,6 +98,7 @@ function montar(
 		nivel?: GuideLevel;
 		itemId?: string;
 		audio?: ReturnType<typeof fakeAudio>;
+		acceptsModel?: (strokes: TraceStroke[]) => boolean;
 	} = {},
 ) {
 	const itemId = over.itemId ?? "letter:a";
@@ -104,6 +106,7 @@ function montar(
 	const onTrace = vi.fn();
 	const onModelDone = vi.fn();
 	const onAnswer = vi.fn();
+	const acceptsModel = vi.fn(over.acceptsModel ?? (() => true));
 	let props: EvaluationProps = {
 		exercise,
 		item: item(itemId),
@@ -112,7 +115,12 @@ function montar(
 		locked: over.locked ?? false,
 		onAnswer,
 		onModelDone,
-		trace: { guide: guiaDe(itemId, over.nivel ?? 1), onTrace },
+		trace: {
+			guide: guiaDe(itemId, over.nivel ?? 1),
+			onTrace,
+			clearKey: 0,
+			acceptsModel,
+		},
 	};
 	const store = crearStore();
 	const audio = over.audio ?? fakeAudio();
@@ -133,6 +141,7 @@ function montar(
 		onTrace,
 		onModelDone,
 		onAnswer,
+		acceptsModel,
 		actualizar,
 		props: () => props,
 	};
@@ -320,6 +329,8 @@ describe("trace Evaluation", () => {
 			trace: {
 				guide: guiaDe(itemId, 2),
 				onTrace: props().trace?.onTrace ?? vi.fn(),
+				clearKey: 0,
+				acceptsModel: () => true,
 			},
 		});
 		expect(svg.getAttribute("data-level")).toBe("1");
@@ -379,5 +390,120 @@ describe("trace Evaluation", () => {
 		expect(boton.getAttribute("aria-disabled")).toBe("true");
 		fireEvent.click(boton);
 		expect(audio.play).not.toHaveBeenCalled();
+	});
+	describe("D19: clearKey y modelo", () => {
+		function conClearKey(t: ReturnType<typeof montar>, clearKey: number): void {
+			const trace = t.props().trace;
+			if (trace === undefined) throw new Error("sin trace");
+			t.actualizar({ trace: { ...trace, clearKey } });
+		}
+
+		it("W6: al cambiar clearKey se borra la tinta y el lienzo vuelve a aceptar un envío, sin apagar la pista que se muestra", () => {
+			vi.useFakeTimers();
+			const t = montar({ nivel: 2 });
+			t.actualizar({
+				feedback: { hint: templates.trace.hints[0], resolution: null },
+			});
+			const pulso = () => t.container.querySelector('[data-pulse="true"]');
+			expect(pulso()).not.toBeNull();
+
+			trazoSimple(t.svg);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(t.onTrace).toHaveBeenCalledTimes(1);
+			expect(t.svg.getAttribute("data-disabled")).toBe("true");
+
+			conClearKey(t, 1);
+
+			expect(t.container.querySelectorAll('[data-testid="ink"]')).toHaveLength(
+				0,
+			);
+			expect(t.svg.getAttribute("data-disabled")).toBeNull();
+			expect(pulso()).not.toBeNull();
+			// Vuelve a mandar, y sin arrastrar la tinta anterior.
+			trazoSimple(t.svg, 2);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(t.onTrace).toHaveBeenCalledTimes(2);
+			expect(t.onTrace.mock.calls[1]?.[0]).toHaveLength(1);
+		});
+
+		it("W6: clearKey tampoco corta una animación de pista en curso", () => {
+			vi.useFakeTimers();
+			const t = montar({ nivel: 2 });
+			t.actualizar({
+				feedback: { hint: templates.trace.hints[1], resolution: null },
+			});
+			expect(
+				t.container.querySelector('[data-testid="anim-dot"]'),
+			).not.toBeNull();
+			conClearKey(t, 1);
+			expect(
+				t.container.querySelector('[data-testid="anim-dot"]'),
+			).not.toBeNull();
+		});
+
+		it("W7: en el modelo, si acceptsModel dice que no, borra la tinta, no avisa y sigue esperando", () => {
+			vi.useFakeTimers();
+			const t = montar({ acceptsModel: () => false });
+			t.actualizar({
+				feedback: {
+					hint: templates.trace.hints[2],
+					resolution: { status: "assisted" },
+				},
+			});
+			act(() => {
+				vi.advanceTimersByTime(10_000);
+			});
+			trazoSimple(t.svg);
+			expect(
+				t.container.querySelectorAll('[data-testid="ink"]').length,
+			).toBeGreaterThan(0);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(t.acceptsModel).toHaveBeenCalledTimes(1);
+			expect(t.onModelDone).not.toHaveBeenCalled();
+			expect(t.container.querySelectorAll('[data-testid="ink"]')).toHaveLength(
+				0,
+			);
+			expect(t.svg.getAttribute("data-disabled")).toBeNull();
+			// Sigue esperando: un segundo intento que sí vale cierra el modelo.
+			t.acceptsModel.mockReturnValue(true);
+			trazoSimple(t.svg, 2);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(t.onModelDone).toHaveBeenCalledTimes(1);
+			expect(t.onTrace).not.toHaveBeenCalled();
+			// Un intento rechazado no deja sus trazos: `acceptsModelTrace` decide por tinta
+			// acumulada, y varios toques accidentales seguidos no pueden sumarse hasta cerrar el
+			// modelo sin repasar nada (P12/D19).
+			expect(t.acceptsModel).toHaveBeenCalledTimes(2);
+			expect(t.acceptsModel.mock.calls[1]?.[0]).toHaveLength(1);
+		});
+
+		it("W7: acceptsModel recibe los trazos cerrados del intento", () => {
+			vi.useFakeTimers();
+			const t = montar();
+			t.actualizar({
+				feedback: {
+					hint: templates.trace.hints[2],
+					resolution: { status: "assisted" },
+				},
+			});
+			act(() => {
+				vi.advanceTimersByTime(10_000);
+			});
+			trazoSimple(t.svg);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(t.acceptsModel).toHaveBeenCalledTimes(1);
+			const trazos = t.acceptsModel.mock.calls[0]?.[0];
+			expect(trazos).toHaveLength(1);
+		});
 	});
 });

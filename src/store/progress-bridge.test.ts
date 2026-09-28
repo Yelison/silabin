@@ -45,7 +45,13 @@ describe("B1: withProgress", () => {
 			items: {},
 			units: { "phase0:clap": { status: "active", bestStars: 3 } },
 			sessionCounter: 7,
-			counters: { traces: 1, sessions: 2, voiceOk: 3, wordsRead: 4 },
+			counters: {
+				traces: 1,
+				sessions: 2,
+				voiceOk: 3,
+				wordsRead: 4,
+				syllablesVoiced: 2,
+			},
 		};
 		const out = withProgress(doc, progress);
 		expect(out.settings).toEqual(doc.settings);

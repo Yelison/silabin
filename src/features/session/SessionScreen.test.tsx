@@ -31,6 +31,7 @@ import {
 	Evaluation as RealTraceEvaluation,
 	TRACE_IDLE_MS,
 } from "@/features/session/trace/Evaluation";
+import { HINT_AUDIO_MAX_MS } from "@/features/session/voice/hint-audio";
 import {
 	conProveedores,
 	crearStore,
@@ -38,6 +39,7 @@ import {
 	respuestaCorrecta,
 	vistasFalsas,
 } from "@/features/test-support";
+import { createMemoryAdapter } from "@/store";
 
 afterEach(() => {
 	cleanup();
@@ -296,6 +298,26 @@ describe("SessionScreen", () => {
 		expect(run().attempt.attempt).toBe(2);
 	});
 
+	it("M1: con un play que nunca resuelve, el feedback de fallo y la celebración llegan igualmente", async () => {
+		const { run, audio, vistas } = await montar();
+		const user = userEvent.setup();
+		await hastaEvaluacion(user);
+		audio.play.mockImplementation(() => new Promise<void>(() => {}));
+		vi.useFakeTimers();
+		const cursor = run().cursor;
+		fireEvent.click(mal());
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(HINT_AUDIO_MAX_MS);
+		});
+		expect(vistas.ultimo()?.locked).toBe(false);
+		expect(vistas.ultimo()?.feedback?.hint?.rung).toBe("reduce");
+		fireEvent.click(bien());
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(HINT_AUDIO_MAX_MS);
+		});
+		expect(run().cursor).toBe(cursor + 1);
+	});
+
 	it("E6: un toque corto en salir no hace nada; mantenerlo 1,5 s vuelve al mapa y run es null", async () => {
 		const { store, onExit, audio } = await montar();
 		vi.useFakeTimers();
@@ -427,6 +449,14 @@ describe("SessionScreen", () => {
 			source: "active-unit",
 		};
 
+		// D19: un trazo vacío ya no es un fallo sino un toque ignorado; el fallo lleva tinta.
+		const TRAZO_MALO = [
+			[
+				{ x: 5, y: 5 },
+				{ x: 6, y: 6 },
+			],
+		];
+
 		function glifoA(): Glyph {
 			const item = curriculum.items.get(LETTER_A_ID);
 			if (item === undefined) throw new Error("falta letter:a");
@@ -477,7 +507,7 @@ describe("SessionScreen", () => {
 							<button
 								type="button"
 								aria-label="fallar"
-								onClick={() => p.trace?.onTrace([])}
+								onClick={() => p.trace?.onTrace(TRAZO_MALO)}
 							/>
 						</div>
 					);
@@ -542,7 +572,7 @@ describe("SessionScreen", () => {
 			if (onTrace === undefined) throw new Error("sin trace.onTrace");
 
 			await act(async () => {
-				onTrace([]);
+				onTrace(TRAZO_MALO);
 			});
 			await waitFor(() => expect(claves()).toContain("feedback:retry"));
 			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
@@ -645,6 +675,180 @@ describe("SessionScreen", () => {
 
 			await act(async () => {
 				await vi.advanceTimersByTimeAsync(700);
+			});
+		});
+
+		describe("D19: un toque sin querer con la vista real de trace", () => {
+			// Una línea larga arriba del todo: tinta de sobra, fuera de la letra. Es un fallo real.
+			const FALLO: [number, number, number, number] = [20, 20, 380, 20];
+			// La A completa, en coordenadas de pantalla para un rect de 400×400 en (0,0).
+			const A_COMPLETA: [number, number, number, number][] = [
+				[200, 57.14, 85.71, 342.86],
+				[200, 57.14, 314.29, 342.86],
+				[129.14, 234.29, 270.86, 234.29],
+			];
+
+			async function montarReal(box: Box) {
+				if (!("setPointerCapture" in Element.prototype)) {
+					Object.defineProperty(Element.prototype, "setPointerCapture", {
+						configurable: true,
+						writable: true,
+						value: () => {},
+					});
+				}
+				vi.useFakeTimers();
+				const adapter = createMemoryAdapter();
+				const escrituras = vi.spyOn(adapter, "write");
+				const store = crearStore(adapter);
+				await store.getState().load();
+				store.getState().beginSession();
+				store.setState({ run: trazoRun(store.getState().progress, box) });
+				escrituras.mockClear();
+				const audio = fakeAudio();
+				const views: TemplateViews = {
+					Presentation: (p: PresentationProps) => (
+						<button type="button" data-view="presentation" onClick={p.onDone}>
+							listo
+						</button>
+					),
+					Evaluation: RealTraceEvaluation,
+				};
+				const { container } = render(
+					conProveedores(
+						store,
+						audio,
+						<SessionScreen
+							onEnd={vi.fn()}
+							onExit={vi.fn()}
+							views={{ trace: views }}
+							celebrationMs={0}
+						/>,
+					),
+				);
+				const svg = container.querySelector("svg");
+				if (svg === null) throw new Error("sin <svg>");
+				vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 400,
+					height: 400,
+					right: 400,
+					bottom: 400,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				});
+				let pointerId = 1;
+				const trazo = (x0: number, y0: number, x1: number, y1: number) => {
+					const id = pointerId++;
+					fireEvent.pointerDown(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x0,
+						clientY: y0,
+					});
+					fireEvent.pointerMove(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x1,
+						clientY: y1,
+					});
+					fireEvent.pointerUp(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x1,
+						clientY: y1,
+					});
+				};
+				const avanzar = (ms: number) =>
+					act(async () => {
+						await vi.advanceTimersByTimeAsync(ms);
+					});
+				return {
+					store,
+					svg,
+					escrituras,
+					trazo,
+					run: () => {
+						const r = store.getState().run;
+						if (r === null) throw new Error("sin corrida");
+						return r;
+					},
+					fallos: () =>
+						audio.play.mock.calls.filter((c) => c[0].key === "feedback:retry")
+							.length,
+					tinta: () => container.querySelectorAll('[data-testid="ink"]').length,
+					pulso: () => container.querySelector('[data-pulse="true"]') !== null,
+					fallar: async () => {
+						trazo(...FALLO);
+						await avanzar(TRACE_IDLE_MS + 50);
+						// Deja que acabe la animación de la pista, si la hay.
+						await avanzar(10_000);
+					},
+					punto: async () => {
+						trazo(200, 200, 200, 200);
+						await avanzar(TRACE_IDLE_MS + 50);
+					},
+					dibujarA: async () => {
+						for (const t of A_COMPLETA) trazo(...t);
+						await avanzar(TRACE_IDLE_MS + 50);
+					},
+				};
+			}
+
+			it("W6: un punto tras un fallo no suena feedback:retry, no guarda, borra la tinta, deja la pista y el trazo siguiente es el mismo intento", async () => {
+				const t = await montarReal(2);
+				await t.fallar();
+				// Rung 1: la guía anterior con el inicio latiendo.
+				expect(t.fallos()).toBe(1);
+				expect(t.run().attempt).toMatchObject({ attempt: 2, hintsShown: 1 });
+				expect(t.pulso()).toBe(true);
+
+				await t.punto();
+
+				expect(t.fallos()).toBe(1);
+				expect(t.escrituras).not.toHaveBeenCalled();
+				expect(t.tinta()).toBe(0);
+				// La pista que se mostraba sigue: el pulso no se apaga.
+				expect(t.pulso()).toBe(true);
+				// El motor no lo contó como intento.
+				expect(t.run().attempt).toMatchObject({ attempt: 2, hintsShown: 1 });
+				// Y el lienzo vuelve a estar libre: el trazo siguiente se recoge y cuenta.
+				expect(t.svg.getAttribute("data-disabled")).toBeNull();
+				t.trazo(...FALLO);
+				expect(t.tinta()).toBeGreaterThan(0);
+				await t.fallar();
+				expect(t.fallos()).toBe(2);
+				expect(t.run().attempt).toMatchObject({ attempt: 3, hintsShown: 2 });
+			});
+
+			it("W6: un punto seguido de la letra bien hecha resuelve con una pista, no con dos", async () => {
+				const t = await montarReal(2);
+				await t.fallar();
+				await t.punto();
+				await t.dibujarA();
+				expect(t.run().resolutions).toEqual([
+					{ status: "correct-with-hint", hintsUsed: 1 },
+				]);
+			});
+
+			it("W7: en el modelo, un punto no cierra el ejercicio y borra la tinta; un trazo completo, sí", async () => {
+				const t = await montarReal(0);
+				await t.fallar();
+				await t.fallar();
+				await t.fallar();
+				expect(t.run().resolutions).toEqual([{ status: "assisted" }]);
+				expect(t.run().cursor).toBe(0);
+
+				t.trazo(200, 200, 200, 200);
+				expect(t.tinta()).toBeGreaterThan(0);
+				await t.punto();
+				expect(t.run().cursor).toBe(0);
+				expect(t.tinta()).toBe(0);
+				expect(t.svg.getAttribute("data-disabled")).toBeNull();
+
+				await t.dibujarA();
+				expect(t.run().cursor).toBe(1);
 			});
 		});
 	});
@@ -796,6 +1000,185 @@ describe("SessionScreen", () => {
 			});
 			expect(run().cursor).toBe(cursor + 1);
 			expect(container.querySelector("[data-celebrating]")).toBeNull();
+		});
+	});
+	describe("evaluación de voz", () => {
+		const VOZ: PlannedExercise = {
+			id: "ex-voz",
+			kind: "evaluation",
+			templateId: "say-it",
+			itemId: "letter:a",
+			optionIds: [],
+			correctOptionId: null,
+			source: "active-unit",
+		};
+		const TOQUE: PlannedExercise = {
+			...VOZ,
+			id: "ex-toque",
+			templateId: "listen-tap",
+			optionIds: ["letter:a", "letter:e"],
+			correctOptionId: "letter:a",
+		};
+
+		function vistaVozFalsa() {
+			const pintados: EvaluationProps[] = [];
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: (p: EvaluationProps) => {
+					pintados.push(p);
+					return (
+						<div data-view="evaluation" data-exercise={p.exercise.id}>
+							<button
+								type="button"
+								aria-label="decir bien"
+								onClick={() => p.speech?.onVerdict("ok")}
+							/>
+							<button
+								type="button"
+								aria-label="decir mal"
+								onClick={() => p.speech?.onVerdict("retry")}
+							/>
+							<button
+								type="button"
+								aria-label="modelo"
+								onClick={p.onModelDone}
+							/>
+						</div>
+					);
+				},
+			};
+			return { views, pintados, ultimo: () => pintados[pintados.length - 1] };
+		}
+
+		async function montarVoz(ejercicios: PlannedExercise[]) {
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			const progress = store.getState().progress;
+			store.setState({
+				run: {
+					sessionIndex: progress.sessionCounter,
+					unitId: null,
+					exercises: ejercicios,
+					cursor: 0,
+					attempt: createAttemptState(),
+					resolutions: [],
+					progress,
+				},
+			});
+			// Después del último `setState`, que reemplaza el objeto de estado: la pantalla toma
+			// la acción de ese objeto al pintar.
+			const espia = vi.spyOn(store.getState(), "answerSpeech");
+			const audio = fakeAudio();
+			const vistas = vistaVozFalsa();
+			render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={vi.fn()}
+						onExit={vi.fn()}
+						views={{ "say-it": vistas.views, "listen-tap": vistas.views }}
+						celebrationMs={0}
+					/>,
+				),
+			);
+			const run = () => {
+				const r = store.getState().run;
+				if (r === null) throw new Error("sin corrida");
+				return r;
+			};
+			const claves = () => audio.play.mock.calls.map((c) => c[0].key);
+			return { store, audio, vistas, run, claves, espia };
+		}
+
+		it("Y4: al montar un say-it suena la instrucción y NO el ítem (P8)", async () => {
+			const { claves, vistas } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(claves()).toEqual(["instruction:say-it"]);
+		});
+
+		it("Y4: con un listen-tap siguen sonando la instrucción y el ítem (la regla vieja no se rompe)", async () => {
+			const { claves, vistas } = await montarVoz([
+				TOQUE,
+				{ ...TOQUE, id: "t2" },
+			]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			expect(claves()).toEqual(["instruction:listen-tap", "phoneme:a"]);
+		});
+
+		it("solo las evaluaciones de voz reciben props.speech", async () => {
+			const voz = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(voz.vistas.ultimo()).toBeDefined());
+			expect(voz.vistas.ultimo()?.speech).toBeDefined();
+			cleanup();
+			const toque = await montarVoz([TOQUE, { ...TOQUE, id: "t2" }]);
+			await waitFor(() => expect(toque.vistas.ultimo()).toBeDefined());
+			expect(toque.vistas.ultimo()?.speech).toBeUndefined();
+		});
+
+		it("onVerdict llama a answerSpeech, y dos veredictos seguidos dan una sola llamada (guarda busy)", async () => {
+			const { vistas, run, espia } = await montarVoz([
+				VOZ,
+				{ ...VOZ, id: "v2" },
+			]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			const onVerdict = vistas.ultimo()?.speech?.onVerdict;
+			if (onVerdict === undefined) throw new Error("sin speech.onVerdict");
+			await act(async () => {
+				onVerdict("ok");
+				onVerdict("ok");
+			});
+			await waitFor(() => expect(run().resolutions.length).toBe(1));
+			expect(run().resolutions).toEqual([{ status: "mastery-credit" }]);
+			expect(espia).toHaveBeenCalledTimes(1);
+		});
+
+		it("un retry suena feedback:retry, sube attemptKey y la vista recibe la pista de la boca", async () => {
+			const { vistas, claves } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("retry");
+			});
+			await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(1));
+			expect(claves()).toContain("feedback:retry");
+			expect(vistas.ultimo()?.feedback?.hint?.action).toBe(
+				"show-mouth+replay-instruction",
+			);
+		});
+
+		it("tres retry resuelven como asistido, y onModelDone (no un veredicto más) avanza", async () => {
+			const { vistas, run } = await montarVoz([VOZ, { ...VOZ, id: "v2" }]);
+			await waitFor(() => expect(vistas.ultimo()).toBeDefined());
+			for (let i = 1; i <= 2; i++) {
+				await act(async () => {
+					vistas.ultimo()?.speech?.onVerdict("retry");
+				});
+				await waitFor(() => expect(vistas.ultimo()?.attemptKey).toBe(i));
+			}
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("retry");
+			});
+			await waitFor(() =>
+				expect(run().resolutions.at(-1)?.status).toBe("assisted"),
+			);
+			expect(vistas.ultimo()?.feedback?.hint?.action).toBe(
+				"play-full+accept-any-speech",
+			);
+			// Con el modelo en curso, un veredicto más no cuenta.
+			await act(async () => {
+				vistas.ultimo()?.speech?.onVerdict("ok");
+			});
+			expect(run().resolutions).toHaveLength(1);
+			expect(run().cursor).toBe(0);
+			await act(async () => {
+				vistas.ultimo()?.onModelDone();
+			});
+			expect(run().cursor).toBe(1);
 		});
 	});
 });

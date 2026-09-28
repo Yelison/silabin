@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const SRC = resolve(__dirname, "..");
 const CARPETAS = ["features", "components"];
-/** Carpetas cuyo interior solo se toca por su barril (`@/engine`, `@/store`). */
-const PRIVADAS = ["content", "engine", "store"];
+/** Carpetas cuyo interior solo se toca por su barril (`@/engine`, `@/speech`, `@/store`). */
+const PRIVADAS = ["content", "engine", "speech", "store"];
 
 /** Todo lo que sigue a `from`, `import(` o `import` a secas, entre comillas. */
 const IMPORT_RE =
@@ -32,6 +32,8 @@ function motivoProhibido(
 		return "importa un módulo de @/engine: usa el barril @/engine";
 	if (especificador.startsWith("@/store/"))
 		return "importa un módulo de @/store: usa el barril @/store";
+	if (especificador.startsWith("@/speech/"))
+		return "importa un módulo de @/speech: usa el barril @/speech";
 	if (especificador.startsWith(".")) {
 		const destino = relative(
 			SRC,
@@ -53,7 +55,7 @@ function ficheros(carpeta: string): string[] {
 }
 
 describe("fronteras de la interfaz", () => {
-	it("U8: features/ y components/ no importan content, engine/<módulo> ni store/<módulo>", () => {
+	it("U8: features/ y components/ no importan content, engine/<módulo>, speech/<módulo> ni store/<módulo>", () => {
 		const yo = resolve(__filename);
 		const violaciones: string[] = [];
 		let revisados = 0;
@@ -107,6 +109,8 @@ describe("fronteras de la interfaz", () => {
 			'import "@/engine/planner";',
 			'import { x } from "../../store/persist";',
 			'import { x } from "../../engine/session";',
+			'import { stepVad } from "@/speech/vad";',
+			'import { x } from "../../speech/vad";',
 			"import { x } from '@/engine/session';",
 		];
 		it.each(prohibidos)("prohíbe: %s", (linea) => {
@@ -119,6 +123,7 @@ describe("fronteras de la interfaz", () => {
 			'import { curriculum } from "@/engine";',
 			'import { createAppStore } from "@/store";',
 			'import type { AudioPlayer } from "@/audio";',
+			'import { createMicListener } from "@/speech";',
 			'import { imageFor } from "@/images";',
 			'import { BigButton } from "@/components/BigButton";',
 			'import { useApp } from "@/features/app-context";',

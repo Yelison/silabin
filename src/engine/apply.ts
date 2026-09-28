@@ -1,4 +1,5 @@
 import type { CurriculumIndex } from "@/content/index";
+import type { ItemKind } from "@/content/kinds";
 import type { TemplateId } from "@/content/templates";
 import { demote, promote } from "@/engine/leitner";
 import { isMastered, itemProgressOf } from "@/engine/mastery";
@@ -27,6 +28,7 @@ export function applyPresentation(
 function bumpCounters(
 	state: ProgressState,
 	templateId: TemplateId,
+	itemKind: ItemKind,
 	resolution: ExerciseResolution,
 ): ProgressState["counters"] {
 	const counters = { ...state.counters };
@@ -35,6 +37,8 @@ function bumpCounters(
 	if (templateId === "trace") counters.traces += 1;
 	if ((templateId === "say-it" || templateId === "read-word") && succeeded)
 		counters.voiceOk += 1;
+	if (templateId === "say-it" && itemKind === "syllable" && succeeded)
+		counters.syllablesVoiced += 1;
 	if (templateId === "read-word" && succeeded) counters.wordsRead += 1;
 
 	return counters;
@@ -51,8 +55,8 @@ export function applyResolution(input: {
 }): ProgressState {
 	const { content, state, itemId, templateId, resolution, sessionIndex, now } =
 		input;
-	if (!content.items.has(itemId))
-		throw new Error(`Ítem desconocido: ${itemId}`);
+	const item = content.items.get(itemId);
+	if (item === undefined) throw new Error(`Ítem desconocido: ${itemId}`);
 
 	const current = itemProgressOf(state, itemId);
 	const next: ItemProgress = {
@@ -78,7 +82,7 @@ export function applyResolution(input: {
 	const withItem: ProgressState = {
 		...state,
 		items: { ...state.items, [itemId]: next },
-		counters: bumpCounters(state, templateId, resolution),
+		counters: bumpCounters(state, templateId, item.kind, resolution),
 	};
 
 	return { ...withItem, units: recomputeUnitStatuses(content, withItem) };

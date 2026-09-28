@@ -4,17 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { useLongPress } from "@/components/use-long-press";
 import {
 	type AttemptFeedback,
+	acceptsModelTrace,
 	currentExercise,
 	curriculum,
 	isSessionOver,
 	type PlannedExercise,
 	type SessionRun,
+	type SpokenVerdict,
 	type TemplateId,
 	type TraceStroke,
+	templates,
 	traceGuide,
 } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
 import { type TemplateViews, templateViews } from "@/features/session/registry";
+import { playCapped } from "@/features/session/voice/hint-audio";
 
 /** Lo que hay que mantener la esquina para salir. Un niño no lo hace sin querer. */
 export const EXIT_HOLD_MS = 1500;
@@ -81,13 +85,22 @@ function ExerciseView(props: {
 	const presentationDone = useApp((s) => s.presentationDone);
 	const answer = useApp((s) => s.answer);
 	const answerTrace = useApp((s) => s.answerTrace);
+	const answerSpeech = useApp((s) => s.answerSpeech);
 	const next = useApp((s) => s.next);
 	const item = curriculum.items.get(exercise.itemId);
+	// P8: el dato del contenido decide, no la vista. En una evaluación de voz oír el ítem es
+	// darle la respuesta al niño.
+	const porVoz =
+		exercise.kind === "evaluation" &&
+		templates[exercise.templateId].evaluation === "voice";
 
 	const [attemptKey, setAttemptKey] = useState(0);
 	const [feedback, setFeedback] = useState<AttemptFeedback | null>(null);
 	const [locked, setLocked] = useState(false);
 	const [celebrating, setCelebrating] = useState(false);
+	// D19: sube cuando el motor ignora un trazo, para que `trace` borre su tinta sin que sea un
+	// intento nuevo (`attemptKey`).
+	const [clearKey, setClearKey] = useState(0);
 	// Un ref y no el estado: dos toques en el mismo instante ven el mismo `locked`.
 	const busy = useRef(false);
 	const modelPending = useRef(false);
@@ -100,13 +113,9 @@ function ExerciseView(props: {
 		};
 	}, []);
 
-	/** El sonido acompaña, no manda: si falla o no suena, la sesión sigue. */
-	async function sonar(key: string) {
-		try {
-			await audio.play({ key });
-		} catch {
-			// Sin voz también se puede jugar.
-		}
+	/** El sonido acompaña, no manda: si falla, no suena o se cuelga, la sesión sigue (tope). */
+	function sonar(key: string): Promise<void> {
+		return playCapped(audio, { key });
 	}
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: efecto de montaje
@@ -115,19 +124,28 @@ function ExerciseView(props: {
 			void sonar(`instruction:${exercise.templateId}`);
 			// Un repaso no tiene presentación: sin oír la palabra el niño le pondría nombre al
 			// dibujo («balón» o «pelota») y fallaría el primer intento. La cola ordena las dos.
-			if (item !== undefined) void sonar(item.audioKey);
+			// En voz no: la instrucción sola, el niño dice lo que ve (P8).
+			if (item !== undefined && !porVoz) void sonar(item.audioKey);
 		}
 		// Solo al montar el ejercicio: un reintento no repite ni la instrucción ni la palabra.
 	}, []);
 
 	/**
-	 * Lo que hoy hacen `answer` y `answerTrace` en cuanto el motor ya ha respondido: el mismo
+	 * Lo que hoy hacen `answer`, `answerTrace` y `answerSpeech` en cuanto el motor ya ha respondido: el mismo
 	 * paso a pista, modelo o celebración, sea cual sea la plantilla. `llamar` es `() =>
-	 * answer(a)` o `() => answerTrace(trazos)`.
+	 * answer(a)`, `() => answerTrace(trazos)` o `() => answerSpeech(v)`.
 	 */
 	async function resolver(llamar: () => Promise<AttemptFeedback>) {
 		const fb = await llamar();
 		if (!alive.current) return;
+		if (fb.ignored === true) {
+			// D19: un toque sin querer no es un intento. Ni suena `feedback:retry`, ni cambia la
+			// pista (`feedback`, `attemptKey`): solo se desbloquea y se borra la tinta.
+			setClearKey((k) => k + 1);
+			setLocked(false);
+			busy.current = false;
+			return;
+		}
 		const resolucion = fb.resolution;
 		if (resolucion === null) {
 			// Fallo con pista: el único sonido de fallo, y luego la Evaluation ejecuta la pista.
@@ -190,10 +208,25 @@ function ExerciseView(props: {
 					modelPending.current = false;
 					next();
 				}}
+				{...(porVoz
+					? {
+							speech: {
+								onVerdict: (v: SpokenVerdict) => {
+									if (busy.current) return;
+									busy.current = true;
+									setLocked(true);
+									void resolver(() => answerSpeech(v));
+								},
+							},
+						}
+					: {})}
 				{...(exercise.templateId === "trace"
 					? {
 							trace: {
 								guide: traceGuide(curriculum, run),
+								clearKey,
+								acceptsModel: (trazos: TraceStroke[]) =>
+									acceptsModelTrace(curriculum, run, trazos),
 								onTrace: (trazos: TraceStroke[]) => {
 									if (busy.current) return;
 									busy.current = true;

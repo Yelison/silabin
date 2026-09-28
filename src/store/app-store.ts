@@ -9,8 +9,10 @@ import {
 	type ProgressState,
 	type SessionRun,
 	type SessionSummary,
+	type SpokenVerdict,
 	startSession,
 	submitAnswer,
+	submitSpeech,
 	submitTrace,
 	type TraceStroke,
 } from "@/engine";
@@ -62,6 +64,7 @@ export type AppState = {
 	presentationDone(): Promise<void>;
 	answer(value: string): Promise<AttemptFeedback>;
 	answerTrace(strokes: readonly TraceStroke[]): Promise<AttemptFeedback>;
+	answerSpeech(verdict: SpokenVerdict): Promise<AttemptFeedback>;
 	next(): void;
 	/** Lanza, sin tocar el estado, si no hay sesión o todavía no ha terminado. */
 	endSession(): Promise<void>;
@@ -167,6 +170,19 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 					content,
 					run: corridaEnCurso(),
 					strokes,
+					now: now(),
+				});
+				set({ run, progress: run.progress });
+				if (feedback.resolution !== null)
+					await guardar(withProgress(get().doc, run.progress));
+				return feedback;
+			},
+
+			async answerSpeech(verdict) {
+				const { run, feedback } = submitSpeech({
+					content,
+					run: corridaEnCurso(),
+					verdict,
 					now: now(),
 				});
 				set({ run, progress: run.progress });

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Glyph, GlyphPoint } from "@/content/glyphs";
+import { UPPER_GLYPHS } from "@/content/glyphs";
 import {
+	ACCIDENTAL_INK_RATIO,
 	guideLevel,
+	isNegligibleTrace,
 	MIN_COVERAGE,
 	scoreTrace,
 	type TraceStroke,
@@ -173,5 +176,77 @@ describe("guideLevel", () => {
 		for (const [box, hintsShown, expected] of table) {
 			expect(guideLevel(box, hintsShown)).toBe(expected);
 		}
+	});
+});
+
+describe("isNegligibleTrace", () => {
+	// L mide 1 (vertical) + 0.6 (base) = 1.6 de longitud total.
+	const LONGITUD_L = 1.6;
+	const UMBRAL = ACCIDENTAL_INK_RATIO * LONGITUD_L;
+
+	it("M1a: sin trazos, o con un solo punto, la tinta es despreciable", () => {
+		expect(isNegligibleTrace(L, [])).toBe(true);
+		expect(isNegligibleTrace(L, [[{ x: 0.3, y: 0.3 }]])).toBe(true);
+	});
+
+	it("M1b: la letra A trazada con sus propios trazos no es despreciable", () => {
+		const a = UPPER_GLYPHS.a;
+		if (a === undefined) throw new Error("falta UPPER_GLYPHS.a");
+		expect(isNegligibleTrace(a, a.strokes)).toBe(false);
+	});
+
+	it("M1c: justo en el umbral no es despreciable (la comparación es estricta)", () => {
+		const enElUmbral: TraceStroke[] = [
+			[
+				{ x: 0, y: 0 },
+				{ x: UMBRAL, y: 0 },
+			],
+		];
+		expect(isNegligibleTrace(L, enElUmbral)).toBe(false);
+		const pordebajo: TraceStroke[] = [
+			[
+				{ x: 0, y: 0 },
+				{ x: UMBRAL * 0.99, y: 0 },
+			],
+		];
+		expect(isNegligibleTrace(L, pordebajo)).toBe(true);
+	});
+
+	it("M1d: los puntos con coordenadas no finitas no suman tinta", () => {
+		const conNaN: TraceStroke[] = [
+			[
+				{ x: 0, y: 0 },
+				{ x: Number.NaN, y: 5 },
+				{ x: 9, y: Number.POSITIVE_INFINITY },
+			],
+			[{ x: 0.2, y: 0.2 }],
+		];
+		expect(isNegligibleTrace(L, conNaN)).toBe(true);
+	});
+
+	it("M1f: el umbral es el 10 % de la longitud del glifo, fijado con números absolutos", () => {
+		expect(ACCIDENTAL_INK_RATIO).toBe(0.1);
+		const recta = (largo: number): TraceStroke[] => [
+			[
+				{ x: 0, y: 0 },
+				{ x: largo, y: 0 },
+			],
+		];
+		expect(isNegligibleTrace(L, recta(0.12))).toBe(true);
+		expect(isNegligibleTrace(L, recta(0.2))).toBe(false);
+	});
+
+	it("M1e: la tinta se suma entre trazos", () => {
+		const dosTrazos: TraceStroke[] = [
+			[
+				{ x: 0, y: 0 },
+				{ x: UMBRAL * 0.6, y: 0 },
+			],
+			[
+				{ x: 0, y: 1 },
+				{ x: UMBRAL * 0.6, y: 1 },
+			],
+		];
+		expect(isNegligibleTrace(L, dosTrazos)).toBe(false);
 	});
 });

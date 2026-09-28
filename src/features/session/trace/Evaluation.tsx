@@ -27,7 +27,7 @@ export function Evaluation(props: EvaluationProps) {
 			`El ejercicio ${exercise.id} es de trazo: necesita props.trace`,
 		);
 	}
-	const { guide, onTrace } = trace;
+	const { guide, onTrace, clearKey } = trace;
 	const audio = useAudio();
 
 	const [animation, setAnimation] = useState<TraceAnimation>("none");
@@ -44,6 +44,10 @@ export function Evaluation(props: EvaluationProps) {
 	onTraceRef.current = onTrace;
 	const onModelDoneRef = useRef(props.onModelDone);
 	onModelDoneRef.current = props.onModelDone;
+	// Un ref: el temporizador de inactividad cierra el intento con lo que había al armarse, y
+	// `acceptsModel` cambia de identidad (y de corrida) en cada pintado de la sesión.
+	const acceptsModelRef = useRef(trace.acceptsModel);
+	acceptsModelRef.current = trace.acceptsModel;
 
 	// Guía congelada tras acertar (spec de `trace`, §4): mientras no está `locked` sigue a
 	// `guide`, tal cual la manda el motor. En cuanto se bloquea (celebración) se queda con la
@@ -79,6 +83,20 @@ export function Evaluation(props: EvaluationProps) {
 			idleTimer.current = null;
 		}
 	}, [attemptKey]);
+
+	// D19: el motor ignoró el trazo (tinta despreciable). No es un intento nuevo: se borra la
+	// tinta y el envío para poder volver a trazar, y NADA MÁS. Ni `pulseStart` ni `animation`:
+	// la pista que se estaba mostrando sigue, que es lo que un toque sin querer no debe quitar.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reacciona solo a `clearKey`
+	useEffect(() => {
+		strokesRef.current = [];
+		setInk([]);
+		setSubmitted(false);
+		if (idleTimer.current !== null) {
+			clearTimeout(idleTimer.current);
+			idleTimer.current = null;
+		}
+	}, [clearKey]);
 
 	// La pista que ordena el motor. Una vez por feedback nuevo, no por cada pintado.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reacciona solo al feedback
@@ -127,9 +145,16 @@ export function Evaluation(props: EvaluationProps) {
 		idleTimer.current = null;
 		const strokes = strokesRef.current;
 		if (modelMode.current) {
-			// El rung 3 garantiza el acierto: cualquier intento cerrado con al menos un trazo
-			// avisa del modelo, nunca puntúa ni pasa por `onTrace` (mutación 3).
+			// El rung 3 garantiza el acierto: un intento cerrado que el motor da por bueno avisa
+			// del modelo, nunca puntúa ni pasa por `onTrace` (mutación 3).
 			if (strokes.length === 0 || modelDone.current) return;
+			// D19 en el modelo (P12): la tinta despreciable no lo cierra. Lo decide el motor; aquí
+			// solo se borra y se sigue esperando.
+			if (!acceptsModelRef.current(strokes)) {
+				strokesRef.current = [];
+				setInk([]);
+				return;
+			}
 			modelDone.current = true;
 			onModelDoneRef.current();
 			return;

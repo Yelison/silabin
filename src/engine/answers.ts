@@ -1,5 +1,5 @@
 import type { CurriculumIndex } from "@/content/index";
-import { VOWELS } from "@/content/invariants";
+import { stripDiacritics, VOWELS } from "@/content/invariants";
 import type { Item } from "@/content/types";
 import type { PlannedExercise } from "@/engine/types";
 
@@ -8,7 +8,8 @@ import type { PlannedExercise } from "@/engine/types";
  * decide por su cuenta. `correctOptionId` manda cuando existe (las plantillas con opciones);
  * si no, `item.task.answer` (las tareas orales); si tampoco, `build` compara con el texto de
  * la sílaba porque ahí la "opción correcta" es el orden de las piezas, no una entre varias.
- * `null` solo queda para las plantillas sin evaluador propio todavía (trazo y voz).
+ * `null` queda para las plantillas de trazo y de voz: su evaluación no compara texto
+ * (`submitTrace` puntúa la geometría y `submitSpeech` recibe el veredicto del adulto).
  */
 export function expectedAnswer(
 	exercise: PlannedExercise,
@@ -56,4 +57,28 @@ export function reducedPieces(
 	return exercise.optionIds.filter(
 		(id) => id === consonantId || VOWELS.has(id.slice("letter:".length)),
 	);
+}
+
+/**
+ * Audio de la primera sílaba de una palabra (pista 2 de `read-word`): el `audioKey` del ítem
+ * `syllable:<s>` si existe; si la sílaba es una vocal sola, el de `phoneme:<v>`. Lanza si el
+ * ítem no es una palabra o si no hay ninguno de los dos.
+ */
+export function firstSyllableAudioKey(
+	content: CurriculumIndex,
+	item: Item,
+): string {
+	if (item.kind !== "word")
+		throw new Error(`El ítem ${item.id} no es una palabra`);
+	const first = item.syllables?.[0];
+	if (first === undefined)
+		throw new Error(`La palabra ${item.id} no tiene sílabas`);
+	const base = stripDiacritics(first);
+	const syllable = content.items.get(`syllable:${base}`);
+	if (syllable !== undefined) return syllable.audioKey;
+	if (VOWELS.has(base)) {
+		const vowel = content.items.get(`phoneme:${base}`);
+		if (vowel !== undefined) return vowel.audioKey;
+	}
+	throw new Error(`No hay audio para la primera sílaba de ${item.id}`);
 }

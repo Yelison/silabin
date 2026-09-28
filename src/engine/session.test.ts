@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UPPER_GLYPHS } from "@/content/glyphs";
 import {
 	type AttemptState,
+	acceptsModelTrace,
 	type Box,
 	checkAnswer,
 	completePresentation,
@@ -20,6 +21,7 @@ import {
 	starsForSession,
 	startSession,
 	submitAnswer,
+	submitSpeech,
 	submitTrace,
 	type TraceStroke,
 	traceGuide,
@@ -110,12 +112,36 @@ const LISTEN_TAP_EXERCISE: PlannedExercise = {
 	source: "active-unit",
 };
 
+const SAY_IT_EXERCISE: PlannedExercise = {
+	id: "ex-say-it",
+	kind: "evaluation",
+	templateId: "say-it",
+	itemId: "syllable:ma",
+	optionIds: [],
+	correctOptionId: null,
+	source: "active-unit",
+};
+const READ_WORD_EXERCISE: PlannedExercise = {
+	id: "ex-read-word",
+	kind: "evaluation",
+	templateId: "read-word",
+	itemId: "word:mapa",
+	optionIds: [],
+	correctOptionId: null,
+	source: "active-unit",
+};
+
 const GLYPH_A = UPPER_GLYPHS.a;
 if (GLYPH_A === undefined) throw new Error("falta UPPER_GLYPHS.a");
 /** El propio trazo de referencia de la A: puntúa correcto (G14 en glyphs.test.ts). */
 const TRAZO_CORRECTO: TraceStroke[] = GLYPH_A.strokes;
-/** Sin tinta: puntúa incorrecto (G6 en trace.test.ts). */
-const TRAZO_VACIO: TraceStroke[] = [];
+/** Tinta de sobra pero lejos de la letra: puntúa incorrecto y no es despreciable (D19). */
+const TRAZO_MALO: TraceStroke[] = [
+	[
+		{ x: 5, y: 5 },
+		{ x: 6, y: 6 },
+	],
+];
 
 /** Monta a mano una sesión de un solo ejercicio, sin pasar por el planificador. */
 function runCon(
@@ -143,6 +169,17 @@ function trazoDesde(
 
 function trazar(run: SessionRun, strokes: readonly TraceStroke[]) {
 	return submitTrace({ content: curriculum, run, strokes, now: NOW });
+}
+
+function hablar(run: SessionRun, verdict: "ok" | "retry") {
+	return submitSpeech({ content: curriculum, run, verdict, now: NOW });
+}
+
+/** Deja el ejercicio de `run` con `n` fallos ya registrados, por la vía del motor. */
+function conFallos(run: SessionRun, n: number): SessionRun {
+	let actual = run;
+	for (let i = 0; i < n; i++) actual = hablar(actual, "retry").run;
+	return actual;
 }
 
 function conCaja(
@@ -372,7 +409,7 @@ describe("submitTrace", () => {
 	});
 
 	it("C2: trazo vacío en el 1.er intento da la pista reduce, sin resolver, y deja el 2.o intento con 1 pista mostrada", () => {
-		const { run, feedback } = trazar(trazoDesde(), TRAZO_VACIO);
+		const { run, feedback } = trazar(trazoDesde(), TRAZO_MALO);
 		expect(feedback.resolution).toBeNull();
 		expect(feedback.hint?.rung).toBe("reduce");
 		expect(feedback.hint?.action).toBe("restore-previous-guide-level");
@@ -384,7 +421,7 @@ describe("submitTrace", () => {
 		const pistas: (string | undefined)[] = [];
 		const resoluciones: (string | undefined)[] = [];
 		for (let i = 0; i < 3; i++) {
-			const paso = trazar(run, TRAZO_VACIO);
+			const paso = trazar(run, TRAZO_MALO);
 			pistas.push(paso.feedback.hint?.rung);
 			resoluciones.push(paso.feedback.resolution?.status);
 			run = paso.run;
@@ -395,7 +432,7 @@ describe("submitTrace", () => {
 	});
 
 	it("C4: fallo y después acierto es correct-with-hint con hintsUsed 1", () => {
-		const fallo = trazar(trazoDesde(), TRAZO_VACIO);
+		const fallo = trazar(trazoDesde(), TRAZO_MALO);
 		const acierto = trazar(fallo.run, TRAZO_CORRECTO);
 		expect(acierto.feedback.resolution).toEqual({
 			status: "correct-with-hint",
@@ -416,6 +453,163 @@ describe("submitTrace", () => {
 		// Sesión acabada.
 		const acabada = jugarTodo(empezar(), () => 0);
 		expect(() => trazar(acabada, TRAZO_CORRECTO)).toThrow();
+	});
+});
+
+describe("submitTrace: tinta despreciable (D19)", () => {
+	const PUNTO: TraceStroke[] = [[{ x: 0.5, y: 0.5 }]];
+
+	it("M2: un punto devuelve la misma corrida, ignored, sin pista ni resolución, y no gasta el primer intento", () => {
+		const antes = trazoDesde();
+		const { run, feedback } = trazar(antes, PUNTO);
+		expect(run).toBe(antes);
+		expect(run.attempt).toEqual({ attempt: 1, hintsShown: 0, resolved: false });
+		expect(feedback).toEqual({ hint: null, resolution: null, ignored: true });
+
+		const acierto = trazar(run, TRAZO_CORRECTO);
+		expect(acierto.feedback.resolution).toEqual({ status: "mastery-credit" });
+		expect(acierto.feedback.ignored).toBeUndefined();
+	});
+
+	it("M2b: un trazo real y equivocado sigue contando como fallo", () => {
+		const largoPeroMalo: TraceStroke[] = [
+			[
+				{ x: 5, y: 5 },
+				{ x: 6, y: 6 },
+			],
+		];
+		const { feedback, run } = trazar(trazoDesde(), largoPeroMalo);
+		expect(feedback.hint?.rung).toBe("reduce");
+		expect(feedback.ignored).toBeUndefined();
+		expect(run.attempt.attempt).toBe(2);
+	});
+});
+
+describe("acceptsModelTrace", () => {
+	function trasTresFallos(): SessionRun {
+		let run = trazoDesde();
+		for (let i = 0; i < 3; i++)
+			run = trazar(run, [
+				[
+					{ x: 5, y: 5 },
+					{ x: 6, y: 6 },
+				],
+			]).run;
+		return run;
+	}
+
+	it("M3: tras 3 fallos, un punto no cierra el modelo y un trazo completo sí", () => {
+		const run = trasTresFallos();
+		expect(run.attempt.resolved).toBe(true);
+		expect(acceptsModelTrace(curriculum, run, [[{ x: 0.5, y: 0.5 }]])).toBe(
+			false,
+		);
+		expect(acceptsModelTrace(curriculum, run, [])).toBe(false);
+		expect(acceptsModelTrace(curriculum, run, TRAZO_CORRECTO)).toBe(true);
+	});
+
+	it("M3b: lanza en say-it y en un trace todavía sin resolver", () => {
+		expect(() =>
+			acceptsModelTrace(curriculum, runCon(SAY_IT_EXERCISE), TRAZO_CORRECTO),
+		).toThrow();
+		expect(() =>
+			acceptsModelTrace(curriculum, trazoDesde(), TRAZO_CORRECTO),
+		).toThrow();
+	});
+
+	it("M3c: lanza en un trace resuelto sin ayuda (no es el modelo del tercer rung)", () => {
+		const resuelto = trazar(trazoDesde(), TRAZO_CORRECTO).run;
+		expect(() =>
+			acceptsModelTrace(curriculum, resuelto, TRAZO_CORRECTO),
+		).toThrow();
+	});
+});
+
+describe("submitSpeech", () => {
+	it("M4a: ok al 1.er intento da mastery-credit y resuelve", () => {
+		const { run, feedback } = hablar(runCon(SAY_IT_EXERCISE), "ok");
+		expect(feedback).toEqual({
+			hint: null,
+			resolution: { status: "mastery-credit" },
+		});
+		expect(run.attempt.resolved).toBe(true);
+	});
+
+	it("M4b: retry da la pista reduce propia de cada plantilla", () => {
+		const say = hablar(runCon(SAY_IT_EXERCISE), "retry");
+		expect(say.feedback.resolution).toBeNull();
+		expect(say.feedback.hint?.rung).toBe("reduce");
+		expect(say.feedback.hint?.action).toBe("show-mouth+replay-instruction");
+		expect(say.run.attempt).toEqual({
+			attempt: 2,
+			hintsShown: 1,
+			resolved: false,
+		});
+		const read = hablar(runCon(READ_WORD_EXERCISE), "retry");
+		expect(read.feedback.hint?.action).toBe(
+			"split-syllables+replay-instruction",
+		);
+	});
+
+	it("M4c: retry x3 resuelve asistido con play-full+accept-any-speech", () => {
+		let run = runCon(SAY_IT_EXERCISE);
+		const pasos = [];
+		for (let i = 0; i < 3; i++) {
+			const paso = hablar(run, "retry");
+			pasos.push(paso.feedback);
+			run = paso.run;
+		}
+		expect(pasos.map((f) => f.hint?.rung)).toEqual([
+			"reduce",
+			"sound",
+			"model",
+		]);
+		expect(pasos[2]?.hint?.action).toBe("play-full+accept-any-speech");
+		expect(pasos[2]?.resolution).toEqual({ status: "assisted" });
+		expect(run.attempt.resolved).toBe(true);
+	});
+
+	it("M4d: ok tras un retry es correct-with-hint", () => {
+		const { feedback } = hablar(conFallos(runCon(SAY_IT_EXERCISE), 1), "ok");
+		expect(feedback.resolution).toEqual({
+			status: "correct-with-hint",
+			hintsUsed: 1,
+		});
+	});
+
+	it("M5: lanza en trace, listen-tap, presentación, resuelto y sesión acabada", () => {
+		expect(() => hablar(trazoDesde(), "ok")).toThrow();
+		expect(() => hablar(runCon(LISTEN_TAP_EXERCISE), "ok")).toThrow();
+		expect(() => hablar(empezar(), "ok")).toThrow();
+		const resuelto = hablar(runCon(SAY_IT_EXERCISE), "ok").run;
+		expect(() => hablar(resuelto, "ok")).toThrow();
+		expect(() =>
+			hablar(
+				jugarTodo(empezar(), () => 0),
+				"ok",
+			),
+		).toThrow();
+	});
+
+	it("M5b: submitAnswer lanza en say-it y en read-word nombrando submitSpeech", () => {
+		expect(() => responder(runCon(SAY_IT_EXERCISE), "ma")).toThrow(
+			/submitSpeech/,
+		);
+		expect(() => responder(runCon(READ_WORD_EXERCISE), "mapa")).toThrow(
+			/submitSpeech/,
+		);
+	});
+
+	it("M5c: submitSpeech con ítem desconocido lanza", () => {
+		const raro: PlannedExercise = { ...SAY_IT_EXERCISE, itemId: "syllable:zz" };
+		expect(() => hablar(runCon(raro), "ok")).toThrow();
+	});
+
+	it("M5d: submitSpeech no muta la corrida recibida", () => {
+		const antes = runCon(SAY_IT_EXERCISE);
+		const copia = structuredClone(antes);
+		hablar(antes, "ok");
+		expect(antes).toEqual(copia);
 	});
 });
 

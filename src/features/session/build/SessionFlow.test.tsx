@@ -7,12 +7,22 @@ import {
 	waitFor,
 	within,
 } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { curriculum, type PlannedExercise } from "@/engine";
+import { currentExercise, curriculum } from "@/engine";
 import { SessionScreen } from "@/features/session/SessionScreen";
-import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
+import {
+	conProveedores,
+	crearStore,
+	documentoConUnidadesHechas,
+	fakeAudio,
+} from "@/features/test-support";
+import { createMemoryAdapter } from "@/store";
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	vi.useRealTimers();
+});
 
 const boton = (nombre: string) => screen.getByRole("button", { name: nombre });
 const enCasilla = (n: 1 | 2) =>
@@ -27,23 +37,21 @@ const enCasilla = (n: 1 | 2) =>
  */
 describe("build dentro de SessionScreen (motor real)", () => {
 	it("C1: tras tres fallos el modelo se puede completar y la sesión avanza", async () => {
-		const store = crearStore();
+		// Por la vía normal: la Fase 2 activa (`phase2:m`, con la letra ya dominada para que salgan
+		// las sílabas) y la semilla fija de `crearStore` planifican un `build` de `syllable:ma`.
+		const store = crearStore(
+			createMemoryAdapter(
+				documentoConUnidadesHechas("phase2:m", {
+					itemsExtra: ["phoneme:m", "letter:m"],
+				}),
+			),
+		);
 		await store.getState().load();
 		store.getState().beginSession();
-		const ejercicio: PlannedExercise = {
-			id: "ev:build:ma",
-			kind: "evaluation",
-			templateId: "build",
-			itemId: "syllable:ma",
-			optionIds: ["letter:e", "letter:m", "letter:a", "letter:l", "letter:o"],
-			correctOptionId: null,
-			source: "active-unit",
+		const ejercicioActual = () => {
+			const run = store.getState().run;
+			return run === null ? null : currentExercise(run);
 		};
-		for (const id of ejercicio.optionIds)
-			expect(curriculum.items.has(id)).toBe(true);
-		const run = store.getState().run;
-		if (run === null) throw new Error("Sin corrida");
-		store.setState({ run: { ...run, exercises: [ejercicio], cursor: 0 } });
 		const onEnd = vi.fn();
 		render(
 			conProveedores(
@@ -52,6 +60,23 @@ describe("build dentro de SessionScreen (motor real)", () => {
 				<SessionScreen onEnd={onEnd} onExit={vi.fn()} celebrationMs={0} />,
 			),
 		);
+		// Se pasan las presentaciones con el reloj falso y, ya en el `build`, se vuelve al real.
+		vi.useFakeTimers();
+		for (let vuelta = 0; vuelta < 100; vuelta++) {
+			const ex = ejercicioActual();
+			if (ex?.kind === "evaluation") break;
+			const siguiente = screen.queryByRole("button", { name: "Siguiente" });
+			if (siguiente !== null) fireEvent.click(siguiente);
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(500);
+			});
+		}
+		vi.useRealTimers();
+		const ejercicio = ejercicioActual();
+		expect(ejercicio?.templateId).toBe("build");
+		expect(ejercicio?.itemId).toBe("syllable:ma");
+		for (const id of ejercicio?.optionIds ?? [])
+			expect(curriculum.items.has(id)).toBe(true);
 		// Dos fallos con pista (rung 1 y 2): cada uno abre un intento nuevo y vacía las casillas.
 		// Se falla con vocales, que la pista 1 no atenúa.
 		for (let intento = 0; intento < 2; intento++) {
@@ -71,6 +96,9 @@ describe("build dentro de SessionScreen (motor real)", () => {
 		expect(enCasilla(1)).toEqual([]);
 		fireEvent.click(boton("m"));
 		fireEvent.click(boton("a"));
-		await waitFor(() => expect(onEnd).toHaveBeenCalledTimes(1));
+		// Ya no es una corrida de un solo ejercicio: avanzar es pasar al siguiente, sin acabar.
+		await waitFor(() => expect(ejercicioActual()?.id).not.toBe(ejercicio?.id));
+		expect(store.getState().run?.resolutions.at(-1)?.status).toBe("assisted");
+		expect(onEnd).not.toHaveBeenCalled();
 	});
 });

@@ -213,6 +213,7 @@ function estadoConTodoElProgreso(): PersistedState {
 			sessionLength: 6,
 			speechMode: "auto",
 			reducedCelebrations: true,
+			hideMic: true,
 			childName: "Sofía",
 			pinHash: "hash-de-prueba",
 		},
@@ -242,7 +243,13 @@ function estadoConTodoElProgreso(): PersistedState {
 			"phase2:m": { status: "locked", bestStars: 0 },
 		},
 		sessionCounter: 9,
-		counters: { traces: 4, sessions: 9, voiceOk: 2, wordsRead: 6 },
+		counters: {
+			traces: 4,
+			sessions: 9,
+			voiceOk: 2,
+			wordsRead: 6,
+			syllablesVoiced: 5,
+		},
 		sessions: [
 			{
 				index: 0,

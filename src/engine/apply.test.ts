@@ -242,6 +242,38 @@ describe("contadores para los logros", () => {
 		expect(state.counters.voiceOk).toBe(1);
 	});
 
+	it("M6: syllablesVoiced solo cuenta say-it sobre sílabas resueltas sin asistencia", () => {
+		function resolver(
+			itemId: string,
+			templateId: "say-it" | "read-word",
+			status: ExerciseResolution["status"],
+		) {
+			const resolution: ExerciseResolution =
+				status === "correct-with-hint"
+					? { status, hintsUsed: 1 }
+					: ({ status } as ExerciseResolution);
+			return applyResolution({
+				content,
+				state: emptyProgressState(),
+				itemId,
+				templateId,
+				resolution,
+				sessionIndex: 0,
+				now: NOW,
+			}).counters;
+		}
+		const silaba = resolver("syllable:ma", "say-it", "mastery-credit");
+		expect([silaba.syllablesVoiced, silaba.voiceOk]).toEqual([1, 1]);
+		const conPista = resolver("syllable:ma", "say-it", "correct-with-hint");
+		expect(conPista.syllablesVoiced).toBe(1);
+		const letra = resolver("letter:m", "say-it", "mastery-credit");
+		expect([letra.syllablesVoiced, letra.voiceOk]).toEqual([0, 1]);
+		const asistida = resolver("syllable:ma", "say-it", "assisted");
+		expect([asistida.syllablesVoiced, asistida.voiceOk]).toEqual([0, 0]);
+		const palabra = resolver("word:mapa", "read-word", "mastery-credit");
+		expect([palabra.wordsRead, palabra.syllablesVoiced]).toEqual([1, 0]);
+	});
+
 	it("cuenta las palabras leídas", () => {
 		const state = applyResolution({
 			content,
