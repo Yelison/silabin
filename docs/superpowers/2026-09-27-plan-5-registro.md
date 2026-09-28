@@ -298,3 +298,16 @@ README: el micrófono exige HTTPS, y el móvil debe confiar en el certificado au
 7. Con `resume` colgado (Safari iOS) deben salir los botones del adulto en ≤ 1,5 s tras la cuenta
    atrás.
 8. La receta HTTPS del README (`mkcert` con la IP de la LAN) funciona desde el móvil con esa IP.
+
+**Estado (2026-09-28), a media prueba — el móvil se quedó sin batería:**
+- Punto 3 (voz a distancia normal, palabra corta al ver el micrófono azul): **bien**, tras
+  f2374a4. Confirmado en el dispositivo real, varias veces seguidas.
+- Punto 8: **bien** (la receta HTTPS funcionó para entrar a la app).
+- Duda abierta, sin resolver: recargar la página vuelve a pedir el permiso de micrófono cada
+  vez, en pestaña normal (no privada). Sin determinar si (a) es el comportamiento esperado de
+  Safari con un certificado autofirmado y no afecta al punto 1 (que es sobre no repetir el
+  permiso turno a turno **dentro** de la misma carga de página), o (b) hay un problema real.
+  Pendiente: mirar qué dice el ajuste de sitio para «Micrófono» (Preguntar/Permitir) y probar
+  varios ejercicios seguidos **sin recargar** para ver si ahí solo lo pide una vez.
+- Sin probar todavía: puntos 1 (turno a turno sin recargar), 2, 4, 5, 6, 7.
+- No se abre el PR hasta terminar esta lista.
