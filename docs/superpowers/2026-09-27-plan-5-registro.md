@@ -6,13 +6,13 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: plan escrito (2026-09-28), pendiente de la revisión del autor; después, ejecución.**
+**Fase: ejecución (2026-09-28). Tarea 1 completa; siguiente, Tarea 2.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
 | Tarea | Contenido | Riesgo | Estado |
 |---|---|---|---|
-| 1 | `*.test.tsx` en jsdom (trampa 8), trampa 4 por test | configuración | pendiente |
+| 1 | `*.test.tsx` en jsdom (trampa 8), trampa 4 por test | configuración | **completa** (e91db39, revisión limpia) |
 | 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | pendiente |
 | 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | pendiente |
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | pendiente |
@@ -47,3 +47,16 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
    sustituir la inyección de `build/SessionFlow.test.tsx` al hacerse jugable la Fase 2.
 6. Rung 3 de voz: se acepta con solo detectar habla (spec §5); sin habla → «No te oí» sin
    contar intento.
+
+## Ejecución
+
+- Tarea 1: complete (commits 0e9cedd..e91db39, revisión de cumplimiento limpia, sin mutación).
+  Mecanismo: `test.projects` inline con `extends: true` (`node` para `*.test.ts`, `jsdom` para
+  `*.test.tsx`). C3 ya existía en `src/engine/index.test.ts` (`PODADOS`), no se duplicó.
+- Ruling: la cifra de partida de la Tarea 1 era 912 + 1 omitido, no 900 (el plan estaba
+  desactualizado) — la aceptación es «idéntico más los centinelas»: 914 + 1 tras C1 y C2 —
+  si fuera equivocada, solo habría que corregir el número en el plan.
+- Tarea 1: minor (deferred): el comentario de `vitest.config.ts:52` no menciona que el `.ts`
+  va a `node` de forma explícita; no urge.
+- Nota de proceso: el script `task-brief` del skill busca «Task N» y el plan usa «Tarea N»;
+  los briefs se extraen a mano con `sed -n` sobre las líneas de cada tarea.
