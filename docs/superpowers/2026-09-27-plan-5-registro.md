@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-3 completas; siguiente, Tarea 4.**
+**Fase: ejecución (2026-09-28). Tareas 1-4 completas; siguiente, Tarea 5.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -15,7 +15,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 | 1 | `*.test.tsx` en jsdom (trampa 8), trampa 4 por test | configuración | **completa** (e91db39, revisión limpia) |
 | 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | **completa** (fefe69f, 1229fbe) |
 | 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | **completa** (0b82285, 9c19e0c) |
-| 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | pendiente |
+| 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | **completa** (c966a90, 5132eb2, 3a6a6c9) |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | pendiente |
 | 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | pendiente |
 | 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | pendiente |
@@ -96,3 +96,44 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
 - Nota de proceso: S16 quedó en `src/features/speech-context.test.tsx` (importa de `features/`, y
   `speech/` corre en node). El implementador citó un SHA erróneo (0dc0a5e) para la corrección; el
   real es 9c19e0c.
+- Tarea 4: fix round 1/2 (3 addressed, 0 open — (1) un `heard` con `disabled=true` se descartaba
+  dejando el turno atrapado en `attempt` y en `model`; (2) un evaluador que nunca resuelve dejaba
+  al adulto sin botones (P4); (3) faltaba el test de evaluación tardía tras desmontar; commits
+  5132eb2..3a6a6c9).
+- Tarea 4: complete (commits 425b04c..3a6a6c9, review clean tras 1 ronda). 28 mutaciones del
+  implementador + 13 del revisor + 11 sobre la corrección; sobrevivieron y se cerraron con tests:
+  silencios sin reinicio tras veredicto, botón del adulto sin abortar la escucha, `heard` tardío tras
+  desmontar (test vacuo), quitar `signal.aborted` tras `evaluate`, tope sin limpiar, `heard`
+  descartado contando como silencio. Equivalentes: `disabled` en `pulsar` (`MicButton` ya lo bloquea)
+  y `disabled` en `resolver` (los resultados asíncronos se descartan antes de llegar a él).
+  1036 pasan + 1 omitido antes de la corrección; tras ella, 260 en `voice`, `components` y `content`.
+- Ruling: `TAP_GUARD_MS = 800` (no estaba en el plan; decisión del implementador, avalada por el
+  revisor). Tras un veredicto los botones quedan inertes y a los 800 ms el turno vuelve a `idle`;
+  los silencios se reinician al dar veredicto. Evita dos veredictos con un doble toque y deja el
+  turno reutilizable si el padre no remonta — si fuera equivocado, se cambiaría por un latch por
+  montaje, y solo afectaría a `VoiceTurn`.
+- Ruling: un `heard` (o el fin de la evaluación) que llega con `disabled=true` se descarta y el
+  turno vuelve a `idle`, sin `onVerdict`/`onModelDone` y sin contar silencio — `disabled` = «locked o
+  audio de pista sonando»: el motor no puede aceptarlo entonces y P7 dice que la voz del dispositivo
+  no cuenta como la del niño. Si fuera equivocado, se pierde un intento hablado en un caso raro.
+- Ruling: `EVALUATION_MAX_MS = 5000` con `Promise.race` sobre `pickEvaluator`+`evaluate`; al vencer,
+  botones del adulto — el plan solo pedía tope para el audio, pero P4 lo exige y `browser`/`azure`
+  van por red. Si fuera equivocado, costaría un `Promise.race` de más.
+- Tarea 4: minor (deferred): **para la Tarea 5** — `mouthShapesFor` lanza si un fonema no tiene forma
+  (`mouths.ts`) y la invariante V1 solo cubre las fases 1 y 2: proteger `Mouth` con try/catch o error
+  boundary al integrarla, o ampliar la invariante a todo lo que llegue a `say-it`.
+- Tarea 4: minor (deferred): `silence`/`unavailable` con `disabled` no se descartan (solo `heard`):
+  el silencio cuenta y suena «No te oí» aunque haya una pista sonando. Con `disabled` durante la
+  cuenta atrás la escucha se abre igual (el descarte cubre P7 en el resultado, no en el micrófono).
+- Tarea 4: minor (deferred): tras vencer el tope, el `evaluate()` colgado sigue vivo en segundo plano
+  porque no recibe `signal` (contrato de `speech/`; relevante con `browser`/`azure`).
+- Tarea 4: minor (deferred): `Mouth` no resetea `paso` cuando `playing` pasa a false; si `onVerdict`
+  lanza queda un rechazo sin capturar (`void escuchar`/`dar`); `setNivel(0)` tras escuchar sin test
+  (solo visual); durante los 800 ms de `resuelto` el micrófono se ve activo pero ignora el toque.
+- Tarea 4: minor (deferred): sin verificación visual en 360×640 ni 1024×768 (estilos placeholder;
+  `browser-qa` llega con la integración de la Tarea 5). `speechTarget` sin adaptar: `browser`/`azure`
+  lo necesitarán por las tildes («mamá»); ya anotado en la Tarea 3.
+- Nota de proceso: el scratchpad compartido causó una incidencia: un `mut.py` genérico fue
+  sobrescrito por otro proceso y dejó una mutación en `VoiceTurn.tsx`; el implementador la vio con
+  `git diff` y la restauró antes de commitear, y el re-revisor confirmó que no queda residuo. En los
+  despachos con mutaciones, pedir nombres de script únicos o worktrees propios.
