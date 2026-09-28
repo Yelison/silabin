@@ -383,7 +383,99 @@ Task 6: complete (commits f693a72..55bf326, 1 hallazgo Important resuelto en fix
 2 minor deferred: margen de `START_MARKER_OFFSET` para M y tamaño de tableta sin reconfirmar
 con `browser-qa`).
 
+## Revisión final de toda la rama (opus, 2026-09-27), rango `8f51a2c..d665922`
+
+**Assessment: Con correcciones.** Arquitectura, contrato del motor, tests y el fix de
+movimiento reducido correctos. Verificó por su cuenta el grep de
+`transitionDuration|transitionDelay|animationDuration|animationDelay` en todo `src/`: solo dos
+elementos (`anim-full`, `anim-dot` en `TraceCanvas.tsx`), ambos con el fix — no hay un tercer
+sitio sin cubrir. `pnpm test` (909/909, 1 omitido), typecheck y lint en verde, corridos por el
+propio revisor. Probó también `offset-path`+`offset-rotate: auto` en Chromium/WebKit/Firefox
+con Playwright aislado — la flecha recorre bien los trazos en los tres motores (no sustituye
+D11, la prueba en dispositivo real).
+
+**Critical:** ninguno.
+
+**Important #1 — la flecha estática de fin de trazo tapa un marcador de inicio en O, L, E y M**
+(`TraceCanvas.tsx:386-401`, orden de capas `:351-401`). El triángulo de la Tarea 6
+(`TRACE_ARROW_POINTS`, 0.14×0.14, antes ~0.03-0.05) tapa el círculo+número de inicio cuando el
+final de un trazo coincide con el inicio de otro. Caso más grave: la **O** tiene un solo trazo
+que empieza y acaba en el mismo punto — la flecha tapa su único marcador, dejando la pista 1
+(pulso del punto de inicio) sin efecto visible a nivel 1, quien según `trace-design.md:169`
+és "lo único visible" de esa pista cuando la base ya es 1.
+
+**Ruling — Important #1: se arregla.** Cambiar el orden z violaría el orden de capas del spec
+(`trace-design.md:139`) y pediría su propio Ruling; en cambio, cuando el final de un trazo
+coincide con el inicio de cualquier trazo (de la misma letra), retrasar la flecha estática a lo
+largo de su propio último segmento (`end − 0.15·dir`, o el valor que el implementador calcule
+para separar centro de flecha y marcador). Test: misma idea que T6-2 pero flecha↔marcador, para
+las 9 letras; debe fallar para O, L, E, M si se quita el arreglo. Coste si esta cifra (0.15)
+quedara corta: un solape residual pequeño, visual, no funcional — bajo.
+
+**Important #2 — README y spec desfasados respecto a la Tarea 5 cerrada y la Tarea 6.**
+- `README.md:276` dice "5 tareas" (son 6); `:277-278` y `:349-354` dicen que falta la prueba
+  manual del autor, ya confirmada (ver más arriba: torpe completa pasa, garabato completo
+  falla, 1.5s bien, letra distinta rechazada); `:406` dice "todavía pendiente" sobre esa misma
+  prueba, que es la que decide si los pares confundibles (E↔S, E↔P, O↔U) se quedan como están
+  — hay que decir que el autor los dejó así. Nada menciona el fix de movimiento reducido, D18
+  (marcadores separados) ni que la pista 2/flecha de presentación reemplazó al punto simple.
+- `docs/superpowers/specs/2026-09-27-trace-design.md:170` (pista 2) y `:177` (presentación)
+  siguen describiendo "un punto". La tabla de decisiones (`:32-37`) no tiene D18; tampoco la
+  tabla de decisiones del README (`:392-399`).
+
+**Ruling — Important #2: se arregla (solo docs).** Actualizar ambos ficheros con los puntos de
+arriba. El banner desactualizado del README (línea ~8) ya estaba anotado como minor deferred
+desde la Tarea 5 — no se repite aquí, pero el implementador puede corregirlo de paso si el
+banner menciona el recuento de tareas.
+
+**Important #3 (del propio revisor) — un toque accidental (un único punto de tinta) cuenta
+como intento fallido**, gasta un escalón de pista y afecta contadores. El spec calla; el
+revisor lo juzga por la expectativa razonable de un adulto viendo a un niño de 3-4 años tocar
+sin querer. **No bloquea este merge** (D14: ningún niño llega a `trace` antes del Plan 5) pero
+debe quedar como decisión abierta para el autor antes de que el Plan 5 desbloquee la Fase 1.
+
+**Ruling — Important #3: no se arregla en este fix wave; se documenta como decisión abierta
+del README** (junto a las demás decisiones abiertas, con puntero a este hallazgo) para que el
+autor la resuelva antes o durante el Plan 5. Coste si se difiere mal: un niño real podría
+gastar pistas por un roce accidental durante el Plan 5 — bajo mientras D14 siga en pie, y ya
+queda visible en el README para que no se pierda.
+
+**Minor #4 — con movimiento reducido, la pista 2 no tiene el respaldo prometido en ítems de
+caja ≥2** (nivel de guía 2 o 3): las flechas estáticas de fin de trazo solo se pintan con
+`level === 1` (`TraceCanvas.tsx:386`), así que en la pista 2 de un ítem con caja ≥1 (nivel ≥2)
+no queda nada quieto que mostrar bajo `prefers-reduced-motion: reduce` — solo el punto/flecha
+de `animation="dot"` congelado al final del último trazo.
+
+**Ruling — Minor #4: se arregla en este mismo fix wave** (mismo fichero que el Important #1,
+coste bajo, evita dejar otro Ruling pendiente): pintar las flechas estáticas también bajo
+`motion-reduce:` mientras `animation === "dot"`, no solo en `level === 1`.
+
+**Minor #5** — T6-1 solo comprueba presencia de clase, no comportamiento real (`jsdom` no
+ejecuta transiciones). Ya reconocido por el propio plan y por el registro de la Tarea 6
+(evidencia real vive aquí, con Playwright aislado) — sin acción, límite conocido.
+
+**Declinado a juzgar por el revisor (con su razón), sin acción:** números de trazo como "texto
+para el niño" (el spec pide inicios numerados); alturas en `vh` vs. la barra dinámica de Safari
+(cubierto por D11, prueba en dispositivo real); `Presentation.tsx` importando `Written` de
+`listen-tap/` (acoplamiento sin efecto funcional); `ReplayButton` activo durante pistas 2/3
+(inocuo, igual que otras plantillas); nivel de guía bajando dentro de sesión tras acierto (D13
+tal cual); scroll de 58px en 640×360 (Ruling ya tomado, de acuerdo). **Un hallazgo nuevo fuera
+del diff, para anotar y no perder:** `SessionScreen.tsx:61`, `transition-[width]` sin
+`motion-safe:` — gap real de movimiento reducido en la barra de progreso, anterior a esta rama,
+fuera de alcance de este plan. **Queda para un plan posterior** (candidato: cuando se toque
+`SessionScreen.tsx` de nuevo, o una pasada de accesibilidad transversal).
+
 ## Estado
 
-Plan escrito y aprobado (2026-09-27). **Tareas 1-6 completas.** Siguiente y última tarea del
-plan: revisión final de toda la rama, modelo opus.
+Plan escrito y aprobado (2026-09-27). **Tareas 1-6 completas.** Revisión final de la rama:
+**Con correcciones** (opus) — 2 Important a arreglar (marcador tapado en O/L/E/M; docs
+desfasados) + 1 Minor a arreglar de paso (respaldo de movimiento reducido en pista 2 con
+caja ≥2), 1 Important que se documenta sin arreglar (toque accidental, decisión abierta para
+el autor antes del Plan 5), 1 Minor sin acción (límite conocido de test), 1 hallazgo nuevo
+fuera de esta rama anotado para un plan posterior (`SessionScreen.tsx:61`).
+
+**Siguiente:** dispatch de UN solo fix subagent con los tres puntos a tocar (Important #1,
+Important #2 con la decisión abierta del README, Minor #4), reanudando al implementador de la
+Tarea 6 (`a138216b072444181`, ya conoce `TraceCanvas.tsx`). Después, una sola re-revisión
+acotada del fix diff; sin segunda ronda — los hallazgos que sobrevivan se adjudican y se
+presentan al autor con `finishing-a-development-branch`.
