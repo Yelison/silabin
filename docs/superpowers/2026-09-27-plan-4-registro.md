@@ -465,17 +465,62 @@ del diff, para anotar y no perder:** `SessionScreen.tsx:61`, `transition-[width]
 fuera de alcance de este plan. **Queda para un plan posterior** (candidato: cuando se toque
 `SessionScreen.tsx` de nuevo, o una pasada de accesibilidad transversal).
 
+## Fix wave sobre la revisión final (2026-09-27, un solo dispatch: Puntos 1, 2 y 4 del brief)
+
+El agente de la Tarea 6 (`a138216b072444181`) no seguía vivo en esta máquina (`ListAgents`
+vacío) — implementador nuevo (sonnet), con el mismo contexto vía brief. Commits: `002ad85`
+(Puntos 1-2, código+tests) y `c18123f` (Puntos 3-4, solo docs). 913 casos (912 pasan, 1
+omitido; +3 nuevos: `T7-1`, `T7-1b`, `T7-2`), typecheck y lint en verde. Brief:
+`.superpowers/sdd/2026-09-27-silabin-trazo/final-review-fixwave-brief.md`. Reporte completo:
+`.superpowers/sdd/2026-09-27-silabin-trazo/final-review-fixwave-report.md`.
+
+**Punto 1 (Important #1):** `ARROW_RETREAT_DISTANCE = 0.15` — la flecha retrocede a lo largo
+de su dirección de llegada (`strokeAngleDeg`) cuando su final coincide con el inicio, sin
+desplazar, de cualquier trazo de la letra, incluido el propio (caso cerrado de la O). El
+implementador verificó contra la geometría real de `UPPER_GLYPHS` (no de memoria) que O, L, E
+y M son los únicos 4 casos, ninguno más.
+
+**Punto 2 (Minor #4):** condición de las flechas estáticas ampliada a `level === 1 ||
+animation === "dot"`; en el segundo caso llevan `hidden motion-reduce:block` (invisibles
+salvo con movimiento reducido), sin tocar el caso `level === 1` ya aprobado en la Tarea 6.
+
+**Mutación (Puntos 1-2; toca la guía pedagógica del trazo, exige 3-5 mutaciones dirigidas):**
+de las 3 mutaciones del brief, 1 la detectó el test tal cual (`T7-1`, retreat a 0). Las otras
+2 sobrevivían al test tal como estaba especificado en el brief, por razones geométricas/
+lógicas reales (documentadas en el reporte), no por error del implementador, quien amplió el
+test en vez de forzarlo: `T7-1b` (producto escalar retreat·llegada < 0, detecta el signo
+invertido de `dir`) y un caso nuevo en `T7-2` (`level: 2, animation: "full"`, detecta
+`animation !== "none"` mal puesto en vez de `=== "dot"`). El revisor (sonnet) re-derivó a
+mano, de forma independiente, la geometría de las 9 letras y confirmó las 3; probó además una
+cuarta mutación propia (`strokeStartAngleDeg` en vez de `strokeAngleDeg`), detectada vía el
+caso de M en `T7-1b`.
+
+**Revisión de tarea (sonnet), diff `9c29e62..c18123f`: Spec ✅, sin Critical ni Important.**
+Confirmó las 8 ubicaciones que nombraba el brief (README:276, :277-278, bullets ~281-306,
+tabla ~392-399, :406; spec tabla ~29-37, :170, :177) con el tratamiento pedido, y que la
+extensión del implementador a "Siguientes pasos concretos" (misma corrección factual, para no
+dejar el README contradiciéndose a dos secciones de distancia) es un ajuste de consistencia
+razonable, no scope creep.
+
+**Minor (deferred):** `TraceCanvas.tsx:345-347`, `arrowPositions` reindexa en vez de reusar el
+`stroke` que ya da el `.map` — redundante, inocuo (≤4 trazos por letra). `T7-1b` tiene un
+punto ciego teórico aislado a la O (arco muy discretizado, segmentos casi paralelos) que no
+importa en la práctica porque la misma mutación ya falla por el caso de M dentro del mismo
+`it()`.
+
+Fix wave: complete (commits `9c29e62..c18123f`, review clean, 2 minor deferred, sin fix round
+— review limpia a la primera).
+
 ## Estado
 
-Plan escrito y aprobado (2026-09-27). **Tareas 1-6 completas.** Revisión final de la rama:
-**Con correcciones** (opus) — 2 Important a arreglar (marcador tapado en O/L/E/M; docs
-desfasados) + 1 Minor a arreglar de paso (respaldo de movimiento reducido en pista 2 con
-caja ≥2), 1 Important que se documenta sin arreglar (toque accidental, decisión abierta para
-el autor antes del Plan 5), 1 Minor sin acción (límite conocido de test), 1 hallazgo nuevo
-fuera de esta rama anotado para un plan posterior (`SessionScreen.tsx:61`).
+Plan escrito y aprobado (2026-09-27). **Tareas 1-6 completas. Revisión final de la rama: con
+correcciones, y el fix wave que las resuelve, completo y con revisión limpia.** Queda **un
+Important documentado como decisión abierta** para el autor (un toque accidental cuenta como
+intento fallido en `trace`; ver README, "Lo que falta: planes 4 a 6", y el hallazgo Important
+#3 de la revisión final más arriba), a resolver antes o durante el Plan 5 — protegido por D14
+mientras tanto. Un hallazgo fuera de esta rama, anotado para un plan posterior:
+`SessionScreen.tsx:61` (`transition-[width]` sin `motion-safe:`). Sin trabajo de código
+pendiente en esta rama.
 
-**Siguiente:** dispatch de UN solo fix subagent con los tres puntos a tocar (Important #1,
-Important #2 con la decisión abierta del README, Minor #4), reanudando al implementador de la
-Tarea 6 (`a138216b072444181`, ya conoce `TraceCanvas.tsx`). Después, una sola re-revisión
-acotada del fix diff; sin segunda ronda — los hallazgos que sobrevivan se adjudican y se
-presentan al autor con `finishing-a-development-branch`.
+**Siguiente:** `superpowers:finishing-a-development-branch` (la prueba manual del autor y la
+revisión final de la rama ya están hechas; falta solo el PR).
