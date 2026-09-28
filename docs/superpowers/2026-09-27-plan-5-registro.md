@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-6 completas; siguiente, Tarea 7 (cierre).**
+**Fase: ejecución (2026-09-28). Tareas 1-6 completas; Tarea 7 (cierre) en revisión.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -18,7 +18,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | **completa** (c966a90, 5132eb2, 3a6a6c9) |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | **completa** (a31d41c, 4d71af1) |
 | 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | **completa** (7d7973e, 63ef0ad, 231f10b) |
-| 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | pendiente |
+| 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | en revisión (1b23591, y el commit de docs) |
 
 Rulings de planificación: P1-P15, en la sección «Decisiones» del plan. Los más delicados son
 P1 (`parent` = siempre `unsure`), P2 (cada «Otra vez» avanza la pista), P4 (2 silencios →
@@ -205,3 +205,36 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
   `trace/Evaluation.tsx`); el implementador lo reaplicó, repitió la pasada con copias de respaldo y lo
   declaró. Lección: en los despachos con mutaciones, exigir copia de respaldo con `cp` (no
   `git checkout --`) mientras haya trabajo sin commitear, y no cortar scripts con `| head`.
+- Tarea 7: `Voice.integration.test.tsx` (I1-I7, 7 tests) y la deuda 4 en un commit (1b23591); README,
+  archivo y este registro en otro. Mutaciones rápidas para comprobar que I1-I7 no son vacuos, todas
+  muertas: `syllablesVoiced += 0` (I1), `MAX_SILENT_TURNS = 3` (I4), `hideMic={false}` en
+  `say-it/Evaluation` (I3) y quitar `read-word` de `templateViews` (I5 e I7). Restauradas con copia
+  de respaldo; `git status` limpio tras cada una.
+- Ruling: el helper `documentoConUnidadesHechas` (documento a mano con unidades dominadas, `hideMic` y
+  `itemsExtra`) va en `features/test-support.tsx` y no se refactoriza `documentoCon` de
+  `Phase0.integration.test.tsx` para usarlo; si fuera equivocado, son dos copias de un documento de
+  prueba y se unifican después.
+- Ruling: en `build/SessionFlow.test.tsx` la última aserción pasa de `onEnd` a «avanza al ejercicio
+  siguiente y queda `assisted`», porque la sesión real ya no tiene un solo ejercicio; el resto de
+  aserciones no se tocó. Si fuera equivocado, se seguiría jugando hasta el fin de la sesión.
+- Ruling: en I1 la caja solo sube en el primer acierto de cada ítem y sesión (crédito único por sesión,
+  ya así en el motor); los aciertos siguientes del mismo ítem exigen que no baje ni suba.
+- Ruling: se añade `certificates` a `.gitignore`: `next dev --experimental-https` lo escribe él solo la
+  primera vez que se arranca; se comprobó que arranca (`https://localhost:3457`, «Ready») y se paró. No
+  se probó con un móvil. Crea además la CA raíz de `mkcert` en `~/.local/share/mkcert`.
+- Tarea 7: minor (deferred): I7 solo cubre con el currículo real las unidades activas `phase1:vowel-a`
+  y `phase2:m` (30 semillas cada una); no recorre las otras unidades de la Fase 1 y la 2.
+
+## Prueba manual del autor (antes del PR)
+
+Con `DEV_ORIGINS=<ip-lan> pnpm dev --experimental-https -H 0.0.0.0` (ver «Cómo ejecutarlo» del
+README: el micrófono exige HTTPS, y el móvil debe confiar en el certificado autofirmado):
+
+1. iPad/iPhone con Safari: el permiso de micrófono se pide una vez; el indicador de grabación se
+   apaga entre turnos.
+2. La instrucción y el modelo se siguen oyendo bien después de abrir el micrófono (iOS cambia la
+   sesión de audio).
+3. La voz de un niño a la distancia normal da «oído» (P5), y el televisor de fondo no bloquea nada.
+4. Denegar el permiso → botones del adulto, sin pantalla muerta.
+5. La boca se entiende como boca (D21, placeholder).
+6. Un toque accidental en `trace` desaparece sin gastar pista (D19).

@@ -1,7 +1,8 @@
 # Archivo de trampas y deuda menor
 
 Texto completo de las trampas y la deuda menor tal como estaban en el README al cerrar el
-Plan 4 (2026-09-27). **No se lee al retomar**: el README solo guarda lo vivo (ver la regla de
+Plan 4 (2026-09-27), más lo que salió del README al cerrar el Plan 5 (2026-09-28, sección
+«Plan 5» del final). **No se lee al retomar**: el README solo guarda lo vivo (ver la regla de
 poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una entrada del README
 remita a él.
 
@@ -18,8 +19,9 @@ se ignoraba. Estado tras el Plan 2:
 3. ✅ **`saveState` devuelve `{ saved: boolean }`.** Resuelta: el store guarda tras cada paso
    y `SaveWarning` (`src/features/adult/`) avisa al adulto con `saveFailed`; reintenta en el
    siguiente guardado (D5).
-4. 🔁 **Regla viva: `unitMasteryRatio` devuelve `1` para una unidad vacía.** Ya no sale del
-   barril `@/engine`, así que la interfaz no puede leerlo por error. Si algún día una barra de
+4. ✅ **`unitMasteryRatio` devuelve `1` para una unidad vacía.** Resuelta en el Plan 5
+   (T1, e91db39): ya no sale del barril `@/engine` y el test C3 (`PODADOS` en
+   `src/engine/index.test.ts`) falla si vuelve a exportarse. Si algún día una barra de
    progreso necesita ese dato, usa `isUnitComplete`, que devuelve `false` para una unidad
    vacía.
 5. ✅ **El historial de sesiones no se escribía.** Resuelta: `appendSession` en
@@ -29,11 +31,13 @@ se ignoraba. Estado tras el Plan 2:
    Plan 6.
 7. ✅ **iOS exige un gesto antes de cualquier audio.** Resuelta: la primera pantalla es
    `StartScreen` («Toca para empezar») y todo audio pasa por la cola de `AudioPlayer`.
-8. ✅ **Los tests de componentes necesitan `jsdom`.** Resuelta: `jsdom` y Testing Library
-   están instalados. `vitest.config.ts` sigue en entorno `node`, así que **cada test de
-   interfaz debe llevar** `// @vitest-environment jsdom`.
-9. ✅ **Cerrada para `trace` en el Plan 4; sigue 🔴 viva para `say-it` y `read-word`
-   (Plan 5).** `checkAnswer` lanza para un ítem sin respuesta que comparar
+8. ✅ **Los tests de componentes necesitan `jsdom`.** Resuelta en el Plan 5 (T1, e91db39):
+   `vitest.config.ts` usa `test.projects` (`node` para `*.test.ts`, `jsdom` para
+   `*.test.tsx`), y los centinelas `src/test-env.test.tsx` y `src/test-env-node.test.ts` fallan
+   si se rompe. Ya no hace falta el comentario `// @vitest-environment jsdom`.
+9. ✅ **Cerrada para `trace` en el Plan 4 y para `say-it` y `read-word` en el Plan 5 (T2,
+   fefe69f y 1229fbe: `submitSpeech` y el invariante de `evaluable.test.ts`).** Texto original
+   (Plan 4): `checkAnswer` lanza para un ítem sin respuesta que comparar
    (`expectedAnswer` devuelve `null`), pero `trace` ya no pasa nunca por ahí: `submitTrace`
    (`src/engine/session.ts`) es su propio camino de evaluación, con `scoreTrace` contra la
    geometría de referencia de la letra (D17), y `submitAnswer` lanza explícitamente si se le
@@ -137,9 +141,15 @@ ha reverificado)
   arrastre y el `dimmed` del resto de piezas en `build`; el rung 2 de `PlantillasDev.test.tsx`
   (herramienta de desarrollo); `jugarSesion` en `Phase0.integration.test.tsx` solo exige
   `evaluaciones > 0`; `PAUSE_MS`.
-- **`build` no sale por la vía normal:** el planificador aún no saca `build` en `phase2:m`, así
+- ✅ **`build` no sale por la vía normal:** el planificador aún no saca `build` en `phase2:m`, así
   que `build/SessionFlow.test.tsx` inyecta la corrida con `store.setState` (R24). Cuando la
-  unidad sea jugable (Planes 4 y 5), sustituir la inyección.
+  unidad sea jugable (Planes 4 y 5), sustituir la inyección. **Resuelta en el Plan 5 (T7,
+  1b23591):** el test carga un documento con la Fase 2 activa y `letter:m` dominada, y la
+  semilla fija de `crearStore` planifica un `build` de `syllable:ma`; el helper
+  `documentoConUnidadesHechas` vive en `features/test-support.tsx`. La última aserción pasó de
+  «`onEnd` se llama una vez» (la corrida inyectada tenía un solo ejercicio) a «pasa al ejercicio
+  siguiente, queda `assisted` y `onEnd` no se llama»: es lo mismo (la sesión avanza) sin depender
+  de una corrida de un solo ejercicio.
 - **Tarea 6:** un `pkill` de procesos `next` en el puerto 3000 durante la implementación y la
   revisión; si el autor tenía un `pnpm dev` en marcha, hay que relanzarlo.
 - **Para el Plan 6:** el mapa no enseña ningún avance hasta completar una unidad (5-6 sesiones
@@ -174,3 +184,22 @@ ha reverificado)
   ISO.
 - `createMemoryAdapter` guarda por referencia, mientras que el adaptador real serializa.
 - Las fixtures de tipos solo protegen con `pnpm typecheck`; `vitest` no comprueba tipos.
+
+**Plan 5 (2026-09-28): lo que salió del README al podarlo**
+
+Del registro del Plan 5 (`docs/superpowers/2026-09-27-plan-5-registro.md`, busca `minor (deferred)`).
+
+- **M14 sobrevive:** nada prueba la segunda reproducción del ítem tras `PAUSE_MS` en
+  `say-it/Presentation` (un test avanzaría `PAUSE_MS` y esperaría dos `phoneme:a` seguidos).
+- **`/dev/plantillas` desborda 11 px en apaisado** por su rejilla de dos columnas; a ancho de
+  sesión (992 px) cabe. Solo es una página de desarrollo.
+- **`Palabra.tsx` usa `text-[min(8rem,26vw)]`** y no se ha comprobado que coincida con
+  `Written size="lg"` (pulido visual).
+- **Duplicación entre `say-it` y `read-word` `Evaluation`** (`hintBusy`, `VoiceTurn`): extraer un
+  hook común solo si aparece una tercera plantilla de voz.
+- **Las 35 `img:<palabra>` siguen sin resolver:** si una palabra no tiene imagen, `imageFor`
+  devuelve `null` y la tarjeta tapada de `read-word` desaparece al resolver sin sustituto. Va con
+  la deuda de ilustraciones del README.
+- **Poda del README:** la deuda 4 (`build` inyectado) se cerró (ver arriba) y las trampas 4, 8 y
+  9 pasaron a este archivo como resueltas.
+
