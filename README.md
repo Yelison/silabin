@@ -382,8 +382,9 @@ del Plan 3 se resolvió en la Tarea 4, D15), y también la revisión final de la
 "con correcciones", resuelta en el fix wave) y la **prueba manual del autor en un dispositivo
 táctil real** (`/dev/plantillas`, con `DEV_ORIGINS` — ver
 [Cómo ejecutarlo](#cómo-ejecutarlo) — o con la emulación táctil de Chrome si no hay ninguno a
-mano). Falta el PR, y queda abierta la decisión sobre el toque accidental (ver
-[arriba](#lo-que-falta-planes-4-a-6)) antes de que el Plan 5 desbloquee la Fase 1.
+mano). **PR abierto:** [#5](https://github.com/Yelison/silabin/pull/5). Queda abierta la
+decisión sobre el toque accidental (ver [arriba](#lo-que-falta-planes-4-a-6)) antes de que el
+Plan 5 desbloquee la Fase 1.
 
 1. **Escribir el Plan 5** (`say-it`, `read-word`, y el desbloqueo de la Fase 1 con `say-it`
    según D14) con `superpowers:writing-plans`, en `docs/superpowers/plans/`, en una rama
