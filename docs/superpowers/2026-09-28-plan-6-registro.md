@@ -146,7 +146,8 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 | 1 | completa (commits `865937b`..`9eb94d0`) | 1/5 | 0 (las 5 mandatadas atrapadas; ronda 1 corrigió cobertura de `counts` por cubo y `bestStars`, que solo se comprobaban por suma) |
 | 2 | completa (commits `c7ea145`..`80c0e13`), Approved | 0/5 | 0 (9 mutaciones: las 6 del brief más 3 que el implementador añadió por su cuenta, todas confirmadas por el revisor contra el diff) |
 | 3 | completa (commit `6bf2f44`), Approved | 0/5 | 0 (5 mutaciones: las 4 del brief más `acceptsModelTrace`, todas atrapadas y confirmadas por el revisor contra el diff) |
-| 4-11 | pendientes | | |
+| 4 | completa (commit `65f606a`), Approved | 0/5 | 0 (2 mutaciones del brief, ambas atrapadas, verificadas por el revisor contra la lógica del diff) |
+| 5-11 | pendientes | | |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -225,3 +226,26 @@ dice comprobar "el glifo de la evaluación y del marcador" pero no comprueba el 
 solo cuenta carriles SVG; las aserciones de `D1b` (`PlantillasDev.test.tsx:716-729`) son más
 débiles que el estándar de producción (`Presentation.test.tsx` compara el atributo `d`
 exacto) — aceptable para una herramienta de solo desarrollo.
+
+**Ruling (Tarea 4):** los botones «Borrar» y «Listo» pintan el emoji (🧽/👍) directamente,
+no el componente `Icon`/PNG. — Por qué: S21 los lista explícitamente como provisionales con
+emoji hasta el Plan 7, a diferencia del icono de `ReplayButton` (ya migrado a `Icon` en un
+plan anterior, no provisional); añadir entradas nuevas a `ICON_NAMES` exigiría crear PNGs
+reales que el Plan 7 reemplazaría de todos modos. — Coste si fuera un error: ninguno de
+diseño final (es explícitamente provisional); si acaso, repintar dos botones en el Plan 7 en
+vez de uno menos. Dado al implementador antes del despacho, no como corrección.
+
+**Minor (deferred) de la Tarea 4:** `handleStrokeStart` (`Evaluation.tsx:233-239`, código
+preexistente fuera del alcance de esta tarea) repite en línea el mismo patrón que ahora
+centraliza `cancelarTemporizador()` unas líneas arriba — DRY trivial, sin tomar; la
+condición de visibilidad `!disabled` incluye `locked`, sin test de esta tarea que lo
+ejercite con tinta presente (el revisor confirmó que en la práctica `locked` implica
+`submitted` en todos los caminos reales, así que es redundante-pero-inofensivo, no una
+ampliación de comportamiento).
+
+**Pendiente antes de cerrar el plan (no bloquea la Tarea 4):** el layout de landscape
+(640×360) de la franja de 3 botones (72×72 cada uno, huecos siempre montados) se razonó por
+aritmética (248 px de columna dentro de "~328 px libres" estimados, no derivados de clases
+del diff) pero no se verificó con `browser-qa` ni dispositivo real — señalado tanto por el
+implementador como por el revisor. Queda para la prueba manual de cierre del plan (S11 ya
+prevé iPad/iPhone real; añadir landscape 640×360 a esa pasada antes del PR).
