@@ -7,11 +7,11 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 
 > **Estado a 2026-09-28:** el núcleo sin interfaz (Plan 1, PR #1), la primera sesión jugable
 > (Plan 2, PR #3), la Fase 0 entera (Plan 3, PR #4) y `trace` (Plan 4, PR #5) están fusionados
-> en `main`. El **Plan 5** (rama `feat/plan-5-voz`, 7 tareas hechas) construye **la voz**:
+> en `main`. El **Plan 5** (rama `feat/plan-5-voz`, 7 tareas hechas y revisión final aplicada) construye **la voz**:
 > `say-it` y `read-word` con el turno de voz (micrófono con VAD por energía, y los botones del
 > adulto como respaldo siempre disponible) y desbloquea **la Fase 1 y la Fase 2**, así que hoy
 > **son jugables las tres fases**. Además cierra la decisión abierta del toque accidental en
-> `trace` (D19). 1132 tests (1 omitido), y `typecheck`, `lint` y `pnpm build` en verde.
+> `trace` (D19). 1134 tests (1 omitido), y `typecheck`, `lint` y `pnpm build` en verde.
 > **Falta** la revisión final de la rama (Opus), la **prueba manual del autor** (lista en
 > `docs/superpowers/2026-09-27-plan-5-registro.md`, sección «Prueba manual del autor (antes
 > del PR)») y el PR (ver [siguientes pasos](#siguientes-pasos-concretos)).
@@ -62,21 +62,30 @@ un fallo de las constantes de trazo en vez de un artefacto del arnés).
 un **contexto seguro**: `https://` o `localhost`. El `http://<ip-lan>` de arriba **no lo es**, así
 que desde el móvil el micrófono no se abriría y las vistas de voz caerían a los botones del
 adulto (P4), lo que parece que «no funciona». La versión de Next instalada trae
-`next dev --experimental-https`, que genera un certificado autofirmado con `mkcert` (opciones
-`--experimental-https-key`, `--experimental-https-cert` y `--experimental-https-ca` para uno
-propio; ver `node_modules/next/dist/docs/01-app/03-api-reference/06-cli/next.md`). Se combina
-con `DEV_ORIGINS`:
+`next dev --experimental-https`, pero **su certificado automático solo cubre `localhost`,
+`127.0.0.1`, `::1` y el valor de `-H` (`0.0.0.0`), nunca la IP de la LAN**: desde
+`https://<ip-lan>:3000` el nombre no coincidiría. Hay que generar el certificado a mano con
+[`mkcert`](https://github.com/FiloSottile/mkcert) incluyendo la IP y pasárselo a Next
+(`--experimental-https-key` y `--experimental-https-cert`; ver
+`node_modules/next/dist/docs/01-app/03-api-reference/06-cli/next.md`):
 
 ```bash
-DEV_ORIGINS=<ip-lan> pnpm dev --experimental-https -H 0.0.0.0
+mkdir -p certificates && cd certificates   # ya ignorado por git
+mkcert -install                            # una vez: crea la CA raíz local
+mkcert -key-file lan-key.pem -cert-file lan.pem <ip-lan> localhost 127.0.0.1
+cd ..
+DEV_ORIGINS=<ip-lan> pnpm dev --experimental-https \
+  --experimental-https-key ./certificates/lan-key.pem \
+  --experimental-https-cert ./certificates/lan.pem -H 0.0.0.0
 # y en el móvil: https://<ip-lan>:3000
 ```
 
-En el móvil **hay que aceptar o confiar a mano en el certificado autofirmado** (Safari avisa de
-que la conexión no es privada; para que no lo repita, instala y confía la CA raíz de `mkcert`,
-que está en `~/.local/share/mkcert/rootCA.pem`). La primera vez que se arranca, Next crea
-`certificates/` (ya ignorado por git) y avisa. Sin ese paso, o con `http://<ip-lan>`, la página
-carga pero el micrófono no. No se ha probado con un móvil real (ver la deuda 1).
+El móvil no confía por defecto en esa CA: hay que instalar y activar la CA raíz de `mkcert`
+(`rootCA.pem`, en `mkcert -CAROOT`) en el dispositivo, o aceptar el aviso de Safari (sin la CA
+el aviso puede repetirse). Sin HTTPS, o con `http://<ip-lan>`, la página carga pero el
+micrófono no. **WSL2:** con la red en modo NAT el móvil puede no alcanzar el servidor; hace
+falta un `portproxy` de Windows (`netsh interface portproxy add v4tov4 ...`) o poner WSL2 en
+red *mirrored*. No se ha probado con un móvil real (ver la deuda 1).
 
 **`/dev/plantillas`** (solo con `pnpm dev`; en producción da 404): un selector de plantilla e
 ítem que monta la presentación y la evaluación con un ejercicio planificado por el motor, y
@@ -105,26 +114,21 @@ instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
 |---|---|---|
 | 1 | Este README | Estado, pendientes y siguientes pasos |
 | 2 | `docs/superpowers/specs/2026-09-18-silabin-design.md` | **El spec aprobado. Es la autoridad.** Pedagogía, arquitectura, contenido, motor, voz, recompensas, UX y pruebas |
-| 3 | `docs/superpowers/2026-09-26-plan-3-registro.md` | Registro de ejecución del Plan 3. Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-3-plantillas-toque` |
-| 4 | `docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md` | El Plan 3 (tareas 1-6, con la 5b): base visual, plantillas de toque y Fase 0 de punta a punta, con las decisiones D8-D11 al principio |
-| 5 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens y reglas visuales (D8). La identidad final sigue pendiente |
-| 6 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete) |
-| 7 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito |
-| 8 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
-| 9 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
-| 10 | `docs/superpowers/plans/2026-09-18-silabin-nucleo.md` | El Plan 1 completo (22 tareas) y la hoja de ruta original al final |
-| 11 | `docs/research/pedagogia-lectura-inicial.md` | Evidencia pedagógica: método fonético-silábico, orden de letras, espejo b/d/p/q |
-| 12 | `docs/research/reconocimiento-voz-infantil.md` | Comparativa de reconocimiento de voz infantil; por qué el evaluador `parent` es el del día uno y Azure viene después |
-
----|---|---|
-| 1 | Este README | Estado, pendientes y siguientes pasos |
-| 2 | `docs/superpowers/specs/2026-09-18-silabin-design.md` | **El spec aprobado. Es la autoridad.** Pedagogía, arquitectura, contenido, motor, voz, recompensas, UX y pruebas |
-| 3 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-2-sesion` |
-| 4 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
-| 5 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
-| 6 | `docs/superpowers/plans/2026-09-18-silabin-nucleo.md` | El Plan 1 completo (22 tareas) y la hoja de ruta original al final |
-| 7 | `docs/research/pedagogia-lectura-inicial.md` | Evidencia pedagógica: método fonético-silábico, orden de letras, espejo b/d/p/q |
-| 8 | `docs/research/reconocimiento-voz-infantil.md` | Comparativa de reconocimiento de voz infantil; por qué el evaluador `parent` es el del día uno y Azure viene después |
+| 3 | `docs/superpowers/2026-09-27-plan-5-registro.md` | Registro de ejecución del Plan 5 (la voz). Busca `Ruling` y `minor (deferred)`, y la lista de la prueba manual del autor. Es la memoria de la rama `feat/plan-5-voz` |
+| 4 | `docs/superpowers/plans/2026-09-28-silabin-voz.md` | El Plan 5 (7 tareas): `say-it`, `read-word` y el turno de voz, con los rulings P1-P15 y las decisiones D19-D23 |
+| 5 | `docs/superpowers/2026-09-27-plan-4-registro.md` | Registro de ejecución del Plan 4 (`trace`). Busca `Ruling` y `minor (deferred)` |
+| 6 | `docs/superpowers/plans/2026-09-27-silabin-trazo.md` | El Plan 4: la plantilla `trace`, con las decisiones D12-D18 |
+| 7 | `docs/superpowers/2026-09-26-plan-3-registro.md` | Registro de ejecución del Plan 3. Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-3-plantillas-toque` |
+| 8 | `docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md` | El Plan 3 (tareas 1-6, con la 5b): base visual, plantillas de toque y Fase 0 de punta a punta, con las decisiones D8-D11 al principio |
+| 9 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens y reglas visuales (D8). La identidad final sigue pendiente |
+| 10 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete) |
+| 11 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito |
+| 12 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
+| 13 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
+| 14 | `docs/superpowers/plans/2026-09-18-silabin-nucleo.md` | El Plan 1 completo (22 tareas) y la hoja de ruta original al final |
+| 15 | `docs/research/pedagogia-lectura-inicial.md` | Evidencia pedagógica: método fonético-silábico, orden de letras, espejo b/d/p/q |
+| 16 | `docs/research/reconocimiento-voz-infantil.md` | Comparativa de reconocimiento de voz infantil; por qué el evaluador `parent` es el del día uno y Azure viene después |
+| 17 | `docs/archivo-trampas-y-deuda.md` | Texto completo de las trampas y la deuda podadas del README; no se lee al retomar |
 
 ---
 
@@ -137,8 +141,8 @@ src/
   store/       Estado persistido, store de Zustand y puente con el motor.          ✅ hecho
   audio/       Interfaz AudioPlayer; placeholder con speechSynthesis y cola.       🟡 en parte (Planes 2-3)
   images/      Interfaz de imágenes: WebP ilustrado (65) y emoji de respaldo.      🟡 en parte (Plan 3)
-  speech/      SpeechEvaluator (parent, browser, azure), VAD, fonemización.        ⏳ Plan 5
-  features/    Inicio, mapa, sesión (5 plantillas de toque), fin, aviso, exportar. 🟡 en parte (Planes 2-3)
+  speech/      Evaluador `parent`, captura de micrófono con VAD, `speechTarget`.   🟡 en parte (Plan 5)
+  features/    Inicio, mapa, sesión (7 plantillas), fin, aviso, exportar.        🟡 en parte (Planes 2-5)
   components/  UI infantil: BigButton, OptionCard, Picture, Icon, ReplayButton.    🟡 en parte (Plan 3)
   app/         Ruta única que monta App, /dev/plantillas; falta /api/speech-token. 🟡 en parte (Plan 3)
 ```
@@ -146,7 +150,7 @@ src/
 **Regla de fronteras:** `features/` y `components/` nunca deciden pedagogía. Solo pintan lo
 que ordena `engine/` y le devuelven eventos (acierto, fallo, tiempo). `engine/`, `content/`
 y `speech/` (salvo la captura de audio) se prueban sin navegador. `features/` y
-`components/` importan solo los barriles `@/engine`, `@/store` y `@/audio`, nunca
+`components/` importan solo los barriles `@/engine`, `@/speech`, `@/store` y `@/audio`, nunca
 `@/content` ni un módulo interno; `src/features/boundaries.test.ts` lo hace cumplir.
 
 ---
@@ -350,8 +354,8 @@ ofrecía `trace` (D14); desde el Plan 5 la ofrecen la Fase 1 y la 2.
 
 Plan 5 = **la voz: `say-it` y `read-word`**, en la rama `feat/plan-5-voz` (7 tareas; ledger en
 `docs/superpowers/2026-09-27-plan-5-registro.md`, con los rulings P1-P15 en el plan). Cada
-tarea pasó revisión. **Falta** la revisión final de la rama (Opus), la prueba manual del
-autor y el PR. D19-D23 están [en la tabla](#decisiones-tomadas).
+tarea pasó su revisión y la revisión final de la rama, con Opus, se hizo y se aplicaron sus
+correcciones. **Faltan** la prueba manual del autor y el PR. D19-D23 están [en la tabla](#decisiones-tomadas).
 
 - **Motor y store:** `submitSpeech(verdict)` en `engine/session.ts` es el camino de evaluación
   de voz (como `submitTrace`, D17): el evaluador da un `"ok"`/`"retry"` y el motor aplica las
@@ -419,9 +423,9 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 ## Siguientes pasos concretos
 
 **Plan 5 cerrado en código (2026-09-28):** ledger en
-`docs/superpowers/2026-09-27-plan-5-registro.md`. Las 7 tareas pasaron revisión. Queda:
+`docs/superpowers/2026-09-27-plan-5-registro.md`. Las 7 tareas pasaron revisión de tarea; la revisión final de la rama la hizo Opus y se aplicaron sus correcciones. Queda:
 
-1. La **revisión final de la rama** con `model: "opus"`, y la **prueba manual del autor** con
+1. La **prueba manual del autor** con
    la lista del registro (sección «Prueba manual del autor (antes del PR)»: micrófono en
    Safari iOS, audio tras abrirlo, la voz de un niño frente al televisor, permiso denegado,
    la boca y el toque accidental en `trace`). Para el móvil hace falta HTTPS, ver
@@ -520,15 +524,14 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    `AudioContext` en Safari iOS** (`suspended`, `webkitAudioContext`), más **la prueba con niños
    de la boca** (D21, y que desaparezca en la pista 2). Todo visto solo en Chromium.
 2. **`AudioPlayer` debe resolver o rechazar siempre:** si `play` se queda colgado, las
-   presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan, y
-   `SessionScreen.resolver` espera `feedback:retry` sin tope (ni la pista ni el feedback llegan).
+   presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan (`say-it`,
+   `read-word` y `SessionScreen.resolver` ya usan `playCapped`).
 3. **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): «Reintentar» solo
    desbloquea con el disco vacío; con un documento real hay que recargar.
 4. **Accesibilidad y objetivos táctiles < 72 px:** círculos del modelo (56 px), icono de
    `SaveWarning` (~36 px, panel sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos.
 5. **Ilustraciones a criterio del autor:** `una`, `asa`, `sumo`, contraste de iglú y velo,
-   imágenes al borde del cuadro, estilo mixto; emoji de respaldo dudosos. Las 35
-   `img:<palabra>` siguen sin resolver: `read-word` sin imagen pierde la tarjeta tapada.
+   imágenes al borde del cuadro, estilo mixto; emoji de respaldo dudosos.
 6. **Duplicaciones del motor:** `planReviewOnly` repite `makeExercise`; `letter:${phoneme}`
    en `answers.ts` y `planner.ts`; `picture:${item.text}` y `onsetRequest` en línea.
 7. **Mutaciones supervivientes y huecos de test** de los Planes 2 y 3 (lista en el archivo).

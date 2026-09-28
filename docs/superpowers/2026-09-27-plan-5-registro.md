@@ -231,10 +231,23 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
 - Tarea 7: minor (deferred): `README.md` afirma «las 7 tareas pasaron revisión» (falta la revisión final
   de la rama) y la tabla «Documentos y en qué orden leerlos» está duplicada y sin los planes/registros
   del 4 y el 5 (viene de antes); se arreglan tras la revisión final, en el mismo despacho de correcciones.
+- Final review: revisión final de la rama con Opus: 0 críticos, 2 importantes (I1 `ctx.resume()` sin tope
+  en `capture.ts`; I2 receta HTTPS del README errónea) y M1-M4. I1, I2, M1, M2 y M3 se arreglan en
+  db73e02 y el commit de docs; M4 queda diferido en `docs/archivo-trampas-y-deuda.md`.
+- Ruling: I1 devuelve `unavailable/error` tras `RESUME_MAX_MS = 1500` (y no `silence`) para que el niño
+  llegue a los botones del adulto. Si fuera equivocado, un `resume` lento pero válido (>1,5 s) pasaría
+  a botones del adulto en ese turno; se sube la constante.
+- Ruling: M1 usa `playCapped` desde `voice/hint-audio.ts` sin moverlo (evita tocar 7 imports y tests);
+  `sonar` también lo usa el audio de montaje, que no se espera. Si fuera equivocado, se mueve el
+  fichero a `session/` en una tarea de limpieza.
+- Ruling: I2 documenta `mkcert` a mano en `certificates/` (ya ignorado) con `-H 0.0.0.0`; no se probó
+  con un móvil. Si fuera equivocado, la prueba manual 8 lo destapa.
+- Ruling: la deuda 2 del README ya no menciona `SessionScreen.resolver`; M4 va al archivo y no al
+  README para respetar el tope de 10 deudas.
 
 ## Prueba manual del autor (antes del PR)
 
-Con `DEV_ORIGINS=<ip-lan> pnpm dev --experimental-https -H 0.0.0.0` (ver «Cómo ejecutarlo» del
+Con la receta HTTPS del README (`mkcert` con la IP de la LAN, `DEV_ORIGINS` y `-H 0.0.0.0`; ver «Cómo ejecutarlo» del
 README: el micrófono exige HTTPS, y el móvil debe confiar en el certificado autofirmado):
 
 1. iPad/iPhone con Safari: el permiso de micrófono se pide una vez; el indicador de grabación se
@@ -245,3 +258,6 @@ README: el micrófono exige HTTPS, y el móvil debe confiar en el certificado au
 4. Denegar el permiso → botones del adulto, sin pantalla muerta.
 5. La boca se entiende como boca (D21, placeholder).
 6. Un toque accidental en `trace` desaparece sin gastar pista (D19).
+7. Con `resume` colgado (Safari iOS) deben salir los botones del adulto en ≤ 1,5 s tras la cuenta
+   atrás.
+8. La receta HTTPS del README (`mkcert` con la IP de la LAN) funciona desde el móvil con esa IP.

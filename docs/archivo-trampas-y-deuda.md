@@ -197,9 +197,10 @@ Del registro del Plan 5 (`docs/superpowers/2026-09-27-plan-5-registro.md`, busca
   `Written size="lg"` (pulido visual).
 - **Duplicación entre `say-it` y `read-word` `Evaluation`** (`hintBusy`, `VoiceTurn`): extraer un
   hook común solo si aparece una tercera plantilla de voz.
-- **Las 35 `img:<palabra>` siguen sin resolver:** si una palabra no tiene imagen, `imageFor`
-  devuelve `null` y la tarjeta tapada de `read-word` desaparece al resolver sin sustituto. Va con
-  la deuda de ilustraciones del README.
+- **~~Las 35 `img:<palabra>` sin resolver~~ (falso, corregido tras la revisión final):** las 37
+  palabras del currículo tienen imagen y un test lo exige (65 ficheros en
+  `public/images/palabras/`).
 - **Poda del README:** la deuda 4 (`build` inyectado) se cerró (ver arriba) y las trampas 4, 8 y
   9 pasaron a este archivo como resueltas.
-
+- **M4 (revisión final):** un permiso de micrófono denegado se vuelve a pedir en cada ejercicio
+  (`VoiceTurn.tsx`, `sinMicrofono` es estado por montaje). Con niños puede ser un aviso repetido.
