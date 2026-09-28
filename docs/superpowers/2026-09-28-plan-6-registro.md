@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | pendiente: `/model sonnet`, `superpowers:subagent-driven-development` |
+| Ejecución | en curso: Tarea 1/11 completa (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -143,7 +143,22 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 
 | Tarea | Estado | Rondas | Mutaciones supervivientes |
 |---|---|---|---|
-| 1-11 | pendientes | | |
+| 1 | completa (commits `865937b`..`9eb94d0`) | 1/5 | 0 (las 5 mandatadas atrapadas; ronda 1 corrigió cobertura de `counts` por cubo y `bestStars`, que solo se comprobaban por suma) |
+| 2-11 | pendientes | | |
+
+**Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
+ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
+construye `phase1:vowel-${vowel}`). Se usan los ids reales en la Tarea 1 (test) y en todo lo
+que venga después. — Por qué: los ids abreviados no existen, el test fallaría al arrancar. —
+Coste si fuera un error: ninguno, son solo literales de test. **Aviso para T2, T6, T7 y T8**
+si sus briefs citan el mismo id abreviado: comprobar contra `src/content/phase1.ts` antes de
+despachar.
+
+**Minor (deferred) de la Tarea 1:** sombra de nombre entre el parámetro `totalStars` de
+`nextMilestone` y la función exportada `totalStars(state)` (`rewards.ts:47`, viene del
+contrato del brief); fallback silencioso de `text` al id crudo si falta el ítem
+(`progress-report.ts:545`); asimetría entre `progressReport` (mira `!presented` primero) y
+`unitProgress` (llama `isMastered` directo) — no alcanzable por la máquina de estados actual.
 
 **Recordatorios para el plan:** en la tarea de identidad (Plan 7) instalar entonces
 `frontend-design@claude-plugins-official`, no antes (memoria del autor). El cierre actualiza
