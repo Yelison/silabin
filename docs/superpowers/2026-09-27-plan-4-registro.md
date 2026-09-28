@@ -372,12 +372,18 @@ de M (0.2214) — vigilar si el Plan 6 añade glifos con trazos muy alineados. E
 47.6% original) no se reconfirmó con `browser-qa`/Playwright tras el fix — el propio brief lo
 clasifica como cumplimiento sin mutación, así que queda como nota informativa, no bloqueante.
 
-**Fix round 1/5:** se resume al implementador original con el hallazgo Important (añadir una
-aserción que fije la posición exacta esperada de al menos un marcador desplazado, no solo la
-distancia mínima).
+**Fix round 1/5** (commit `55bf326`, solo test): añadido `T6-2b`, fija la posición exacta
+esperada del marcador de inicio del trazo 2 de M (`(0.144, 0.192)`). Re-revisión confirmó con
+aritmética propia (no solo con la palabra del implementador) que las dos mutaciones del
+hallazgo (dirección final en vez de inicial; signo invertido) rompen la nueva aserción — el
+código de producción no cambió, era un hueco de cobertura, no un bug. Sin rotura nueva.
+
+Task 6: fix round 1/5 (1 addressed, 0 open; commits 375c3b6..55bf326).
+Task 6: complete (commits f693a72..55bf326, 1 hallazgo Important resuelto en fix round 1,
+2 minor deferred: margen de `START_MARKER_OFFSET` para M y tamaño de tableta sin reconfirmar
+con `browser-qa`).
 
 ## Estado
 
-Plan escrito y aprobado (2026-09-27). Tareas 1-5 completas. Tarea 6: implementada y revisada;
-un hallazgo Important en fix round 1/5 (ver arriba), dos minor deferred anotados. Después de
-cerrar la Tarea 6: revisión final de la rama (opus).
+Plan escrito y aprobado (2026-09-27). **Tareas 1-6 completas.** Siguiente y última tarea del
+plan: revisión final de toda la rama, modelo opus.
