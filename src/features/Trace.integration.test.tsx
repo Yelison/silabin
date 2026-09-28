@@ -23,6 +23,7 @@ import {
 import { EndScreen } from "@/features/session/EndScreen";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import { TRACE_IDLE_MS } from "@/features/session/trace/Evaluation";
+import { ARROW_ANIMATION_RATIO } from "@/features/session/trace/Presentation";
 import { conProveedores, fakeAudio } from "@/features/test-support";
 import { createAppStore, createMemoryAdapter } from "@/store";
 
@@ -206,8 +207,13 @@ describe("trace de punta a punta, con el motor, el store y las vistas reales", (
 			return svg;
 		}
 
-		// --- Presentación: la letra se dibuja sola y luego aparece «Siguiente» ---
+		// --- Presentación: la letra se dibuja sola, luego la flecha de dirección la sigue
+		// (Tarea 6, punto 3) y solo entonces aparece «Siguiente». Dos `pasar()` separados, no uno
+		// solo con la suma: entre medias, React necesita flushear el cambio de fase (de "full" a
+		// "dot") para que el nuevo temporizador de la flecha llegue a programarse antes de que
+		// se siga avanzando el reloj simulado. ---
 		await pasar(animationMs(glyph));
+		await pasar(animationMs(glyph) * ARROW_ANIMATION_RATIO);
 		fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
 		await pasar(0);
 

@@ -88,6 +88,51 @@ function strokeAngleDeg(stroke: readonly GlyphPoint[]): number {
 	return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
 }
 
+/** Igual que `strokeAngleDeg`, pero con los dos *primeros* puntos: la dirección de salida. */
+function strokeStartAngleDeg(stroke: readonly GlyphPoint[]): number {
+	const a = stroke[0];
+	const b = stroke[1] ?? a;
+	if (a === undefined || b === undefined) return 0;
+	return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+}
+
+function sameStart(a: GlyphPoint, b: GlyphPoint): boolean {
+	return Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6;
+}
+
+/**
+ * Distancia (en unidades de la caja de la letra) a la que se desplaza el marcador de inicio de
+ * un trazo cuando coincide con el de otro trazo de la misma letra (candidato D18, Tarea 6: A, E,
+ * M y P tienen dos trazos que empiezan en el mismo punto exacto). El círculo mide 0.07 de radio,
+ * así que hacen falta ≥0.14 entre centros; con A y M, casi alineados, el ángulo entre sus dos
+ * direcciones iniciales es pequeño (~43.6° y ~36.9°) y el desplazamiento mínimo que separa sus
+ * marcadores esa distancia es ~0.189 y ~0.221 respectivamente — 0.24 deja margen para los dos.
+ */
+const START_MARKER_OFFSET = 0.24;
+
+/**
+ * Posición de pintado del marcador de inicio de cada trazo de `glyph`: la del propio trazo, o
+ * desplazada a lo largo de su dirección inicial si coincide con la de otro trazo de la misma
+ * letra. Trazos con inicio único no se mueven.
+ */
+function startMarkerPositions(glyph: Glyph): (GlyphPoint | undefined)[] {
+	return glyph.strokes.map((stroke, i) => {
+		const start = stroke[0];
+		if (start === undefined) return undefined;
+		const overlaps = glyph.strokes.some((other, j) => {
+			if (j === i) return false;
+			const otherStart = other[0];
+			return otherStart !== undefined && sameStart(otherStart, start);
+		});
+		if (!overlaps) return start;
+		const rad = (strokeStartAngleDeg(stroke) * Math.PI) / 180;
+		return {
+			x: start.x + START_MARKER_OFFSET * Math.cos(rad),
+			y: start.y + START_MARKER_OFFSET * Math.sin(rad),
+		};
+	});
+}
+
 /** Grosor y atenuación del carril, según el nivel (grueso y visible → tenue → muy tenue). */
 const LANE_WIDTH: Record<GuideLevel, number> = { 1: 0.06, 2: 0.035, 3: 0.02 };
 const LANE_OPACITY: Record<GuideLevel, string> = {
@@ -95,6 +140,16 @@ const LANE_OPACITY: Record<GuideLevel, string> = {
 	2: "opacity-40",
 	3: "opacity-[0.15]",
 };
+
+/**
+ * Triángulo compartido por la flecha estática de fin de trazo (`guide-arrow-{n}`) y la guía de
+ * dirección animada (`animation === "dot"`, Tarea 6). Crece de ~0.03-0.05 a ~0.06-0.08 unidades
+ * (la prueba manual de la Tarea 5 la pidió más grande; mismo color `calm-border`, ya al mínimo
+ * de contraste aceptado, no se toca). Apunta hacia +x: la estática la orienta con
+ * `transform: rotate(...)` sobre `strokeAngleDeg`, la animada con `offset-rotate: auto` sobre el
+ * `offsetPath` que ya recorre `combinedPathD`.
+ */
+export const TRACE_ARROW_POINTS = "-0.06,-0.07 0.08,0 -0.06,0.07";
 
 /** Un trazo de un solo punto se pinta como un punto redondo, no como una línea vacía. */
 function Ink(props: { stroke: readonly GlyphPoint[]; strokeWidthPx: number }) {
@@ -146,6 +201,13 @@ export function TraceCanvas(props: {
 	disabled: boolean;
 	onStrokeStart(): void;
 	onStrokeEnd(stroke: TraceStroke): void;
+	/**
+	 * Duración de `animation === "dot"`, en ms. Por omisión es `animationMs(glyph)`, igual que
+	 * antes (la pista 2 de `trace/Evaluation.tsx` no la pasa: sigue con la misma duración de
+	 * siempre). `trace/Presentation.tsx` la pasa más corta cuando reutiliza "dot" para la guía de
+	 * dirección animada que sigue al dibujo completo (Tarea 6, punto 3).
+	 */
+	dotDurationMs?: number;
 }) {
 	const {
 		glyph,
@@ -157,6 +219,7 @@ export function TraceCanvas(props: {
 		disabled,
 		onStrokeStart,
 		onStrokeEnd,
+		dotDurationMs,
 	} = props;
 
 	const svgRef = useRef<SVGSVGElement>(null);
@@ -224,19 +287,25 @@ export function TraceCanvas(props: {
 			return;
 		}
 		setRevealed(false);
+		const duracion =
+			animation === "dot"
+				? (dotDurationMs ?? animationMs(glyph))
+				: animationMs(glyph);
 		const empezar = setTimeout(() => setRevealed(true), 0);
 		const acabar = setTimeout(() => {
 			onAnimationEndRef.current?.();
-		}, animationMs(glyph));
+		}, duracion);
 		return () => {
 			clearTimeout(empezar);
 			clearTimeout(acabar);
 		};
-	}, [animation, glyph]);
+	}, [animation, glyph, dotDurationMs]);
 
 	const strokeWidthPx = LANE_WIDTH[1] + 0.01;
 	const perStrokeMs =
 		glyph.strokes.length === 0 ? 0 : animationMs(glyph) / glyph.strokes.length;
+	const dotMs = dotDurationMs ?? animationMs(glyph);
+	const markerPositions = startMarkerPositions(glyph);
 
 	return (
 		<svg
@@ -279,11 +348,11 @@ export function TraceCanvas(props: {
 						strokeLinecap="round"
 					/>
 				))}
-			{glyph.strokes.map((stroke, i) => {
+			{glyph.strokes.map((_stroke, i) => {
 				const n = i + 1;
 				if (level === 3 && n !== 1) return null;
-				const start = stroke[0];
-				if (start === undefined) return null;
+				const marker = markerPositions[i];
+				if (marker === undefined) return null;
 				return (
 					<g
 						// biome-ignore lint/suspicious/noArrayIndexKey: los trazos de una letra son fijos
@@ -295,15 +364,15 @@ export function TraceCanvas(props: {
 						}
 					>
 						<circle
-							cx={start.x}
-							cy={start.y}
+							cx={marker.x}
+							cy={marker.y}
 							r={0.07}
 							className="fill-card stroke-calm-border"
 							style={{ strokeWidth: 0.015 }}
 						/>
 						<text
-							x={start.x}
-							y={start.y}
+							x={marker.x}
+							y={marker.y}
 							textAnchor="middle"
 							dominantBaseline="central"
 							className="fill-ink-soft"
@@ -324,7 +393,7 @@ export function TraceCanvas(props: {
 							// biome-ignore lint/suspicious/noArrayIndexKey: los trazos de una letra son fijos
 							key={`arrow-${i}`}
 							data-testid={`guide-arrow-${i + 1}`}
-							points="-0.03,-0.035 0.05,0 -0.03,0.035"
+							points={TRACE_ARROW_POINTS}
 							className="fill-calm-border"
 							transform={`translate(${end.x} ${end.y}) rotate(${angle})`}
 						/>
@@ -359,14 +428,15 @@ export function TraceCanvas(props: {
 					/>
 				))}
 			{animation === "dot" && (
-				<circle
+				<polygon
 					data-testid="anim-dot"
-					r={0.06}
+					points={TRACE_ARROW_POINTS}
 					className="fill-trace-ink motion-safe:transition-[offset-distance] motion-safe:ease-linear motion-reduce:transition-none"
 					style={{
 						offsetPath: `path('${combinedPathD(glyph)}')`,
 						offsetDistance: revealed ? "100%" : "0%",
-						transitionDuration: `${animationMs(glyph)}ms`,
+						offsetRotate: "auto",
+						transitionDuration: `${dotMs}ms`,
 					}}
 				/>
 			)}

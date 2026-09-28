@@ -4,9 +4,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ANIMATION_MS_PER_UNIT,
 	animationMs,
+	TRACE_ARROW_POINTS,
 	TraceCanvas,
 } from "@/components/TraceCanvas";
 import { curriculum, type Glyph, glyphFor, type TraceStroke } from "@/engine";
+
+/**
+ * Las 9 letras con trazo de referencia (`UPPER_GLYPHS` en `@/content/glyphs`), alcanzadas por el
+ * barril `@/engine` — este fichero vive en `components/`, que no importa `@/content` (U8).
+ */
+function letrasConTrazo(): [string, Glyph][] {
+	const salida: [string, Glyph][] = [];
+	for (const item of curriculum.items.values()) {
+		if (item.kind !== "letter") continue;
+		salida.push([item.text, glyphFor(item, "upper")]);
+	}
+	return salida;
+}
 
 beforeEach(() => {
 	// jsdom no implementa la captura de puntero: un método vacío que los tests pueden espiar,
@@ -62,6 +76,9 @@ function montar(props: Partial<Parameters<typeof TraceCanvas>[0]> = {}) {
 				: {})}
 			{...(props.onAnimationEnd !== undefined
 				? { onAnimationEnd: props.onAnimationEnd }
+				: {})}
+			{...(props.dotDurationMs !== undefined
+				? { dotDurationMs: props.dotDurationMs }
 				: {})}
 			onStrokeStart={props.onStrokeStart ?? onStrokeStart}
 			onStrokeEnd={props.onStrokeEnd ?? onStrokeEnd}
@@ -377,6 +394,102 @@ describe("TraceCanvas", () => {
 		expect(dot?.getAttribute("class")).toContain(
 			"motion-reduce:transition-none",
 		);
+	});
+
+	it("T6-2: en las 9 letras de UPPER_GLYPHS, ningún par de marcadores guide-start-* queda a menos de 0.14 de distancia (A, E, M y P tienen dos trazos que empiezan en el mismo punto)", () => {
+		const letras = letrasConTrazo();
+		expect(letras).toHaveLength(9);
+		for (const [nombre, glyph] of letras) {
+			const { container } = montar({ glyph, level: 1 });
+			const marcadores = Array.from(
+				container.querySelectorAll('[data-testid^="guide-start-"] circle'),
+			);
+			for (let i = 0; i < marcadores.length; i += 1) {
+				for (let j = i + 1; j < marcadores.length; j += 1) {
+					const a = marcadores[i];
+					const b = marcadores[j];
+					const ax = Number(a?.getAttribute("cx"));
+					const ay = Number(a?.getAttribute("cy"));
+					const bx = Number(b?.getAttribute("cx"));
+					const by = Number(b?.getAttribute("cy"));
+					const distancia = Math.hypot(ax - bx, ay - by);
+					expect(
+						distancia,
+						`${nombre}: marcadores ${i + 1} y ${j + 1} a ${distancia.toFixed(4)}`,
+					).toBeGreaterThanOrEqual(0.14);
+				}
+			}
+			cleanup();
+		}
+	});
+
+	it("T6-4: la flecha estática de fin de trazo crece a 0.06-0.08 unidades, sin cambiar de color", () => {
+		const glyph = letra("letter:i");
+		const { container } = montar({ glyph, level: 1 });
+		const flecha = container.querySelector('[data-testid="guide-arrow-1"]');
+		expect(flecha?.getAttribute("class")).toBe("fill-calm-border");
+		expect(flecha?.getAttribute("points")).toBe(TRACE_ARROW_POINTS);
+		const coordenadas = TRACE_ARROW_POINTS.split(/\s+/).flatMap((par) =>
+			par.split(",").map(Number),
+		);
+		expect(coordenadas.length).toBeGreaterThan(0);
+		for (const coordenada of coordenadas) {
+			if (coordenada === 0) continue;
+			expect(Math.abs(coordenada)).toBeGreaterThanOrEqual(0.06);
+			expect(Math.abs(coordenada)).toBeLessThanOrEqual(0.08);
+		}
+	});
+
+	it("T6-3: 'dot' pinta el mismo triángulo que la flecha estática, viajando por offsetPath con offset-rotate:auto", () => {
+		const glyph = letra("letter:i");
+		const { container } = montar({ glyph, animation: "dot" });
+		const flecha = container.querySelector('[data-testid="anim-dot"]');
+		expect(flecha?.tagName.toLowerCase()).toBe("polygon");
+		expect(flecha?.getAttribute("points")).toBe(TRACE_ARROW_POINTS);
+		const estilo = flecha?.getAttribute("style") ?? "";
+		// letter:i es un solo trazo de (0.1,0) a (0.1,1): combinedPathD lo deja tal cual.
+		expect(estilo).toContain("offset-path: path('M0.1 0 L0.1 1')");
+		expect(estilo).toContain("offset-rotate: auto");
+		expect(estilo).toContain("offset-distance: 0%");
+	});
+
+	it("T6-3b: 'dotDurationMs', si se pasa, sustituye a animationMs(glyph) en el temporizador y en la duración de la transición de 'dot'", () => {
+		vi.useFakeTimers();
+		const glyph = letra("letter:i"); // animationMs(glyph) = 900
+		const onAnimationEnd = vi.fn();
+		const { container } = montar({
+			glyph,
+			animation: "dot",
+			onAnimationEnd,
+			dotDurationMs: 300,
+		});
+		const flecha = container.querySelector('[data-testid="anim-dot"]');
+		expect(flecha?.getAttribute("style")).toContain(
+			"transition-duration: 300ms",
+		);
+		act(() => {
+			vi.advanceTimersByTime(299);
+		});
+		expect(onAnimationEnd).not.toHaveBeenCalled();
+		act(() => {
+			vi.advanceTimersByTime(1);
+		});
+		expect(onAnimationEnd).toHaveBeenCalledTimes(1);
+	});
+
+	it("sin 'dotDurationMs', 'dot' sigue acabando a animationMs(glyph) como antes (pista 2 de Evaluation no cambia de duración)", () => {
+		vi.useFakeTimers();
+		const glyph = letra("letter:i");
+		const onAnimationEnd = vi.fn();
+		montar({ glyph, animation: "dot", onAnimationEnd });
+		act(() => {
+			vi.advanceTimersByTime(899);
+		});
+		expect(onAnimationEnd).not.toHaveBeenCalled();
+		act(() => {
+			vi.advanceTimersByTime(1);
+		});
+		expect(onAnimationEnd).toHaveBeenCalledTimes(1);
 	});
 });
 

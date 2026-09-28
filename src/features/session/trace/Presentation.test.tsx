@@ -16,7 +16,10 @@ import {
 	type Item,
 	type PlannedExercise,
 } from "@/engine";
-import { Presentation } from "@/features/session/trace/Presentation";
+import {
+	ARROW_ANIMATION_RATIO,
+	Presentation,
+} from "@/features/session/trace/Presentation";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 
 beforeEach(() => {
@@ -143,14 +146,25 @@ describe("trace / Presentation", () => {
 		expect(audio.stop).toHaveBeenCalled();
 	});
 
-	it("P3: con un audio que nunca resuelve, «Siguiente» aparece justo a los animationMs y onDone llega al tocarlo", () => {
+	it("P3: con un audio que nunca resuelve, «Siguiente» aparece tras el dibujo completo y la flecha de dirección que lo sigue, y onDone llega al tocarlo", () => {
 		vi.useFakeTimers();
 		const audio = fakeAudio();
 		audio.play.mockImplementation(() => new Promise<void>(() => {}));
 		const { onDone } = montar(audio);
 		const ms = animationMs(glyphFor(LETRA_A, "upper"));
+		const arrowMs = ms * ARROW_ANIMATION_RATIO;
 		act(() => {
 			vi.advanceTimersByTime(ms - 1);
+		});
+		expect(siguiente()).toBeNull();
+		act(() => {
+			vi.advanceTimersByTime(1);
+		});
+		// El dibujo completo acabó: antes de «Siguiente» viene la flecha de dirección (Tarea 6,
+		// punto 3), más corta que el dibujo, con la letra ya quieta.
+		expect(siguiente()).toBeNull();
+		act(() => {
+			vi.advanceTimersByTime(arrowMs - 1);
 		});
 		expect(siguiente()).toBeNull();
 		act(() => {
@@ -159,6 +173,22 @@ describe("trace / Presentation", () => {
 		expect(siguiente()).not.toBeNull();
 		fireEvent.click(siguiente() as HTMLElement);
 		expect(onDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("P3b: entre el dibujo completo y «Siguiente» se ve la guía de dirección animada, no el dibujo repetido", () => {
+		vi.useFakeTimers();
+		const { container } = montar();
+		const ms = animationMs(glyphFor(LETRA_A, "upper"));
+		act(() => {
+			vi.advanceTimersByTime(ms - 1);
+		});
+		expect(container.querySelector('[data-testid="anim-full"]')).not.toBeNull();
+		expect(container.querySelector('[data-testid="anim-dot"]')).toBeNull();
+		act(() => {
+			vi.advanceTimersByTime(1);
+		});
+		expect(container.querySelector('[data-testid="anim-full"]')).toBeNull();
+		expect(container.querySelector('[data-testid="anim-dot"]')).not.toBeNull();
 	});
 
 	it("P4: el niño puede repasar la letra mientras se presenta: se ve su tinta y no se llama a nada", () => {
@@ -187,5 +217,11 @@ describe("trace / Presentation", () => {
 		expect(svg.querySelectorAll('[data-testid="ink"]').length).toBe(1);
 		expect(onDone).not.toHaveBeenCalled();
 		expect(audio.play).toHaveBeenCalledTimes(1);
+	});
+
+	it("P6: el lienzo lleva el tamaño de tableta en vertical (Tarea 6, punto 5: 47.6 % medido en 768×1024, min-width 768 + portrait para no rozar el 1024×768 apaisado)", () => {
+		const { container } = montar();
+		const contenedorLienzo = svgDelLienzo(container).closest("div");
+		expect(contenedorLienzo?.className).toContain("md:portrait:h-[65vh]");
 	});
 });

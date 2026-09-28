@@ -8,6 +8,9 @@ import type { Item } from "@/engine";
 export type TraceEffect =
 	| { kind: "none" }
 	| { kind: "pulse-start" }
+	// El nombre "dot" queda por historia: desde la Tarea 6, `TraceCanvas` pinta con
+	// `animation="dot"` una flecha que recorre el trazo (antes era un punto simple), pero la
+	// pista sigue siendo la misma acción del motor con el mismo audio.
 	| { kind: "dot"; request: AudioRequest }
 	| { kind: "model" };
 
