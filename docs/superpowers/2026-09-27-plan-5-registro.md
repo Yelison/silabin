@@ -34,5 +34,11 @@ del día).
 4. **Trampa 9:** `say-it` y `read-word` necesitan su propio camino de evaluación (como
    `submitTrace`, D17), p. ej. `submitSpeech(verdict)`; el veredicto lo da el evaluador y el
    motor aplica pistas. Proponer en el plan.
-5. Rung 3 de voz: se acepta con solo detectar habla (spec §5); sin habla → «No te oí» sin
+5. **Conversiones de trampas a incluir en el plan** (regla de poda de `CLAUDE.md`, primera
+   poda hecha el 2026-09-27): trampa 8 → `*.test.tsx` en jsdom desde `vitest.config.ts`;
+   trampa 4 → `no-restricted-imports` de módulos internos de `engine/` desde
+   `features/`/`components/`; trampa 9 → camino de evaluación de voz más un invariante que
+   falle si una plantilla de una unidad jugable no puede evaluarse. Además, deuda 4 del README:
+   sustituir la inyección de `build/SessionFlow.test.tsx` al hacerse jugable la Fase 2.
+6. Rung 3 de voz: se acepta con solo detectar habla (spec §5); sin habla → «No te oí» sin
    contar intento.
