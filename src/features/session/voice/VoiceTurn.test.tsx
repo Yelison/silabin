@@ -51,8 +51,9 @@ function evaluador(
 async function montar(
 	opts: {
 		resultados?: ListenResult[];
-		/** `listen` que no acaba hasta que se aborta la señal. */
+		/** `listen` que no acaba hasta que se aborta la señal; entonces devuelve `alAbortar`. */
 		colgado?: boolean;
+		alAbortar?: ListenResult;
 		evaluators?: SpeechEvaluator[];
 		speechMode?: "auto" | "parent";
 		mode?: "attempt" | "model";
@@ -89,7 +90,9 @@ async function montar(
 			if (o?.signal !== undefined) senales.push(o.signal);
 			if (opts.colgado === true) {
 				return new Promise<ListenResult>((res) => {
-					o?.signal?.addEventListener("abort", () => res({ kind: "aborted" }));
+					o?.signal?.addEventListener("abort", () =>
+						res(opts.alAbortar ?? { kind: "aborted" }),
+					);
 				});
 			}
 			const r = resultados[Math.min(n, resultados.length - 1)];
@@ -265,6 +268,45 @@ describe("VoiceTurn: el turno", () => {
 		expect(t.onVerdict).not.toHaveBeenCalled();
 	});
 
+	it("los silencios se cuentan por intento: tras un veredicto hacen falta otros MAX_SILENT_TURNS para los botones", async () => {
+		const t = await montar({ resultados: [{ kind: "silence" }] });
+		await turno();
+		await turno();
+		fireEvent.click(boton("Otra vez") as HTMLElement);
+		await avanzar(TAP_GUARD_MS);
+		expect(boton("Otra vez")).toBeNull();
+		await turno();
+		expect(boton("Otra vez")).toBeNull();
+		await turno();
+		expect(boton("Otra vez")).not.toBeNull();
+		expect(t.onVerdict.mock.calls).toEqual([["retry"]]);
+	});
+
+	it("un botón del adulto pulsado con una escucha en curso la aborta y da un solo veredicto aunque el listener conteste heard al abortar", async () => {
+		const t = await montar({
+			resultados: [{ kind: "silence" }],
+			evaluators: [evaluador("azure", "ok"), createParentEvaluator()],
+			speechMode: "auto",
+		});
+		await turno();
+		await turno();
+		expect(boton("Lo dijo bien")).not.toBeNull();
+		// Tercer turno: escucha colgada que, al abortarse, contesta heard.
+		t.listen.mockImplementationOnce(
+			(o) =>
+				new Promise<ListenResult>((res) => {
+					if (o?.signal !== undefined) t.senales.push(o.signal);
+					o?.signal?.addEventListener("abort", () => res({ kind: "heard" }));
+				}),
+		);
+		await turno();
+		expect(t.senales.at(-1)?.aborted).toBe(false);
+		fireEvent.click(boton("Otra vez") as HTMLElement);
+		await avanzar(COUNTDOWN_MS);
+		expect(t.senales.at(-1)?.aborted).toBe(true);
+		expect(t.onVerdict.mock.calls).toEqual([["retry"]]);
+	});
+
 	it("V7: si feedback:no-speech no acaba nunca de sonar, el micrófono vuelve igual", async () => {
 		const t = await montar({ resultados: [{ kind: "silence" }] });
 		t.audio.play.mockImplementation(() => new Promise<void>(() => {}));
@@ -344,6 +386,24 @@ describe("VoiceTurn: limpieza", () => {
 		expect(t.onVerdict).not.toHaveBeenCalled();
 		expect(t.onModelDone).not.toHaveBeenCalled();
 	});
+
+	it.each(["attempt", "model"] as const)(
+		"un listener que contesta heard justo al abortar por desmontaje no da veredicto ni model-done (%s)",
+		async (mode) => {
+			const t = await montar({
+				mode,
+				colgado: true,
+				alAbortar: { kind: "heard" },
+				speechMode: "auto",
+				evaluators: [evaluador("azure", "ok"), createParentEvaluator()],
+			});
+			await turno();
+			t.unmount();
+			await avanzar(COUNTDOWN_MS);
+			expect(t.onVerdict).not.toHaveBeenCalled();
+			expect(t.onModelDone).not.toHaveBeenCalled();
+		},
+	);
 
 	it("desmontar tras un veredicto no deja el temporizador de guarda pendiente", async () => {
 		const t = await montar();
