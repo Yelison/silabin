@@ -1,5 +1,6 @@
 import { del, get, set } from "idb-keyval";
 import {
+	CURRENT_VERSION,
 	emptyPersistedState,
 	migrate,
 	type PersistedState,
@@ -108,15 +109,32 @@ export function exportState(state: PersistedState): string {
 	return JSON.stringify(state, null, 2);
 }
 
-export function importState(json: string): {
-	state: PersistedState;
-	recovered: boolean;
-} {
+export type ImportRejection = "json" | "version" | "schema";
+export type ImportResult =
+	| { ok: true; state: PersistedState }
+	| { ok: false; reason: ImportRejection };
+
+function esObjetoPlano(valor: unknown): valor is Record<string, unknown> {
+	return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+}
+
+/**
+ * Estricta a propósito, a diferencia de `migrate`: esto es un fichero que el adulto elige
+ * importar a mano, no lo que el propio dispositivo guardó. Un documento ajeno o corrupto se
+ * rechaza entero en vez de rescatarse clave por clave — mezclar un progreso real con lo que
+ * `migrate` reponga por omisión sería peor que no importar nada. Nunca devuelve un documento
+ * vacío ni parcialmente rescatado: `ok: false` o el documento importado tal cual.
+ */
+export function importState(json: string): ImportResult {
 	let raw: unknown;
 	try {
 		raw = JSON.parse(json);
 	} catch {
-		return { state: emptyPersistedState(), recovered: true };
+		return { ok: false, reason: "json" };
 	}
-	return migrate(raw);
+	if (!esObjetoPlano(raw)) return { ok: false, reason: "schema" };
+	if (raw.version !== CURRENT_VERSION) return { ok: false, reason: "version" };
+	const parsed = persistedStateSchema.safeParse(raw);
+	if (!parsed.success) return { ok: false, reason: "schema" };
+	return { ok: true, state: parsed.data };
 }

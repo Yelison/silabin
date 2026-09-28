@@ -66,9 +66,10 @@ describe("ExportGesture", () => {
 
 		const [nombre, json] = download.mock.calls[0] as [string, string];
 		expect(nombre).toBe("silabin-progreso-2026-09-26.json");
-		const { state, recovered } = importState(json);
-		expect(recovered).toBe(false);
-		expect(state).toEqual(store.getState().doc);
+		const resultado = importState(json);
+		expect(resultado.ok).toBe(true);
+		if (!resultado.ok) throw new Error("se esperaba ok");
+		expect(resultado.state).toEqual(store.getState().doc);
 	});
 
 	it("salir del logo con el puntero antes de los 3 s cancela", async () => {
@@ -87,7 +88,10 @@ describe("ExportGesture", () => {
 		fireEvent.pointerDown(logo);
 		avanzar(3000);
 		const [, json] = download.mock.calls[0] as [string, string];
-		expect(importState(json).state).toEqual(store.getState().doc);
+		const resultado = importState(json);
+		expect(resultado.ok).toBe(true);
+		if (!resultado.ok) throw new Error("se esperaba ok");
+		expect(resultado.state).toEqual(store.getState().doc);
 	});
 
 	it("un toque corto no hace nada visible: el logo no es un botón para el niño", async () => {

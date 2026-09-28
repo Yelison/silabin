@@ -2,6 +2,8 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { CurriculumIndex } from "@/content/index";
 import {
 	type AttemptFeedback,
+	COSMETICS,
+	canEquip,
 	completePresentation,
 	finishSession,
 	isSessionOver,
@@ -15,20 +17,43 @@ import {
 	submitSpeech,
 	submitTrace,
 	type TraceStroke,
+	totalStars,
 } from "@/engine";
 import {
 	exportState,
+	type ImportRejection,
+	importState,
 	loadState,
 	type StorageAdapter,
 	saveState,
 } from "@/store/persist";
+import { hashPin, verifyPin } from "@/store/pin";
 import {
 	appendSession,
 	toProgress,
 	unlockRewards,
 	withProgress,
 } from "@/store/progress-bridge";
-import { emptyPersistedState, type PersistedState } from "@/store/schema";
+import {
+	emptyPersistedState,
+	type PersistedState,
+	type Settings,
+	settingsSchema,
+} from "@/store/schema";
+
+export type ImportPreview =
+	| { ok: false; reason: ImportRejection }
+	| {
+			ok: true;
+			state: PersistedState;
+			summary: {
+				sessions: number;
+				totalStars: number;
+				unitsDone: number;
+				childName: string | null;
+				lastSessionAt: string | null;
+			};
+	  };
 
 export type AppStoreDeps = {
 	adapter: StorageAdapter;
@@ -58,6 +83,8 @@ export type AppState = {
 	run: SessionRun | null;
 	/** La última sesión terminada, para la pantalla de fin. */
 	summary: SessionSummary | null;
+	/** `now()` del último `saveState` con `saved: true`. `null` mientras no haya guardado ninguno. */
+	lastSavedAt: string | null;
 	load(): Promise<void>;
 	/** Lanza si ya hay una sesión en curso. */
 	beginSession(): void;
@@ -73,6 +100,19 @@ export type AppState = {
 	clearSummary(): void;
 	retrySave(): Promise<void>;
 	exportJson(): string;
+	/** Fusiona con los ajustes actuales; no toca `pinHash`. Lanza si el resultado no valida. */
+	updateSettings(patch: Partial<Omit<Settings, "pinHash">>): Promise<void>;
+	setPin(pin: string): Promise<void>;
+	/** `false` si `pinHash` es `null`. */
+	checkPin(pin: string): Promise<boolean>;
+	/** Lanza si el cosmético no existe o no está desbloqueado; la ranura sale del catálogo. */
+	equip(cosmeticId: string): Promise<void>;
+	/** Solo lee: no cambia `doc`, `progress` ni escribe en el adaptador. */
+	previewImport(json: string): ImportPreview;
+	/** Lanza si hay una sesión en curso. Conserva el `pinHash` actual (S18). */
+	importDoc(state: PersistedState): Promise<void>;
+	/** Se niega con `readFailed` o con una sesión en curso, sin escribir nada. */
+	resetAll(): Promise<{ done: boolean; reason?: "read-failed" | "in-session" }>;
 };
 
 /**
@@ -104,7 +144,11 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 				return;
 			}
 			const { saved } = await saveState(adapter, doc);
-			set({ saveFailed: !saved });
+			if (saved) {
+				set({ saveFailed: false, lastSavedAt: now() });
+			} else {
+				set({ saveFailed: true });
+			}
 		}
 
 		function corridaEnCurso(): SessionRun {
@@ -122,6 +166,7 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 			readFailed: false,
 			run: null,
 			summary: null,
+			lastSavedAt: null,
 
 			async load() {
 				const { state, recovered, readFailed } = await loadState(adapter);
@@ -258,6 +303,111 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 
 			exportJson() {
 				return exportState(get().doc);
+			},
+
+			async updateSettings(patch) {
+				const { doc } = get();
+				const merged: Settings = {
+					...doc.settings,
+					...(patch as Partial<Settings>),
+					// No toca pinHash pase lo que pase en el patch: tiene su propia acción (setPin).
+					pinHash: doc.settings.pinHash,
+				};
+				const parsed = settingsSchema.safeParse(merged);
+				if (!parsed.success) {
+					throw new Error(
+						`Ajustes inválidos: ${parsed.error.issues[0]?.message ?? "desconocido"}`,
+					);
+				}
+				await guardar({ ...doc, settings: parsed.data });
+			},
+
+			async setPin(pin) {
+				const hash = await hashPin(pin);
+				const { doc } = get();
+				await guardar({
+					...doc,
+					settings: { ...doc.settings, pinHash: hash },
+				});
+			},
+
+			async checkPin(pin) {
+				const { pinHash } = get().doc.settings;
+				if (pinHash === null) return false;
+				return verifyPin(pin, pinHash);
+			},
+
+			async equip(cosmeticId) {
+				const { doc } = get();
+				if (!canEquip(cosmeticId, doc.rewards.unlockedAt)) {
+					throw new Error(
+						`No se puede equipar ${cosmeticId}: no está desbloqueado`,
+					);
+				}
+				const cosmetic = COSMETICS.find((c) => c.id === cosmeticId);
+				if (cosmetic === undefined) {
+					throw new Error(`Cosmético desconocido: ${cosmeticId}`);
+				}
+				const rewards = {
+					...doc.rewards,
+					equipped: { ...doc.rewards.equipped, [cosmetic.slot]: cosmeticId },
+				};
+				await guardar({ ...doc, rewards });
+			},
+
+			previewImport(json) {
+				const result = importState(json);
+				if (!result.ok) return result;
+				const { state } = result;
+				// Recalculado por el motor, no leído tal cual del documento: una unidad de la
+				// Fase 3 marcada `done` por el fallo que recomputeUnitStatuses corrige no debe
+				// contarse aquí, o el resumen prometería más de lo que el mapa enseñará tras
+				// importar (ver el comentario de toProgress en progress-bridge.ts).
+				const progress = toProgress(state, content);
+				return {
+					ok: true,
+					state,
+					summary: {
+						sessions: state.sessions.length,
+						totalStars: totalStars(progress),
+						unitsDone: Object.values(progress.units).filter(
+							(u) => u.status === "done",
+						).length,
+						childName: state.settings.childName,
+						lastSessionAt: state.sessions.at(-1)?.endedAt ?? null,
+					},
+				};
+			},
+
+			async importDoc(imported) {
+				if (get().run !== null) {
+					throw new Error("No se puede importar con una sesión en curso");
+				}
+				const { doc: current } = get();
+				const next: PersistedState = {
+					...imported,
+					settings: { ...imported.settings, pinHash: current.settings.pinHash },
+				};
+				await guardar(next, {
+					readFailed: false,
+					recovered: false,
+					progress: toProgress(next, content),
+				});
+			},
+
+			async resetAll() {
+				const { readFailed, run, doc: current } = get();
+				if (readFailed) return { done: false, reason: "read-failed" };
+				if (run !== null) return { done: false, reason: "in-session" };
+
+				await adapter.clear();
+				const vacio = emptyPersistedState();
+				const next: PersistedState = {
+					...vacio,
+					settings: { ...vacio.settings, pinHash: current.settings.pinHash },
+				};
+				await guardar(next, { progress: toProgress(next, content) });
+				return { done: true };
 			},
 		};
 	});
