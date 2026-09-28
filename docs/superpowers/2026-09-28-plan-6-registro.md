@@ -145,7 +145,8 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 |---|---|---|---|
 | 1 | completa (commits `865937b`..`9eb94d0`) | 1/5 | 0 (las 5 mandatadas atrapadas; ronda 1 corrigió cobertura de `counts` por cubo y `bestStars`, que solo se comprobaban por suma) |
 | 2 | completa (commits `c7ea145`..`80c0e13`), Approved | 0/5 | 0 (9 mutaciones: las 6 del brief más 3 que el implementador añadió por su cuenta, todas confirmadas por el revisor contra el diff) |
-| 3-11 | pendientes | | |
+| 3 | completa (commit `6bf2f44`), Approved | 0/5 | 0 (5 mutaciones: las 4 del brief más `acceptsModelTrace`, todas atrapadas y confirmadas por el revisor contra el diff) |
+| 4-11 | pendientes | | |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -182,3 +183,45 @@ consecuencia de romper la firma de `importState`).
 **Recordatorios para el plan:** en la tarea de identidad (Plan 7) instalar entonces
 `frontend-design@claude-plugins-official`, no antes (memoria del autor). El cierre actualiza
 la línea de estado del README, que todavía dice que falta el PR del Plan 5.
+
+**Ruling (Tarea 3):** el brief lista `src/features/session/trace/Evaluation.tsx` como
+fichero a tocar, pero el diff no lo toca — solo su test. Se acepta sin ronda de corrección.
+— Por qué: `SessionScreen.tsx:226` ya construye `guide: traceGuide(curriculum, run)`, y
+`traceGuide` ya lee `run.traceCase` tras el cambio en `session.ts`; `Evaluation` recibe el
+glifo correcto por props sin cambio propio. Tocarlo para leer el store ahí también habría
+duplicado una decisión que ya toma el motor (regla del repo: `features/` nunca decide
+pedagogía). El revisor verificó la ruta real contra el diff (no contra el reporte) y
+confirmó que el test de integración nuevo `S2b` (`SessionScreen.test.tsx`) la ejercita de
+punta a punta. — Coste si fuera un error: si la conexión real estuviera rota, `S2b` (que
+monta `SessionScreen` con la vista real, no un `guide` fabricado a mano) lo habría
+atrapado; el riesgo residual es que `S2b` mismo tenga un hueco, pero el revisor confirmó que
+ejercita el camino real.
+
+**Ruling (Tarea 3):** la confundibilidad bidireccional `a/o` y `a/u` en minúscula
+(señalada por el implementador como preocupación) se acepta como comportamiento esperado,
+no como defecto. — Por qué: S8 manda medir los pares confundibles y documentarlos en
+`LOWER_CONFUSABLE_PAIRS` sin ajustar `TOLERANCE` ni forzar la geometría para esquivarlos —
+exactamente lo que se hizo (el reporte documenta un intento revertido de encoger la `a` que
+el propio implementador identificó como forzar el resultado del test, no medir). — Coste si
+fuera un error: un niño puede recibir crédito indebido al trazar `a` como `o`/`u` o
+viceversa; queda anotado como posible mejora futura (una `a` con óvalo más estrecho) que
+requeriría remedir toda la matriz — no bloquea esta tarea.
+
+**Ruling (Tarea 3):** el patrón "TDD parcial revelado en el propio reporte, sin aviso
+previo al coordinador" (visto ya en la Tarea 2 con `pin.ts`/`persist.ts`, y ahora en `L1`/
+`glyphFor` y `D1b`) se acepta esta vez también, pero no se repite una tercera vez sin aviso
+previo. — Por qué: el propio brief de la Tarea 3 pedía explícitamente «prototipo de glifos y
+medición de pares» como primer paso antes de «tests; verlos fallar; implementar» — el atajo
+en `L1`/`glyphFor` estaba inducido por el propio plan, no elegido por el implementador; y el
+rojo se forzó a posteriori de forma verificable (`throw` marcado `TDD-TEMP`, confirmado por
+el revisor). `D1b` (selector de `PlantillasDev.tsx`) es la pieza sin justificación de plan,
+pero es una herramienta de solo desarrollo, no motor ni pedagogía. — Coste si fuera un
+error: bajo, acotado a una herramienta interna; la próxima vez que ocurra sin aviso previo
+al despachar (no al reportar), el coordinador debe pararlo y pedir que se anuncie antes de
+escribir el test, no solo confesarlo después.
+
+**Minor (deferred) de la Tarea 3:** `D1b` (`PlantillasDev.test.tsx:703`) tiene un título que
+dice comprobar "el glifo de la evaluación y del marcador" pero no comprueba el marcador,
+solo cuenta carriles SVG; las aserciones de `D1b` (`PlantillasDev.test.tsx:716-729`) son más
+débiles que el estándar de producción (`Presentation.test.tsx` compara el atributo `d`
+exacto) — aceptable para una herramienta de solo desarrollo.
