@@ -6,14 +6,14 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tarea 1 completa; siguiente, Tarea 2.**
+**Fase: ejecución (2026-09-28). Tareas 1-2 completas; siguiente, Tarea 3.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
 | Tarea | Contenido | Riesgo | Estado |
 |---|---|---|---|
 | 1 | `*.test.tsx` en jsdom (trampa 8), trampa 4 por test | configuración | **completa** (e91db39, revisión limpia) |
-| 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | pendiente |
+| 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | **completa** (fefe69f, 1229fbe) |
 | 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | pendiente |
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | pendiente |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | pendiente |
@@ -60,3 +60,19 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
   va a `node` de forma explícita; no urge.
 - Nota de proceso: el script `task-brief` del skill busca «Task N» y el plan usa «Tarea N»;
   los briefs se extraen a mano con `sed -n` sobre las líneas de cada tarea.
+- Tarea 2: fix round 1/2 (1 addressed, 0 open — la metacomprobación de `evaluable.test.ts`
+  exigía solo `voz > 0`, así que saltarse `read-word` no fallaba; ahora exige visitas por
+  plantilla; commits fefe69f..1229fbe).
+- Tarea 2: complete (commits 901dffb..1229fbe, review clean tras 1 ronda). 19 mutaciones del
+  implementador + 11 del revisor; las dos que sobrevivieron (saltar `read-word`, y
+  `stripDiacritics` en `firstSyllableAudioKey`) se cerraron o quedan como minor.
+- Tarea 2: minor (deferred): `stripDiacritics(first)` en `engine/answers.ts:76` no lo cubre
+  ningún test (equivalente con el contenido actual: ninguna primera sílaba lleva tilde); si se
+  quiere blindar, un ítem sintético con `syllables: ["má","ma"]`.
+- Ruling: los cambios de tests existentes por D19 (`session.test.ts` TRAZO_MALO, `app-store.test.ts`
+  C9 y 2 usos de `onTrace([])` en `SessionScreen.test.tsx`, este último fuera de la lista de
+  ficheros de la tarea) se aceptan: un trazo vacío ya es `ignored` por diseño y los sustitutos
+  son trazos con tinta lejos de la letra, que siguen ejerciendo el camino de fallo — si fuera
+  equivocado, se debilitaría la cobertura del fallo real de `trace`.
+- Nota de proceso: el implementador escribió la implementación antes de ver el RED; lo
+  verificó después con `git stash` (28 fallos). Sin consecuencia en el resultado.
