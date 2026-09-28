@@ -35,6 +35,7 @@ Tomadas con el autor el 2026-09-27. Siguen la numeración de `README.md` (D1-D11
 | D15 | **R29: con 2 opciones, la pista 1 no atenúa**, solo repite el audio. El nivel fácil sigue con 2 opciones |
 | D16 | **Solo mayúsculas en el Plan 4.** El contrato ya lleva el caso (`"upper" \| "lower"`); el Plan 6 añade las 9 minúsculas y el interruptor `lowercaseTracing` del panel de padres |
 | D17 | **El trazo entra al motor por `submitTrace`**, junto a `submitAnswer`, y el motor lo puntúa. La interfaz pinta con SVG y eventos `pointer`, sin `<canvas>` |
+| D18 | **Los marcadores de inicio superpuestos** (A, E, M, P) se separan desplazándolos a lo largo de la dirección de su propio trazo; la pista 2 pasa de un punto simple a una **flecha de dirección animada** (mismo mecanismo `offsetPath`/`offset-rotate:auto`), que también se reproduce una vez tras la presentación completa de la letra (encadenada, no simultánea) |
 
 ## 3. Motor y contenido
 
@@ -167,15 +168,17 @@ Dato puro, como `choiceEffect`: convierte la `action` que ordena el motor en un 
 | Pista | Efecto |
 |---|---|
 | 1 `restore-previous-guide-level` | El nivel baja solo (viene de `traceGuide`); además pulsa el punto de inicio 1, lo único visible si la base ya era 1 |
-| 2 `animate-dot-along-stroke+play-phoneme` | Un punto recorre cada trazo en orden mientras suena `item.audioKey`; el lienzo no acepta tinta hasta que acaba |
+| 2 `animate-dot-along-stroke+play-phoneme` | Una flecha recorre cada trazo en orden mientras suena `item.audioKey`; el lienzo no acepta tinta hasta que acaba |
 | 3 `animate-full-stroke+await-retrace` | La letra se dibuja sola trazo a trazo y queda en nivel 1; el niño la repasa y cualquier intento cerrado llama a `onModelDone()` **sin puntuar**, porque el rung 3 garantiza el acierto |
 
 ### Presentación (`src/features/session/trace/Presentation.tsx`)
 
 El planificador puede presentar una letra con `trace` (elige la plantilla de la presentación
 entre las de la unidad), así que esta vista hace falta. Muestra el par **A a** (spec §2), con
-la mayúscula grande; suena el fonema; la mayúscula se dibuja sola con el punto en nivel 1; el
-niño puede repasarla sin evaluación y pasa con el `BigButton` «Siguiente», como en las demás
+la mayúscula grande; suena el fonema; la mayúscula se dibuja sola completa
+(`animation="full"`) y, encadenada al terminar, la misma flecha de dirección animada de la
+pista 2 (D18) recorre los trazos una vez más, en nivel 1; el niño puede repasarla sin
+evaluación durante toda la secuencia y pasa con el `BigButton` «Siguiente», como en las demás
 presentaciones.
 
 ### Registro y `/dev/plantillas`

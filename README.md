@@ -273,10 +273,19 @@ final de la rama y el PR. Resultado: **la Fase 0 entera es jugable** (`phase0:cl
 ## Lo que ya está hecho: Plan 4
 
 Plan 4 = **la plantilla `trace`: escribir letras con el dedo**, en la rama
-`feat/plan-4-trace` (5 tareas; ledger en `docs/superpowers/2026-09-27-plan-4-registro.md`).
-Cada tarea pasó revisión; falta la revisión final de la rama, la prueba manual del autor en
-un dispositivo táctil real y el PR. `trace` no la ofrece todavía ninguna unidad real (D14):
-se ve en `/dev/plantillas` y en el test de integración.
+`feat/plan-4-trace` (6 tareas; ledger en `docs/superpowers/2026-09-27-plan-4-registro.md`).
+Cada tarea pasó revisión, y también la revisión final de la rama (Opus): devolvió "con
+correcciones", y los hallazgos de código de esa revisión (la flecha estática tapando el
+marcador de inicio en O/L/E/M, y la pista 2 sin respaldo visual quieto bajo movimiento
+reducido en niveles de guía 2 y 3) ya están resueltos en el mismo commit del fix wave. La
+prueba manual del autor en un dispositivo táctil real también se hizo (ver
+`docs/superpowers/2026-09-27-plan-4-registro.md`, sección "Confirmación del autor — los
+cuatro puntos pendientes de la Tarea 5"): traza torpe pero completa → pasa; garabato completo
+→ falla; tiempo de espera de 1.5 s → se siente bien; letra distinta dibujada encima de la
+guía → rechazada con feedback neutro. Sigue faltando el PR, y queda una decisión abierta para
+el autor sobre el toque accidental (ver [más abajo](#lo-que-falta-planes-4-a-6)) antes de que
+el Plan 5 desbloquee la Fase 1. `trace` no la ofrece todavía ninguna unidad real (D14): se ve
+en `/dev/plantillas` y en el test de integración.
 
 - **Motor:** `content/glyphs.ts` (`UPPER_GLYPHS`, la geometría de referencia de las 9 letras
   mayúsculas de las Fases 1 y 2 — a, e, i, o, u, m, l, s, p — y `glyphFor`) y
@@ -303,6 +312,18 @@ se ve en `/dev/plantillas` y en el test de integración.
   Plan 6. Los pares que se confunden con las constantes de partida (E sobre S, E sobre P, S
   sobre E, O sobre U, U sobre O) están fijados en `CONFUSABLE_PAIRS` como dato conocido del
   prototipo.
+- **Cierre (Tarea 6):** arreglado un bug de movimiento reducido en `TraceCanvas.tsx`
+  (`transitionDuration`/`transitionDelay` en línea seguían animando aunque
+  `prefers-reduced-motion: reduce` estuviera activo) con `motion-reduce:transition-none` en
+  los dos elementos animados (`anim-full`, `anim-dot`). D18: los marcadores de inicio
+  superpuestos (A, E, M y P, que tienen dos trazos empezando en el mismo punto exacto) ahora
+  se separan visualmente, desplazados a lo largo de la dirección inicial de su propio trazo.
+  La pista 2 (antes un punto simple viajando por el trazo) ahora usa el mismo triángulo que la
+  flecha estática de fin de trazo, viajando por `offsetPath`/`offset-rotate: auto`; esa misma
+  guía animada se reproduce también tras `Presentation.tsx`, después de que la letra se dibuje
+  sola entera (encadenada, no simultánea). Fix wave sobre la revisión final de la rama: la
+  flecha estática ya no tapa el marcador de inicio en O/L/E/M, y la pista 2 tiene respaldo
+  visual quieto bajo movimiento reducido también en niveles de guía 2 y 3.
 
 ---
 
@@ -326,6 +347,15 @@ construidas, pero `isSessionPlayable` exige que **todas** las plantillas que dec
 unidad tengan vista, así que la Fase 1 entera espera a `say-it`, que llega en el Plan 5
 (D10, D14).
 
+**Toque accidental en `trace` (decisión abierta, pendiente para el Plan 5).** Hoy un solo
+toque accidental (un único punto de tinta, sin querer) cuenta como intento fallido: gasta un
+escalón de pista y afecta los contadores. No es un bug — el spec calla sobre este caso — sino
+una decisión de producto sin tomar todavía. No bloquea este merge porque D14 protege: ninguna
+unidad real ofrece `trace` todavía, así que ningún niño llega a esta pantalla antes del Plan
+5. Debe resolverse antes de que el Plan 5 desbloquee la Fase 1. Detalle completo del hallazgo
+en `docs/superpowers/2026-09-27-plan-4-registro.md`, sección "Revisión final de toda la
+rama", "Important #3".
+
 **Voz, en «Después».** Antes de generar el lote entero, una **prueba de Azure con unos 10
 audios en `do` y `mx`**. Y **los fonemas sueltos («mmm», «sss», «p») hay que grabarlos con voz
 humana**: ninguna voz sintética los dice bien.
@@ -348,10 +378,12 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 **Plan 4 cerrado (2026-09-27):** ledger en
 `docs/superpowers/2026-09-27-plan-4-registro.md`. Cada tarea pasó revisión (R29 del registro
-del Plan 3 se resolvió en la Tarea 4, D15). Falta: la revisión final de la rama (Opus), la
-**prueba manual del autor en un dispositivo táctil real** (`/dev/plantillas`, con
-`DEV_ORIGINS` — ver [Cómo ejecutarlo](#cómo-ejecutarlo) — o con la emulación táctil de Chrome
-si no hay ninguno a mano) y el PR.
+del Plan 3 se resolvió en la Tarea 4, D15), y también la revisión final de la rama (Opus,
+"con correcciones", resuelta en el fix wave) y la **prueba manual del autor en un dispositivo
+táctil real** (`/dev/plantillas`, con `DEV_ORIGINS` — ver
+[Cómo ejecutarlo](#cómo-ejecutarlo) — o con la emulación táctil de Chrome si no hay ninguno a
+mano). Falta el PR, y queda abierta la decisión sobre el toque accidental (ver
+[arriba](#lo-que-falta-planes-4-a-6)) antes de que el Plan 5 desbloquee la Fase 1.
 
 1. **Escribir el Plan 5** (`say-it`, `read-word`, y el desbloqueo de la Fase 1 con `say-it`
    según D14) con `superpowers:writing-plans`, en `docs/superpowers/plans/`, en una rama
@@ -360,9 +392,9 @@ si no hay ninguno a mano) y el PR.
    [cómo se trabaja](#cómo-se-trabaja-en-este-repo). Antes de escribirlo, revisa las
    [trampas vivas](#trampas-conocidas) (la 9 sigue abierta para `say-it` y `read-word`) y, si
    `say-it` necesita distinguir sonidos parecidos, los pares confundibles que dejó `trace`
-   como dato conocido (E sobre S, E sobre P, S sobre E, O sobre U, U sobre O; con las
-   constantes de partida — si la prueba manual del Plan 4 las mueve, esta lista se recalcula
-   antes). Pregunta al autor las decisiones abiertas que queden.
+   como dato conocido y ya confirmado por la prueba manual (E sobre S, E sobre P, S sobre E,
+   O sobre U, U sobre O; con las constantes de partida, sin cambios). Pregunta al autor las
+   decisiones abiertas que queden.
 2. Llevar el ledger del plan **versionado desde el primer día** en
    `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
    sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
@@ -397,15 +429,16 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D15 | Resuelve R29 del registro del Plan 3: con solo 2 opciones, la pista 1 se limita a **repetir el audio** (no puede quitar un distractor sin dejar solo la respuesta correcta). El nivel fácil sigue ofreciendo 2 opciones |
 | D16 | `trace` **solo mayúsculas**; las minúsculas y el interruptor `lowercaseTracing` quedan para el Plan 6 |
 | D17 | El trazo entra al motor por `submitTrace`, y lo puntúa el motor (`scoreTrace`), nunca la interfaz; la interfaz pinta con SVG y eventos `pointer` |
+| D18 | Los marcadores de inicio superpuestos (A, E, M, P) se separan desplazándolos a lo largo de la dirección de su propio trazo; la pista 2 pasa de un punto simple a una **flecha de dirección animada** (mismo mecanismo `offsetPath`/`offset-rotate:auto`), que también se reproduce una vez tras la presentación completa de la letra (encadenada, no simultánea) |
 
 **Pares confundibles de `trace` (dato conocido, del prototipo de la Tarea 1 del Plan 4):** con
 las constantes de partida (`TOLERANCE`, `MIN_COVERAGE`, `MIN_PRECISION`) que trae hoy el
 código, estos pares también pasan como válidos, no solo la letra correcta: E sobre S, E sobre
 P, S sobre E, O sobre U y U sobre O (confirmado en `pnpm test`, G15 de `glyphs.test.ts`, sin
 pares nuevos respecto al prototipo). Es una consecuencia aceptada de D12 (tolerancia generosa,
-solo forma). La **prueba manual del Plan 4, todavía pendiente**, es quien decide si hace falta
-mover alguna constante; si la mueve, esta lista se recalcula (G15) antes de darla por buena —
-no está confirmada por esa prueba todavía, solo por los tests automáticos.
+solo forma). La **prueba manual del Plan 4 ya se hizo**, y de sus cuatro confirmaciones
+ninguna llevó a mover ninguna constante: el autor dejó esta lista de pares tal cual estaba.
+Queda **confirmada**, no pendiente.
 
 Los rulings tomados durante la ejecución están en los registros:
 [Plan 2](docs/superpowers/2026-09-26-plan-2-registro.md) (R1-R12),
