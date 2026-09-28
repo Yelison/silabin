@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-6 completas; Tarea 7 (cierre) en revisión.**
+**Fase: ejecución (2026-09-28). Tareas 1-7 completas; siguiente, revisión final de la rama (Opus).**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -18,7 +18,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | **completa** (c966a90, 5132eb2, 3a6a6c9) |
 | 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | **completa** (a31d41c, 4d71af1) |
 | 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | **completa** (7d7973e, 63ef0ad, 231f10b) |
-| 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | en revisión (1b23591, y el commit de docs) |
+| 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | **completa** (1b23591, daac7fd) |
 
 Rulings de planificación: P1-P15, en la sección «Decisiones» del plan. Los más delicados son
 P1 (`parent` = siempre `unsure`), P2 (cada «Otra vez» avanza la pista), P4 (2 silencios →
@@ -224,6 +224,13 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
   se probó con un móvil. Crea además la CA raíz de `mkcert` en `~/.local/share/mkcert`.
 - Tarea 7: minor (deferred): I7 solo cubre con el currículo real las unidades activas `phase1:vowel-a`
   y `phase2:m` (30 semillas cada una); no recorre las otras unidades de la Fase 1 y la 2.
+
+- Tarea 7: complete (commits 1b23591..daac7fd, revisión de cumplimiento limpia, sin ronda de corrección;
+  4 mutaciones del implementador, todas muertas; el revisor no vio aserciones vacuas). 1132 pasan + 1
+  omitido; typecheck, lint y `pnpm build` en verde.
+- Tarea 7: minor (deferred): `README.md` afirma «las 7 tareas pasaron revisión» (falta la revisión final
+  de la rama) y la tabla «Documentos y en qué orden leerlos» está duplicada y sin los planes/registros
+  del 4 y el 5 (viene de antes); se arreglan tras la revisión final, en el mismo despacho de correcciones.
 
 ## Prueba manual del autor (antes del PR)
 
