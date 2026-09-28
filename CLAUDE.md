@@ -54,6 +54,20 @@ completo dentro, y rondas de corrección de hasta 5 vueltas. Reglas:
   coordinador. Las puertas (`pnpm test`, etc.) las corre el coordinador con la salida
   recortada: un subagente para eso cuesta más de lo que ahorra.
 
+**Effort por tarea**
+- Cada tarea del plan lleva `Effort:` junto a `Riesgo:`. `high` para lógica nueva, máquinas de
+  estado y contratos entre motor e interfaz; `medium` para el resto (datos, configuración,
+  textos, integración y docs). La revisión final de la rama en Opus, `high` o `xhigh`.
+- Los subagentes de Sonnet **heredan** el effort de la sesión (comprobado el 2026-09-28 con
+  `CLAUDE_EFFORT`: sesión en `medium` → subagente `medium`; en `high` → `high`; Haiku no lo
+  recibe). Por eso se fija con `/effort` **antes** de despachar, no por despacho.
+- El primer mensaje tras cada `/clear` lleva la línea `Modelo: sonnet. Effort: <nivel>`, con el
+  nivel de la siguiente tarea. Al recomendar `/clear`, di también qué `/effort` poner.
+- `/effort` se guarda como valor por defecto de las sesiones nuevas: al terminar una tarea
+  `high`, vuelve a `medium` si la siguiente lo es.
+- Mide en el ledger, por tarea, las rondas de corrección y las mutaciones que sobreviven:
+  si suben con `medium`, súbelo; si `high` no las baja, no compensa.
+
 **Una cosa a la vez**
 - Subagentes en secuencia, nunca en paralelo. Sin workflows ni fan-out.
 - **Sesión nueva cada 2-3 tareas.** El ledger es la memoria: al empezar se lee el ledger y
