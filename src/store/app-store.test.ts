@@ -689,6 +689,33 @@ describe("beginSession", () => {
 		store.getState().beginSession();
 		expect(semillas).toHaveLength(1);
 	});
+
+	it("L6: con lowercaseTracing en false (por defecto), run.traceCase es upper", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("upper");
+	});
+
+	it("L6: con lowercaseTracing en true, run.traceCase es lower", async () => {
+		const doc = emptyPersistedState();
+		doc.settings.lowercaseTracing = true;
+		const { store } = crear(createMemoryAdapter(doc));
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("lower");
+	});
+
+	it("L6: cambiar el ajuste a media sesión no cambia el traceCase de la corrida en curso", async () => {
+		const doc = emptyPersistedState();
+		doc.settings.lowercaseTracing = true;
+		const { store } = crear(createMemoryAdapter(doc));
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("lower");
+		await store.getState().updateSettings({ lowercaseTracing: false });
+		expect(store.getState().run?.traceCase).toBe("lower");
+	});
 });
 
 describe("S9: abandonar no cuenta la sesión ni duplica el crédito", () => {

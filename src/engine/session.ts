@@ -1,4 +1,4 @@
-import { type Glyph, glyphFor } from "@/content/glyphs";
+import { type Glyph, glyphFor, type LetterCase } from "@/content/glyphs";
 import type { CurriculumIndex } from "@/content/index";
 import { type HintStep, templates } from "@/content/templates";
 import type { Item } from "@/content/types";
@@ -52,6 +52,10 @@ export type SessionRun = {
 	resolutions: ExerciseResolution[];
 	/** Progreso con todo lo aplicado hasta ahora. */
 	progress: ProgressState;
+	/** El caso que traza `trace` en esta corrida (D28), fijado al empezarla. Se lee siempre
+	 * con `?? "upper"`: una corrida sin este campo (tests antiguos, documentos previos al
+	 * Plan 6) sigue trazando en mayúscula. */
+	traceCase?: LetterCase;
 };
 
 /** Lo que la interfaz debe enseñar tras una respuesta: la pista, la resolución, o ninguna. */
@@ -77,8 +81,11 @@ export function startSession(input: {
 	progress: ProgressState;
 	sessionLength: 5 | 6;
 	seed: number;
+	/** D28: el caso en que se traza `trace` en esta corrida. Sin pasarlo, `run.traceCase`
+	 * queda `undefined` y se lee como mayúscula (`?? "upper"`). */
+	traceCase?: LetterCase;
 }): SessionRun {
-	const { content, sessionLength, seed } = input;
+	const { content, sessionLength, seed, traceCase } = input;
 	// Los estados de unidad de un documento guardado pueden estar desfasados: se recalculan
 	// primero y la unidad activa se decide sobre lo recalculado, no sobre lo guardado.
 	const progress: ProgressState = {
@@ -101,6 +108,7 @@ export function startSession(input: {
 		attempt: createAttemptState(),
 		resolutions: [],
 		progress,
+		...(traceCase === undefined ? {} : { traceCase }),
 	};
 }
 
@@ -226,8 +234,7 @@ export function submitAnswer(input: {
 /**
  * Igual que `submitAnswer`, pero para la plantilla `trace`: el trazo no tiene una respuesta de
  * texto que comparar, así que el desenlace sale de `scoreTrace` contra la geometría de
- * referencia de la letra. `glyphFor` siempre pide la mayúscula (D16): la minúscula llega en el
- * Plan 6.
+ * referencia de la letra. El caso lo fija `run.traceCase` (D28), leído con `?? "upper"`.
  */
 export function submitTrace(input: {
 	content: CurriculumIndex;
@@ -250,7 +257,7 @@ export function submitTrace(input: {
 	if (item === undefined)
 		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
 
-	const glyph = glyphFor(item, "upper");
+	const glyph = glyphFor(item, run.traceCase ?? "upper");
 	// D19: un toque sin querer ni gasta el intento ni avanza la pista.
 	if (isNegligibleTrace(glyph, strokes))
 		return { run, feedback: { hint: null, resolution: null, ignored: true } };
@@ -313,7 +320,7 @@ export function acceptsModelTrace(
 	const item = content.items.get(exercise.itemId);
 	if (item === undefined)
 		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
-	return !isNegligibleTrace(glyphFor(item, "upper"), strokes);
+	return !isNegligibleTrace(glyphFor(item, run.traceCase ?? "upper"), strokes);
 }
 
 /** Lo que la interfaz necesita para pintar la guía del trazo: el glifo de referencia y cuánto
@@ -339,7 +346,7 @@ export function traceGuide(
 	if (item === undefined)
 		throw new Error(`Ítem desconocido: ${exercise.itemId}`);
 	return {
-		glyph: glyphFor(item, "upper"),
+		glyph: glyphFor(item, run.traceCase ?? "upper"),
 		level: guideLevel(
 			itemProgressOf(run.progress, exercise.itemId).box,
 			run.attempt.hintsShown,

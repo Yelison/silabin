@@ -291,6 +291,49 @@ describe("PlantillasDev", () => {
 		expect(svgDeEvaluacion().getAttribute("data-level")).toBe("2");
 	});
 
+	it("D1b (D28): el selector Mayúscula/Minúscula cambia el glifo de la evaluación y del marcador", () => {
+		montar();
+		elegirPlantilla("trace");
+		const itemId = within(screen.getByRole("combobox", { name: "Ítem" }))
+			.getAllByRole("option")[0]
+			?.getAttribute("value");
+		if (itemId === null || itemId === undefined) throw new Error("sin ítem");
+		const letra = curriculum.items.get(itemId);
+		if (letra === undefined) throw new Error(`falta ${itemId}`);
+
+		expect(svgDeEvaluacion().querySelectorAll("path").length).toBeGreaterThan(
+			0,
+		);
+		const carrilesMayuscula = svgDeEvaluacion().querySelectorAll(
+			'[data-testid="guide-lane"]',
+		);
+		expect(carrilesMayuscula.length).toBe(
+			glyphFor(letra, "upper").strokes.length,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Minúscula" }));
+		const carrilesMinuscula = svgDeEvaluacion().querySelectorAll(
+			'[data-testid="guide-lane"]',
+		);
+		expect(carrilesMinuscula.length).toBe(
+			glyphFor(letra, "lower").strokes.length,
+		);
+		// Documenta que, para el ítem por defecto, mayúscula y minúscula son geometrías
+		// distintas: el cambio de selector se nota en el lienzo (S24).
+		expect(glyphFor(letra, "lower")).not.toEqual(glyphFor(letra, "upper"));
+
+		// El panel de Presentation también pinta el caso elegido (D28): lee run.traceCase
+		// del store, como en la sesión real, no una prop local del panel de Evaluation.
+		const svgPresentacion = presentacion().querySelector("svg");
+		if (svgPresentacion === null) throw new Error("sin <svg> en Presentation");
+		const carrilesPresentacion = svgPresentacion.querySelectorAll(
+			'[data-testid="guide-lane"]',
+		);
+		expect(carrilesPresentacion.length).toBe(
+			glyphFor(letra, "lower").strokes.length,
+		);
+	});
+
 	// La misma conversión de coordenadas que TraceCanvas usa por dentro (viewBoxOf +
 	// toLetterSpace), invertida: de un punto del glifo a un punto de pantalla. Con un
 	// rect de 400×400 no hay bandas que compensar salvo el propio ajuste de aspecto.

@@ -9,6 +9,7 @@ import {
 	glyphFor,
 	type Item,
 	type PlannedExercise,
+	type TraceGuide,
 	type TraceStroke,
 	templates,
 } from "@/engine";
@@ -99,6 +100,7 @@ function montar(
 		itemId?: string;
 		audio?: ReturnType<typeof fakeAudio>;
 		acceptsModel?: (strokes: TraceStroke[]) => boolean;
+		guide?: TraceGuide;
 	} = {},
 ) {
 	const itemId = over.itemId ?? "letter:a";
@@ -116,7 +118,7 @@ function montar(
 		onAnswer,
 		onModelDone,
 		trace: {
-			guide: guiaDe(itemId, over.nivel ?? 1),
+			guide: over.guide ?? guiaDe(itemId, over.nivel ?? 1),
 			onTrace,
 			clearKey: 0,
 			acceptsModel,
@@ -334,6 +336,20 @@ describe("trace Evaluation", () => {
 			},
 		});
 		expect(svg.getAttribute("data-level")).toBe("1");
+	});
+
+	it("E9b (D28): con guide.glyph de LOWER_GLYPHS pinta los carriles de la minúscula, no los de la mayúscula", () => {
+		const lowerA = glyphFor(item("letter:a"), "lower");
+		const guide: TraceGuide = { glyph: lowerA, level: 1 };
+		const { svg } = montar({ guide });
+		const carriles = svg.querySelectorAll('[data-testid="guide-lane"]');
+		expect(carriles.length).toBe(lowerA.strokes.length);
+		for (const [i, carril] of carriles.entries()) {
+			const esperado = lowerA.strokes[i]
+				?.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`)
+				.join(" ");
+			expect(carril.getAttribute("d")).toBe(esperado);
+		}
 	});
 
 	it("E9: sin props.trace, lanza", () => {

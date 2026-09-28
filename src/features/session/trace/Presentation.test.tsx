@@ -11,10 +11,13 @@ import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { animationMs } from "@/components/TraceCanvas";
 import {
+	createAttemptState,
 	curriculum,
+	emptyProgressState,
 	glyphFor,
 	type Item,
 	type PlannedExercise,
+	type SessionRun,
 } from "@/engine";
 import {
 	ARROW_ANIMATION_RATIO,
@@ -76,6 +79,40 @@ function montar(
 	);
 	const view = render(
 		wrapper === "strict" ? <StrictMode>{ui}</StrictMode> : ui,
+	);
+	return { onDone, audio, ...view };
+}
+
+/** Una corrida mínima, válida, con el `traceCase` que se quiera probar (D28). */
+function corridaCon(traceCase: SessionRun["traceCase"]): SessionRun {
+	return {
+		sessionIndex: 0,
+		unitId: null,
+		exercises: [],
+		cursor: 0,
+		attempt: createAttemptState(),
+		resolutions: [],
+		progress: emptyProgressState(),
+		...(traceCase === undefined ? {} : { traceCase }),
+	};
+}
+
+/** Igual que `montar`, pero con `run.traceCase` ya fijado en el store antes de pintar. */
+function montarConCaso(traceCase: SessionRun["traceCase"]) {
+	const audio = fakeAudio();
+	const onDone = vi.fn();
+	const store = crearStore();
+	store.setState({ run: corridaCon(traceCase) });
+	const view = render(
+		conProveedores(
+			store,
+			audio,
+			<Presentation
+				exercise={ejercicio(LETRA_A.id)}
+				item={LETRA_A}
+				onDone={onDone}
+			/>,
+		),
 	);
 	return { onDone, audio, ...view };
 }
@@ -223,5 +260,46 @@ describe("trace / Presentation", () => {
 		const { container } = montar();
 		const contenedorLienzo = svgDelLienzo(container).closest("div");
 		expect(contenedorLienzo?.className).toContain("md:portrait:h-[65vh]");
+	});
+
+	it("P7: con la corrida en minúscula (D28) pinta el glifo de LOWER_GLYPHS, no el de UPPER_GLYPHS; el par a/A sigue visible", () => {
+		const { container } = montarConCaso("lower");
+		const carriles = svgDelLienzo(container).querySelectorAll(
+			'[data-testid="guide-lane"]',
+		);
+		const lowerA = glyphFor(LETRA_A, "lower");
+		const upperA = glyphFor(LETRA_A, "upper");
+		expect(carriles.length).toBe(lowerA.strokes.length);
+		expect(carriles.length).not.toBe(0);
+		for (const [i, carril] of carriles.entries()) {
+			const esperado = lowerA.strokes[i]
+				?.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`)
+				.join(" ");
+			expect(carril.getAttribute("d")).toBe(esperado);
+		}
+		// Ninguno de los trazos coincide con los de la mayúscula (formas bien distintas).
+		const dsMinuscula = [...carriles].map((c) => c.getAttribute("d"));
+		const dsMayuscula = upperA.strokes.map((s) =>
+			s.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" "),
+		);
+		expect(dsMinuscula).not.toEqual(dsMayuscula);
+		// El par a/A sigue visible en la presentación (spec §2), sea cual sea el caso trazado.
+		expect(container.textContent).toContain("a");
+		expect(container.textContent).toContain("A");
+	});
+
+	it("P7b: sin traceCase en la corrida (o con 'upper'), sigue pintando la mayúscula", () => {
+		const { container } = montarConCaso(undefined);
+		const carriles = svgDelLienzo(container).querySelectorAll(
+			'[data-testid="guide-lane"]',
+		);
+		const upperA = glyphFor(LETRA_A, "upper");
+		expect(carriles.length).toBe(upperA.strokes.length);
+		for (const [i, carril] of carriles.entries()) {
+			const esperado = upperA.strokes[i]
+				?.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`)
+				.join(" ");
+			expect(carril.getAttribute("d")).toBe(esperado);
+		}
 	});
 });

@@ -187,6 +187,9 @@ export function createAppStore(deps: AppStoreDeps): StoreApi<AppState> {
 					progress,
 					sessionLength: doc.settings.sessionLength,
 					seed: seed(),
+					// D28: el caso queda fijado al empezar; cambiar el ajuste a media sesión no
+					// lo toca (SessionRun.traceCase no se vuelve a leer de doc.settings).
+					traceCase: doc.settings.lowercaseTracing ? "lower" : "upper",
 				});
 				set({ run, progress: run.progress });
 			},

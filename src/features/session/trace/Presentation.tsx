@@ -9,7 +9,7 @@ import {
 	TraceCanvas,
 } from "@/components/TraceCanvas";
 import { glyphFor, type TraceStroke } from "@/engine";
-import { useAudio } from "@/features/app-context";
+import { useApp, useAudio } from "@/features/app-context";
 import { Written } from "@/features/session/listen-tap/Written";
 import type { PresentationProps } from "@/features/session/registry";
 
@@ -23,9 +23,9 @@ export const ARROW_ANIMATION_RATIO = 0.6;
 type Phase = "draw" | "arrow" | "done";
 
 /**
- * Introducción sin error de `trace` (spec §2, D12): la mayúscula se dibuja sola en nivel 1
- * antes de pedir que se trace. El par a/A va siempre visible, como en las demás presentaciones.
- * `glyphFor` solo tiene mayúsculas por ahora (D16).
+ * Introducción sin error de `trace` (spec §2, D12): la letra se dibuja sola en nivel 1 antes
+ * de pedir que se trace, en el caso que fije `run.traceCase` (D28, `?? "upper"`). El par a/A
+ * va siempre visible, como en las demás presentaciones, sea cual sea el caso trazado.
  *
  * El botón «Siguiente» aparece cuando termina toda la secuencia: el dibujo completo
  * (`animation="full"`) y, encadenada tras él, la guía de dirección animada (`animation="dot"`,
@@ -40,7 +40,8 @@ type Phase = "draw" | "arrow" | "done";
 export function Presentation(props: PresentationProps) {
 	const { item, onDone } = props;
 	const audio = useAudio();
-	const glyph = glyphFor(item, "upper");
+	const traceCase = useApp((s) => s.run?.traceCase ?? "upper");
+	const glyph = glyphFor(item, traceCase);
 
 	const [phase, setPhase] = useState<Phase>("draw");
 	const [ink, setInk] = useState<readonly TraceStroke[]>([]);

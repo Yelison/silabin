@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UPPER_GLYPHS } from "@/content/glyphs";
+import { LOWER_GLYPHS, UPPER_GLYPHS } from "@/content/glyphs";
 import {
 	type AttemptState,
 	acceptsModelTrace,
@@ -610,6 +610,71 @@ describe("submitSpeech", () => {
 		const copia = structuredClone(antes);
 		hablar(antes, "ok");
 		expect(antes).toEqual(copia);
+	});
+});
+
+describe("traceCase (D28)", () => {
+	const lowerA = LOWER_GLYPHS.a;
+	if (lowerA === undefined) throw new Error("falta LOWER_GLYPHS.a");
+	const upperA = UPPER_GLYPHS.a;
+	if (upperA === undefined) throw new Error("falta UPPER_GLYPHS.a");
+
+	it("L5a: startSession fija traceCase tal cual se pasa; sin pasarlo, queda undefined", () => {
+		const conMinuscula = startSession({
+			content: curriculum,
+			progress: emptyProgressState(),
+			sessionLength: 5,
+			seed: 1,
+			traceCase: "lower",
+		});
+		expect(conMinuscula.traceCase).toBe("lower");
+		expect(empezar().traceCase).toBeUndefined();
+	});
+
+	it("L5b: submitTrace en minúscula puntúa contra LOWER_GLYPHS; la A mayúscula falla", () => {
+		const run: SessionRun = { ...trazoDesde(), traceCase: "lower" };
+		const acierto = trazar(run, lowerA.strokes);
+		expect(acierto.feedback.resolution).toEqual({ status: "mastery-credit" });
+
+		// Documentado (S24/D28): la A mayúscula no es un par confundible con la a minúscula
+		// (medido en glyphs.test.ts): falla por precisión (0.77 < MIN_PRECISION 0.8), aunque
+		// su cobertura ya pase.
+		const conMayuscula = trazar(run, upperA.strokes);
+		expect(conMayuscula.feedback.resolution).toBeNull();
+	});
+
+	it("L5c: traceGuide en minúscula devuelve el glifo de LOWER_GLYPHS", () => {
+		const run: SessionRun = { ...trazoDesde(), traceCase: "lower" };
+		expect(traceGuide(curriculum, run).glyph).toBe(lowerA);
+	});
+
+	it('L5d: acceptsModelTrace usa run.traceCase, no "upper" fijo (isNegligibleTrace no distingue formas, solo longitudes: hay que usar letras con largos de referencia distintos para que la mutación se note)', () => {
+		// LOWER l (un palo, largo 1.0) vs UPPER L (palo + remate, largo 1.6): un trazo de
+		// 0.13 supera el umbral de la minúscula (0.1 × 1.0 = 0.1) pero no el de la mayúscula
+		// (0.1 × 1.6 = 0.16). Si acceptsModelTrace ignorara run.traceCase (mutación: "upper"
+		// fijo), este mismo trazo se rechazaría por despreciable.
+		const exerciseL: PlannedExercise = {
+			...TRACE_EXERCISE,
+			itemId: "letter:l",
+		};
+		let run: SessionRun = { ...runCon(exerciseL), traceCase: "lower" };
+		for (let i = 0; i < 3; i++) run = trazar(run, TRAZO_MALO).run;
+		expect(run.attempt.resolved).toBe(true);
+		const trazoCorto: TraceStroke[] = [
+			[
+				{ x: 0.1, y: 0.4 },
+				{ x: 0.1, y: 0.53 },
+			],
+		];
+		expect(acceptsModelTrace(curriculum, run, trazoCorto)).toBe(true);
+	});
+
+	it('L5e: sin traceCase en la corrida, submitTrace/traceGuide siguen leyendo mayúscula (?? "upper")', () => {
+		const run: SessionRun = { ...trazoDesde() };
+		expect(run.traceCase).toBeUndefined();
+		expect(traceGuide(curriculum, run).glyph).toEqual(UPPER_GLYPHS.a);
+		const acierto = trazar(run, TRAZO_CORRECTO);
+		expect(acierto.feedback.resolution).toEqual({ status: "mastery-credit" });
 	});
 });
 

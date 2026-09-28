@@ -51,6 +51,12 @@ describe("trampa 9: trazo y voz siempre son evaluables", () => {
 							() => glyphFor(item, "upper"),
 							clave.join(" "),
 						).not.toThrow();
+						// L8/D28: el adulto puede activar minúsculas en cualquier momento, así
+						// que todo ítem de trazo evaluable necesita también su glifo minúsculo.
+						expect(
+							() => glyphFor(item, "lower"),
+							clave.join(" "),
+						).not.toThrow();
 						continue;
 					}
 
