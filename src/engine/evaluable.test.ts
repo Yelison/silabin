@@ -32,8 +32,7 @@ describe("trampa 9: trazo y voz siempre son evaluables", () => {
 	}
 
 	it("M11: cada pareja de voz da mastery-credit con audio; cada pareja de trazo tiene glifo", () => {
-		let voz = 0;
-		let trazo = 0;
+		const visitadas = new Map<string, number>();
 		for (const unit of curriculum.units.values()) {
 			if (unit.phase > 2) continue;
 			for (const { templateId } of unit.exercises) {
@@ -47,7 +46,7 @@ describe("trampa 9: trazo y voz siempre son evaluables", () => {
 					const clave = [unit.id, templateId, itemId];
 
 					if (template.evaluation === "trace") {
-						trazo += 1;
+						visitadas.set(templateId, (visitadas.get(templateId) ?? 0) + 1);
 						expect(
 							() => glyphFor(item, "upper"),
 							clave.join(" "),
@@ -55,7 +54,7 @@ describe("trampa 9: trazo y voz siempre son evaluables", () => {
 						continue;
 					}
 
-					voz += 1;
+					visitadas.set(templateId, (visitadas.get(templateId) ?? 0) + 1);
 					const { feedback } = submitSpeech({
 						content: curriculum,
 						run: corridaDe({
@@ -85,8 +84,11 @@ describe("trampa 9: trazo y voz siempre son evaluables", () => {
 				}
 			}
 		}
-		// Metacomprobación: un recorrido vacío saldría en verde sin comprobar nada.
-		expect(voz).toBeGreaterThan(0);
-		expect(trazo).toBeGreaterThan(0);
+		// Metacomprobación por plantilla: un bucle que se salte una sola saldría en verde.
+		for (const plantilla of ["say-it", "read-word", "trace"])
+			expect([plantilla, visitadas.get(plantilla) ?? 0]).not.toEqual([
+				plantilla,
+				0,
+			]);
 	});
 });
