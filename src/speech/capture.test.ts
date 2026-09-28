@@ -8,7 +8,9 @@ import {
 const FRAME = 50;
 
 /** Un micrófono falso: 2 pistas, un contexto que anota `close` y un analizador con nivel programable. */
-function montar(opciones: { fallaEnFrame?: number } = {}) {
+function montar(
+	opciones: { fallaEnFrame?: number; suspendido?: boolean } = {},
+) {
 	let t = 0;
 	let nivel = 0.001;
 	let llamadas = 0;
@@ -24,8 +26,15 @@ function montar(opciones: { fallaEnFrame?: number } = {}) {
 			buf.fill(nivel);
 		},
 	};
+	let liberarResume: () => void = () => {};
 	const ctx = {
-		state: "running",
+		state: opciones.suspendido ? "suspended" : "running",
+		resume: vi.fn(
+			() =>
+				new Promise<void>((res) => {
+					liberarResume = res;
+				}),
+		),
 		createMediaStreamSource: vi.fn(() => ({ connect: vi.fn() })),
 		createAnalyser: vi.fn(() => analyser),
 		close,
@@ -46,7 +55,16 @@ function montar(opciones: { fallaEnFrame?: number } = {}) {
 	const ticks = async (n: number, cuantos: number) => {
 		for (let i = 0; i < cuantos; i++) await tick(n);
 	};
-	return { listener, pistas, close, getUserMedia, tick, ticks };
+	return {
+		listener,
+		pistas,
+		close,
+		ctx,
+		getUserMedia,
+		tick,
+		ticks,
+		liberarResume: () => liberarResume(),
+	};
 }
 
 beforeEach(() => {
@@ -98,6 +116,46 @@ describe("createMicListener", () => {
 		await expect(p).resolves.toEqual({ kind: "aborted" });
 		for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
 		expect(m.close).toHaveBeenCalledTimes(1);
+	});
+
+	it("un aborto durante ctx.resume() da aborted aunque el resume se libere después, y cierra todo", async () => {
+		const m = montar({ suspendido: true });
+		const ac = new AbortController();
+		const p = m.listener.listen({ signal: ac.signal });
+		await dejarAbierto(); // getUserMedia resuelto; resume() pendiente
+		ac.abort();
+		m.liberarResume();
+		await dejarAbierto(); // deja que listen retome tras el resume
+		await m.ticks(0.001, 60);
+		await expect(p).resolves.toEqual({ kind: "aborted" });
+		for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
+		expect(m.close).toHaveBeenCalledTimes(1);
+		expect(vi.getTimerCount()).toBe(0);
+		// Ni siquiera se llega a conectar el analizador tras un aborto durante el resume.
+		expect(m.ctx.createAnalyser).not.toHaveBeenCalled();
+	});
+
+	it("un ctx.resume() que nunca termina no deja listen colgado ante un abort", async () => {
+		const m = montar({ suspendido: true });
+		const ac = new AbortController();
+		const p = m.listener.listen({ signal: ac.signal });
+		await dejarAbierto();
+		ac.abort(); // el resume no se libera nunca
+		await expect(p).resolves.toEqual({ kind: "aborted" });
+		for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
+		expect(m.close).toHaveBeenCalledTimes(1);
+	});
+
+	it("con el contexto suspendido y sin aborto, tras el resume escucha con normalidad", async () => {
+		const m = montar({ suspendido: true });
+		const p = m.listener.listen();
+		await dejarAbierto();
+		m.liberarResume();
+		await dejarAbierto();
+		await m.ticks(0.3, 8);
+		await m.ticks(0.001, 12);
+		await expect(p).resolves.toEqual({ kind: "heard" });
+		expect(m.ctx.resume).toHaveBeenCalledTimes(1);
 	});
 
 	it("S8: con la señal ya abortada ni abre el micrófono", async () => {

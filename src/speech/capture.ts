@@ -82,19 +82,32 @@ export function createMicListener(deps?: {
 			const frameMs = deps?.frameMs ?? 50;
 			let ctx: AudioContext | undefined;
 			let timer: ReturnType<typeof setInterval> | undefined;
-			let alAbortar: (() => void) | undefined;
+			// Se escucha el aborto desde que hay micrófono, no solo durante el bucle: un `abort` que
+			// llega mientras se espera a `ctx.resume()` no vuelve a emitir evento (P6).
+			let abortado = false;
+			let avisarAborto: () => void = () => {};
+			const cancelacion = new Promise<void>((res) => {
+				avisarAborto = res;
+			});
+			const alAbortar = () => {
+				abortado = true;
+				avisarAborto();
+			};
+			signal?.addEventListener("abort", alAbortar, { once: true });
 			try {
 				if (signal?.aborted) return { kind: "aborted" };
 				ctx = (deps?.createAudioContext ?? contextoDelNavegador)();
-				if (ctx.state === "suspended") await ctx.resume();
+				// Si `resume()` no termina, el aborto también libera la espera.
+				if (ctx.state === "suspended")
+					await Promise.race([ctx.resume(), cancelacion]);
+				if (abortado) return { kind: "aborted" };
 				const analyser = ctx.createAnalyser();
 				analyser.fftSize = FFT_SIZE;
 				ctx.createMediaStreamSource(stream).connect(analyser);
 				const buffer = new Float32Array(analyser.fftSize);
 				return await new Promise<ListenResult>((resolve, reject) => {
 					let vad = createVad(now());
-					alAbortar = () => resolve({ kind: "aborted" });
-					signal?.addEventListener("abort", alAbortar, { once: true });
+					void cancelacion.then(() => resolve({ kind: "aborted" }));
 					timer = setInterval(() => {
 						try {
 							analyser.getFloatTimeDomainData(buffer);
@@ -111,8 +124,7 @@ export function createMicListener(deps?: {
 				return { kind: "unavailable", reason: "error" };
 			} finally {
 				if (timer !== undefined) clearInterval(timer);
-				if (alAbortar !== undefined)
-					signal?.removeEventListener("abort", alAbortar);
+				signal?.removeEventListener("abort", alAbortar);
 				for (const pista of stream.getTracks()) {
 					try {
 						pista.stop();
