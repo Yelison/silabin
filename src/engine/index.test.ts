@@ -42,4 +42,11 @@ describe("barril @/engine", () => {
 		expectTypeOf<Unit>().toEqualTypeOf<ContentUnit>();
 		expectTypeOf<TemplateId>().toEqualTypeOf<ContentTemplateId>();
 	});
+
+	it("K10: resolveEquipped y progressReport se exportan; unitMasteryRatio sigue fuera", async () => {
+		const nombres = Object.keys(await import("@/engine"));
+		expect(nombres).toContain("resolveEquipped");
+		expect(nombres).toContain("progressReport");
+		expect(nombres).not.toContain("unitMasteryRatio");
+	});
 });

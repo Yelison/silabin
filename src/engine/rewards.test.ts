@@ -4,6 +4,7 @@ import { MASTERY_TARGET } from "@/engine/mastery";
 import {
 	earnedRewardIds,
 	newlyEarnedRewardIds,
+	nextMilestone,
 	REWARDS,
 	totalStars,
 } from "@/engine/rewards";
@@ -193,5 +194,31 @@ describe("newlyEarnedRewardIds", () => {
 		const primera = newlyEarnedRewardIds([], context(state));
 		const segunda = newlyEarnedRewardIds(primera, context(state));
 		expect(segunda).toEqual([]);
+	});
+});
+
+describe("K9 nextMilestone", () => {
+	it("0 va hacia 10", () => {
+		expect(nextMilestone(0)).toEqual({ from: 0, to: 10 });
+	});
+
+	it("10 ya cruzó el primer hito y va hacia 25", () => {
+		expect(nextMilestone(10)).toEqual({ from: 10, to: 25 });
+	});
+
+	it("25 va hacia 50", () => {
+		expect(nextMilestone(25)).toEqual({ from: 25, to: 50 });
+	});
+
+	it("99 va hacia 100", () => {
+		expect(nextMilestone(99)).toEqual({ from: 50, to: 100 });
+	});
+
+	it("100 ya no tiene próximo hito", () => {
+		expect(nextMilestone(100)).toBeNull();
+	});
+
+	it("150 tampoco tiene próximo hito", () => {
+		expect(nextMilestone(150)).toBeNull();
 	});
 });

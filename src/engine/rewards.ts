@@ -43,6 +43,18 @@ export function totalStars(state: ProgressState): number {
 	);
 }
 
+/** Tramo actual hacia el próximo hito de STAR_MILESTONES, o null a partir de 100. */
+export function nextMilestone(
+	totalStars: number,
+): { from: number; to: number } | null {
+	let from = 0;
+	for (const to of STAR_MILESTONES) {
+		if (totalStars < to) return { from, to };
+		from = to;
+	}
+	return null;
+}
+
 const BASE_REWARDS: Reward[] = [
 	{
 		id: "first-session",
