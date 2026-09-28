@@ -6,7 +6,7 @@ fusionar el PR #5).
 
 ## Estado
 
-**Fase: ejecución (2026-09-28). Tareas 1-4 completas; siguiente, Tarea 5.**
+**Fase: ejecución (2026-09-28). Tareas 1-5 completas; siguiente, Tarea 6.**
 Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 `/model sonnet` y `superpowers:subagent-driven-development`, en sesiones de 2-3 tareas.
 
@@ -16,7 +16,7 @@ Plan: `docs/superpowers/plans/2026-09-28-silabin-voz.md`, 7 tareas. Ejecutar con
 | 2 | `submitSpeech`, D19 en el motor, `syllablesVoiced`, `hideMic`, invariante de la trampa 9 | motor/store, mutaciones | **completa** (fefe69f, 1229fbe) |
 | 3 | `speech/`: VAD, captura, evaluador `parent`, `pickEvaluator` | lógica nueva, mutaciones | **completa** (0b82285, 9c19e0c) |
 | 4 | `Mouth`, `MicButton`, `VoiceTurn` | interfaz con estado, mutaciones | **completa** (c966a90, 5132eb2, 3a6a6c9) |
-| 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | pendiente |
+| 5 | `say-it` de punta a punta (desbloquea la Fase 1) | contrato, mutaciones | **completa** (a31d41c, 4d71af1) |
 | 6 | `read-word` (desbloquea la Fase 2), D19 en la vista, `/dev/plantillas` | contrato, mutaciones | pendiente |
 | 7 | Integración, deuda 4, README y poda, lista de la prueba manual | tests/docs | pendiente |
 
@@ -137,3 +137,40 @@ botones), P11 (corrige `first-syllable-voice`) y P12 (D19 también en el modelo)
   sobrescrito por otro proceso y dejó una mutación en `VoiceTurn.tsx`; el implementador la vio con
   `git diff` y la restauró antes de commitear, y el re-revisor confirmó que no queda residuo. En los
   despachos con mutaciones, pedir nombres de script únicos o worktrees propios.
+- Tarea 5: complete (commits 8f9f46c..4d71af1, review clean a la primera, sin ronda de corrección).
+  15 mutaciones del implementador (2 sobrevivieron al principio y se cerraron: la boca persistía en
+  la pista 2 y `ReplayButton` sin `hintBusy`) + 17 del revisor, 15 muertas. 1085 pasan + 1 omitido;
+  typecheck y lint limpios. Verificado en navegador (Chromium propio; el MCP de Playwright pide Chrome)
+  en `/dev/plantillas`: 360×640 y 1024×768 sin scroll, micrófono 96 px, altavoz 80 px, botones del
+  adulto 72 px, separación 16 px. Hallazgo: en 360×640 con boca+micrófono+botones medía 586 px sobre
+  528 útiles; 4d71af1 pone altavoz y hueco de la boca en una fila (494 px).
+- Ruling: `Mouth` se protege con `safeMouthShapes` (`voice/safe-mouth.ts`; si `mouthShapesFor` lanza no
+  se pinta la boca y la instrucción sigue) en vez de ampliar V1 — la vista nunca debe caer por un dato
+  de contenido; si fuera equivocado, se amplía V1 y se quita la guarda.
+- Ruling: se aceptan los cambios de `PlantillasDev` (+test), fuera de la lista de ficheros: el barrido de
+  `/dev/plantillas` lanzaba «necesita props.speech» para `say-it` (29 fallos) — si fuera equivocado,
+  se movería la inyección de `speech` a otro sitio, solo afecta a la página de desarrollo.
+- Ruling: la boca sale solo en la pista 1 (P15) y cada `feedback` nuevo la quita; `ReplayButton` y
+  `VoiceTurn` van deshabilitados mientras suena una pista (`hintBusy`) — si fuera equivocado (p. ej. la
+  boca debe persistir en la pista 2), es un cambio de una línea en `say-it/Evaluation.tsx` más su test.
+- Ruling: `HINT_AUDIO_MAX_MS = 2500` vive en `voice/hint-audio.ts` con `playCapped(audio, request)`
+  (`Promise.race`, nunca rechaza, limpia el timer), reutilizado por Presentation y Evaluation; la
+  presentación de voz lo usa también, a diferencia de `listen-tap` (deuda 2) — si fuera equivocado,
+  se inlinea.
+- Tarea 5: minor (deferred): M14 sobrevive — nada prueba la segunda reproducción del ítem tras
+  `PAUSE_MS` en `say-it/Presentation` (test: avanzar `PAUSE_MS` y esperar dos `phoneme:a` seguidos).
+- Tarea 5: minor (deferred): M16 sobrevive — el test solo usa `accent: "mx"`; un `"mx"` literal en
+  `speechTarget(item, accent)` (`say-it/Evaluation.tsx`) no falla (falta el caso `do` → `es-US`, P14).
+  Solo importa con `browser`/`azure`.
+- Tarea 5: minor (deferred): `onReplay` de `Evaluation` llama a `audio.play` sin `playCapped`; un
+  `play` que lance de forma síncrona no queda cubierto por el `.catch` (teórico).
+- Tarea 5: minor (deferred): `SessionScreen.resolver` espera `feedback:retry` sin tope (deuda 2 del
+  README); con un `play` que nunca resuelve, ni la pista ni el feedback llegan.
+- Tarea 5: minor (deferred): `voiceEffect("play-first-syllable")` lanza si el ítem no es palabra;
+  `say-it` nunca lo emite, pero **la Tarea 6 (`read-word`) debe cubrirlo**. El efecto `split` solo
+  existe en `voiceEffect`: ninguna vista lo pinta aún (Tarea 6).
+- Tarea 5: minor (deferred): el layout se midió en `/dev/plantillas`, no en sesión real (necesita progreso
+  en IndexedDB); falta iPad/iPhone real (D11). La boca desaparece en la pista 2: probar con niños.
+- Nota de proceso: el implementador quedó BLOQUEADO una vez por fallos del clasificador de Bash (no de
+  la tarea; ~9 fallos seguidos); se reanudó con `SendMessage` y terminó. El revisor dejó una mutación viva
+  un momento por cortar un script con `| head`; la restauró y repitió la tanda; `git status` limpio.
