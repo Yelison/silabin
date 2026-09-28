@@ -67,29 +67,31 @@ export function Evaluation(props: EvaluationProps) {
 		};
 	}, [feedback]);
 
+	// El altavoz y el hueco de la boca comparten fila: en 360 × 640, con el micrófono, los
+	// botones del adulto (que se parten en dos filas) y la boca a la vez, cada fila cuenta.
 	return (
 		<div className="flex flex-col items-center gap-4 landscape:flex-row landscape:gap-10">
-			<div className="flex flex-col items-center gap-3">
-				<div className="flex items-center justify-center font-reading">
-					<Written item={item} size="lg" />
-				</div>
-				<div className="flex h-24 items-center justify-center">
-					{mouth && shapes !== null && <Mouth shapes={shapes} playing />}
-				</div>
+			<div className="flex items-center justify-center font-reading">
+				<Written item={item} size="lg" />
 			</div>
 			<div className="flex flex-col items-center gap-4">
-				<ReplayButton
-					aria-label="Oír otra vez"
-					disabled={locked || hintBusy}
-					onReplay={() => {
-						// P8: repite la instrucción, nunca el objetivo.
-						audio
-							.play({ key: `instruction:${exercise.templateId}` })
-							.catch(() => {
-								// Sin voz también se puede jugar.
-							});
-					}}
-				/>
+				<div className="flex items-center gap-4">
+					<ReplayButton
+						aria-label="Oír otra vez"
+						disabled={locked || hintBusy}
+						onReplay={() => {
+							// P8: repite la instrucción, nunca el objetivo.
+							audio
+								.play({ key: `instruction:${exercise.templateId}` })
+								.catch(() => {
+									// Sin voz también se puede jugar.
+								});
+						}}
+					/>
+					<div className="flex h-24 w-32 items-center justify-center">
+						{mouth && shapes !== null && <Mouth shapes={shapes} playing />}
+					</div>
+				</div>
 				<VoiceTurn
 					mode={mode}
 					target={target}
