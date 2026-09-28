@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tarea 1/11 completa (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-2/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -144,7 +144,8 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 | Tarea | Estado | Rondas | Mutaciones supervivientes |
 |---|---|---|---|
 | 1 | completa (commits `865937b`..`9eb94d0`) | 1/5 | 0 (las 5 mandatadas atrapadas; ronda 1 corrigió cobertura de `counts` por cubo y `bestStars`, que solo se comprobaban por suma) |
-| 2-11 | pendientes | | |
+| 2 | completa (commits `c7ea145`..`80c0e13`), Approved | 0/5 | 0 (9 mutaciones: las 6 del brief más 3 que el implementador añadió por su cuenta, todas confirmadas por el revisor contra el diff) |
+| 3-11 | pendientes | | |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -159,6 +160,24 @@ despachar.
 contrato del brief); fallback silencioso de `text` al id crudo si falta el ítem
 (`progress-report.ts:545`); asimetría entre `progressReport` (mira `!presented` primero) y
 `unitProgress` (llama `isMastered` directo) — no alcanzable por la máquina de estados actual.
+
+**Ruling (Tarea 2):** el revisor encontró que el orden TDD no se siguió estrictamente en
+`pin.ts` y `persist.ts` (implementación casi simultánea al test, con RED reconstruido
+después «a propósito», autorrevelado por el implementador). Se acepta sin ronda de
+corrección. — Por qué: el RED reconstruido es honesto y verificable, y el revisor confirmó
+contra el diff (no contra el reporte) que las 9 mutaciones probadas (las 6 del brief más 3
+que el implementador añadió por su cuenta tras consultar su propio `advisor()`) están
+genuinamente atrapadas por tests no vacíos. Rehacer el test-first ahora reescribiría los
+mismos ficheros sin cambiar el código final. — Coste si fuera un error: si un TDD real
+hubiera revelado un problema de diseño que la mutación no atrapa, quedaría sin ver; riesgo
+residual bajo porque la mutación es la técnica que más hallazgos ha dado en este proyecto.
+**Recordatorio para las próximas tareas: TDD real, no reconstruido.**
+
+**Minor (deferred) de la Tarea 2:** comprobación muerta en `equip` tras `canEquip`
+(`app-store.ts`, `canEquip` ya descarta ids desconocidos); `verifyPin` compara con `===` no
+constante en el tiempo (consistente con el modelo de amenaza: el PIN no es seguridad);
+`ExportGesture.test.tsx` tocado fuera de la lista de ficheros del brief (mecánico,
+consecuencia de romper la firma de `importState`).
 
 **Recordatorios para el plan:** en la tarea de identidad (Plan 7) instalar entonces
 `frontend-design@claude-plugins-official`, no antes (memoria del autor). El cierre actualiza
