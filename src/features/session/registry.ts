@@ -22,6 +22,8 @@ import { Evaluation as InitialSoundEvaluation } from "@/features/session/initial
 import { Presentation as InitialSoundPresentation } from "@/features/session/initial-sound/Presentation";
 import { Evaluation as ListenTapEvaluation } from "@/features/session/listen-tap/Evaluation";
 import { Presentation as ListenTapPresentation } from "@/features/session/listen-tap/Presentation";
+import { Evaluation as ReadWordEvaluation } from "@/features/session/read-word/Evaluation";
+import { Presentation as ReadWordPresentation } from "@/features/session/read-word/Presentation";
 import { Evaluation as RhymeEvaluation } from "@/features/session/rhyme/Evaluation";
 import { Presentation as RhymePresentation } from "@/features/session/rhyme/Presentation";
 import { Evaluation as SayItEvaluation } from "@/features/session/say-it/Evaluation";
@@ -36,10 +38,21 @@ export type PresentationProps = {
 	onDone(): void;
 };
 
-/** Lo que necesita la evaluación de `trace`: la guía a pintar y adónde mandar el trazo cerrado. */
+/**
+ * Lo que necesita la evaluación de `trace`: la guía a pintar, adónde mandar el trazo cerrado y
+ * lo que hace falta para que un toque sin querer (D19) no gaste una pista.
+ */
 export type TraceInput = {
 	guide: TraceGuide;
 	onTrace(strokes: TraceStroke[]): void;
+	/**
+	 * Sube cuando el motor ignora un trazo (`feedback.ignored`): la vista borra la tinta y el
+	 * envío, y nada más. No es un intento nuevo (`attemptKey`), así que la pista que se estaba
+	 * mostrando sigue.
+	 */
+	clearKey: number;
+	/** En el modelo del tercer rung: ¿vale este trazo para darlo por repasado? Lo decide el motor. */
+	acceptsModel(strokes: TraceStroke[]): boolean;
 };
 
 /** Lo que necesita la evaluación de voz: adónde mandar el veredicto final del turno. */
@@ -62,7 +75,7 @@ export type EvaluationProps = {
 	onModelDone(): void;
 	/** Solo en la evaluación `trace`, que la exige (lanza si falta). */
 	trace?: TraceInput;
-	/** Solo en las evaluaciones de voz (`say-it`), que la exigen (lanza si falta). */
+	/** Solo en las evaluaciones de voz (`say-it`, `read-word`), que la exigen (lanza si falta). */
 	speech?: SpeechInput;
 };
 
@@ -93,6 +106,10 @@ export const templateViews: Partial<Record<TemplateId, TemplateViews>> = {
 	build: { Presentation: BuildPresentation, Evaluation: BuildEvaluation },
 	trace: { Presentation: TracePresentation, Evaluation: TraceEvaluation },
 	"say-it": { Presentation: SayItPresentation, Evaluation: SayItEvaluation },
+	"read-word": {
+		Presentation: ReadWordPresentation,
+		Evaluation: ReadWordEvaluation,
+	},
 };
 
 /** Plantillas con las que hay sesión jugable hoy. Crece una a una con cada plantilla nueva. */
@@ -106,6 +123,7 @@ export const IMPLEMENTED_TEMPLATES: ReadonlySet<TemplateId> =
 		"build",
 		"trace",
 		"say-it",
+		"read-word",
 	]);
 
 /**

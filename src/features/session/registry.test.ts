@@ -179,17 +179,44 @@ describe("isSessionPlayable", () => {
 		).toBe(true);
 	});
 
-	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap, build, trace y say-it", () => {
+	it("hoy están implementadas count-syllables, rhyme, initial-sound, hear-it, listen-tap, build, trace, say-it y read-word", () => {
 		expect([...IMPLEMENTED_TEMPLATES].sort()).toEqual([
 			"build",
 			"count-syllables",
 			"hear-it",
 			"initial-sound",
 			"listen-tap",
+			"read-word",
 			"rhyme",
 			"say-it",
 			"trace",
 		]);
+	});
+
+	it("W5: con phase2:m activa (fases 0 y 1 hechas) la sesión es jugable, y sin read-word no lo sería", () => {
+		const ultimaFase1 =
+			curriculum.unitOrder
+				.filter((id) => curriculum.units.get(id)?.phase === 1)
+				.at(-1) ?? "";
+		const p = conUnidadesHechasHasta(ultimaFase1);
+		expect(p.units["phase2:m"]?.status).toBe("active");
+		expect(isSessionPlayable(curriculum, p, IMPLEMENTED_TEMPLATES)).toBe(true);
+		const sinLeer = new Set<TemplateId>(IMPLEMENTED_TEMPLATES);
+		sinLeer.delete("read-word");
+		expect(isSessionPlayable(curriculum, p, sinLeer)).toBe(false);
+	});
+
+	it("W5: todas las plantillas que declaran las unidades de las fases 0-2 están implementadas y registradas", () => {
+		const declaradas = new Set<TemplateId>(
+			[...curriculum.units.values()]
+				.filter((u) => u.phase <= 2)
+				.flatMap((u) => u.exercises.map((e) => e.templateId)),
+		);
+		expect(declaradas.has("read-word")).toBe(true);
+		for (const id of declaradas) {
+			expect(IMPLEMENTED_TEMPLATES.has(id), id).toBe(true);
+			expect(templateViews[id], id).toBeDefined();
+		}
 	});
 
 	it("Y8: con phase0:hear-it y la Fase 0 hechas, la primera unidad de la Fase 1 ya es jugable", () => {

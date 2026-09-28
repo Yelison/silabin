@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLongPress } from "@/components/use-long-press";
 import {
 	type AttemptFeedback,
+	acceptsModelTrace,
 	currentExercise,
 	curriculum,
 	isSessionOver,
@@ -96,6 +97,9 @@ function ExerciseView(props: {
 	const [feedback, setFeedback] = useState<AttemptFeedback | null>(null);
 	const [locked, setLocked] = useState(false);
 	const [celebrating, setCelebrating] = useState(false);
+	// D19: sube cuando el motor ignora un trazo, para que `trace` borre su tinta sin que sea un
+	// intento nuevo (`attemptKey`).
+	const [clearKey, setClearKey] = useState(0);
 	// Un ref y no el estado: dos toques en el mismo instante ven el mismo `locked`.
 	const busy = useRef(false);
 	const modelPending = useRef(false);
@@ -137,6 +141,14 @@ function ExerciseView(props: {
 	async function resolver(llamar: () => Promise<AttemptFeedback>) {
 		const fb = await llamar();
 		if (!alive.current) return;
+		if (fb.ignored === true) {
+			// D19: un toque sin querer no es un intento. Ni suena `feedback:retry`, ni cambia la
+			// pista (`feedback`, `attemptKey`): solo se desbloquea y se borra la tinta.
+			setClearKey((k) => k + 1);
+			setLocked(false);
+			busy.current = false;
+			return;
+		}
 		const resolucion = fb.resolution;
 		if (resolucion === null) {
 			// Fallo con pista: el único sonido de fallo, y luego la Evaluation ejecuta la pista.
@@ -215,6 +227,9 @@ function ExerciseView(props: {
 					? {
 							trace: {
 								guide: traceGuide(curriculum, run),
+								clearKey,
+								acceptsModel: (trazos: TraceStroke[]) =>
+									acceptsModelTrace(curriculum, run, trazos),
 								onTrace: (trazos: TraceStroke[]) => {
 									if (busy.current) return;
 									busy.current = true;

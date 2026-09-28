@@ -26,8 +26,14 @@ import {
 	templates,
 	type Unit,
 } from "@/engine";
-import { AppProviders } from "@/features/app-context";
+import { AppProviders, type SpeechDeps } from "@/features/app-context";
 import { type TraceInput, templateViews } from "@/features/session/registry";
+import {
+	createMicListener,
+	createParentEvaluator,
+	createScriptedListener,
+	type Listener,
+} from "@/speech";
 import { createAppStore, createMemoryAdapter } from "@/store";
 
 const UNIT_ID = "dev:plantilla";
@@ -135,6 +141,30 @@ function crearAudio(): AudioPlayer {
 	});
 }
 
+/** Lo que oye el micrófono simulado de las plantillas de voz: los tres caminos, sin micrófono real. */
+const MICROFONOS = {
+	oido: "Oído",
+	silencio: "Silencio",
+	"sin-microfono": "Sin micrófono",
+	real: "Micrófono real",
+} as const;
+type Microfono = keyof typeof MICROFONOS;
+
+function listenerDe(microfono: Microfono): Listener {
+	switch (microfono) {
+		case "oido":
+			return createScriptedListener([{ kind: "heard" }]);
+		case "silencio":
+			return createScriptedListener([{ kind: "silence" }]);
+		case "sin-microfono":
+			return createScriptedListener([
+				{ kind: "unavailable", reason: "no-api" },
+			]);
+		case "real":
+			return createMicListener();
+	}
+}
+
 const BOTON = "rounded border-2 border-calm-border bg-card px-3 py-2";
 
 /** Las dos vistas de una plantilla con un ejercicio ya planificado. Se remonta al cambiar de ítem. */
@@ -178,6 +208,10 @@ function Panel(props: {
 						glyph: glyphFor(item, "upper"),
 						level: guideLevel(caja, rung),
 					},
+					// Sin corrida no hay motor que ignore un trazo ni que decida el modelo: aquí
+					// vale cualquier trazo cerrado, y un intento nuevo (`attemptKey`) limpia la tinta.
+					clearKey: 0,
+					acceptsModel: (strokes: TraceStroke[]) => strokes.length > 0,
 					onTrace: (strokes: TraceStroke[]) => {
 						const score = scoreTrace(glyphFor(item, "upper"), strokes);
 						const cobertura = score.coverage
@@ -311,6 +345,15 @@ export function PlantillasDev(props: { audio?: AudioPlayer }) {
 	);
 	const [itemId, setItemId] = useState<string | null>(null);
 	const [seed, setSeed] = useState(SEED_INICIAL);
+	const [microfono, setMicrofono] = useState<Microfono>("oido");
+	// Un `SpeechDeps` estable por elección: cambiarla remonta el turno con el listener nuevo.
+	const speech = useMemo<SpeechDeps>(
+		() => ({
+			listener: listenerDe(microfono),
+			evaluators: [createParentEvaluator()],
+		}),
+		[microfono],
+	);
 
 	const items = useMemo(() => itemsDe(templateId), [templateId]);
 	const item = items.find((i) => i.id === itemId) ?? items[0];
@@ -320,7 +363,7 @@ export function PlantillasDev(props: { audio?: AudioPlayer }) {
 	);
 
 	return (
-		<AppProviders store={store} audio={audio}>
+		<AppProviders store={store} audio={audio} speech={speech}>
 			{/* El navegador exige un gesto para dejar sonar: cualquier toque desbloquea. */}
 			<main
 				className="flex flex-col gap-6 p-6"
@@ -361,6 +404,22 @@ export function PlantillasDev(props: { audio?: AudioPlayer }) {
 							))}
 						</select>
 					</label>
+					{templates[templateId].evaluation === "voice" && (
+						<label className="flex items-center gap-2">
+							Micrófono simulado
+							<select
+								className={BOTON}
+								value={microfono}
+								onChange={(e) => setMicrofono(e.target.value as Microfono)}
+							>
+								{Object.entries(MICROFONOS).map(([valor, nombre]) => (
+									<option key={valor} value={valor}>
+										{nombre}
+									</option>
+								))}
+							</select>
+						</label>
+					)}
 					<button
 						type="button"
 						className={BOTON}

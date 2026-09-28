@@ -38,6 +38,7 @@ import {
 	respuestaCorrecta,
 	vistasFalsas,
 } from "@/features/test-support";
+import { createMemoryAdapter } from "@/store";
 
 afterEach(() => {
 	cleanup();
@@ -653,6 +654,180 @@ describe("SessionScreen", () => {
 
 			await act(async () => {
 				await vi.advanceTimersByTimeAsync(700);
+			});
+		});
+
+		describe("D19: un toque sin querer con la vista real de trace", () => {
+			// Una línea larga arriba del todo: tinta de sobra, fuera de la letra. Es un fallo real.
+			const FALLO: [number, number, number, number] = [20, 20, 380, 20];
+			// La A completa, en coordenadas de pantalla para un rect de 400×400 en (0,0).
+			const A_COMPLETA: [number, number, number, number][] = [
+				[200, 57.14, 85.71, 342.86],
+				[200, 57.14, 314.29, 342.86],
+				[129.14, 234.29, 270.86, 234.29],
+			];
+
+			async function montarReal(box: Box) {
+				if (!("setPointerCapture" in Element.prototype)) {
+					Object.defineProperty(Element.prototype, "setPointerCapture", {
+						configurable: true,
+						writable: true,
+						value: () => {},
+					});
+				}
+				vi.useFakeTimers();
+				const adapter = createMemoryAdapter();
+				const escrituras = vi.spyOn(adapter, "write");
+				const store = crearStore(adapter);
+				await store.getState().load();
+				store.getState().beginSession();
+				store.setState({ run: trazoRun(store.getState().progress, box) });
+				escrituras.mockClear();
+				const audio = fakeAudio();
+				const views: TemplateViews = {
+					Presentation: (p: PresentationProps) => (
+						<button type="button" data-view="presentation" onClick={p.onDone}>
+							listo
+						</button>
+					),
+					Evaluation: RealTraceEvaluation,
+				};
+				const { container } = render(
+					conProveedores(
+						store,
+						audio,
+						<SessionScreen
+							onEnd={vi.fn()}
+							onExit={vi.fn()}
+							views={{ trace: views }}
+							celebrationMs={0}
+						/>,
+					),
+				);
+				const svg = container.querySelector("svg");
+				if (svg === null) throw new Error("sin <svg>");
+				vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 400,
+					height: 400,
+					right: 400,
+					bottom: 400,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				});
+				let pointerId = 1;
+				const trazo = (x0: number, y0: number, x1: number, y1: number) => {
+					const id = pointerId++;
+					fireEvent.pointerDown(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x0,
+						clientY: y0,
+					});
+					fireEvent.pointerMove(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x1,
+						clientY: y1,
+					});
+					fireEvent.pointerUp(svg, {
+						pointerId: id,
+						isPrimary: true,
+						clientX: x1,
+						clientY: y1,
+					});
+				};
+				const avanzar = (ms: number) =>
+					act(async () => {
+						await vi.advanceTimersByTimeAsync(ms);
+					});
+				return {
+					store,
+					svg,
+					escrituras,
+					trazo,
+					run: () => {
+						const r = store.getState().run;
+						if (r === null) throw new Error("sin corrida");
+						return r;
+					},
+					fallos: () =>
+						audio.play.mock.calls.filter((c) => c[0].key === "feedback:retry")
+							.length,
+					tinta: () => container.querySelectorAll('[data-testid="ink"]').length,
+					pulso: () => container.querySelector('[data-pulse="true"]') !== null,
+					fallar: async () => {
+						trazo(...FALLO);
+						await avanzar(TRACE_IDLE_MS + 50);
+						// Deja que acabe la animación de la pista, si la hay.
+						await avanzar(10_000);
+					},
+					punto: async () => {
+						trazo(200, 200, 200, 200);
+						await avanzar(TRACE_IDLE_MS + 50);
+					},
+					dibujarA: async () => {
+						for (const t of A_COMPLETA) trazo(...t);
+						await avanzar(TRACE_IDLE_MS + 50);
+					},
+				};
+			}
+
+			it("W6: un punto tras un fallo no suena feedback:retry, no guarda, borra la tinta, deja la pista y el trazo siguiente es el mismo intento", async () => {
+				const t = await montarReal(2);
+				await t.fallar();
+				// Rung 1: la guía anterior con el inicio latiendo.
+				expect(t.fallos()).toBe(1);
+				expect(t.run().attempt).toMatchObject({ attempt: 2, hintsShown: 1 });
+				expect(t.pulso()).toBe(true);
+
+				await t.punto();
+
+				expect(t.fallos()).toBe(1);
+				expect(t.escrituras).not.toHaveBeenCalled();
+				expect(t.tinta()).toBe(0);
+				// La pista que se mostraba sigue: el pulso no se apaga.
+				expect(t.pulso()).toBe(true);
+				// El motor no lo contó como intento.
+				expect(t.run().attempt).toMatchObject({ attempt: 2, hintsShown: 1 });
+				// Y el lienzo vuelve a estar libre: el trazo siguiente se recoge y cuenta.
+				expect(t.svg.getAttribute("data-disabled")).toBeNull();
+				t.trazo(...FALLO);
+				expect(t.tinta()).toBeGreaterThan(0);
+				await t.fallar();
+				expect(t.fallos()).toBe(2);
+				expect(t.run().attempt).toMatchObject({ attempt: 3, hintsShown: 2 });
+			});
+
+			it("W6: un punto seguido de la letra bien hecha resuelve con una pista, no con dos", async () => {
+				const t = await montarReal(2);
+				await t.fallar();
+				await t.punto();
+				await t.dibujarA();
+				expect(t.run().resolutions).toEqual([
+					{ status: "correct-with-hint", hintsUsed: 1 },
+				]);
+			});
+
+			it("W7: en el modelo, un punto no cierra el ejercicio y borra la tinta; un trazo completo, sí", async () => {
+				const t = await montarReal(0);
+				await t.fallar();
+				await t.fallar();
+				await t.fallar();
+				expect(t.run().resolutions).toEqual([{ status: "assisted" }]);
+				expect(t.run().cursor).toBe(0);
+
+				t.trazo(200, 200, 200, 200);
+				expect(t.tinta()).toBeGreaterThan(0);
+				await t.punto();
+				expect(t.run().cursor).toBe(0);
+				expect(t.tinta()).toBe(0);
+				expect(t.svg.getAttribute("data-disabled")).toBeNull();
+
+				await t.dibujarA();
+				expect(t.run().cursor).toBe(1);
 			});
 		});
 	});

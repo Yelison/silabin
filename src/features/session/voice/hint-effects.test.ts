@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { curriculum, type Item, stretchKey } from "@/engine";
+import { curriculum, type Item, stretchKey, templates } from "@/engine";
 import { voiceEffect } from "@/features/session/voice/hint-effects";
 
 function item(id: string): Item {
@@ -49,6 +49,22 @@ describe("voiceEffect", () => {
 			kind: "sound",
 			request: { key: item("phoneme:a").audioKey },
 		});
+	});
+
+	it("W4: ninguna pista de read-word lanza con ningún ítem que esa plantilla admite", () => {
+		const palabras = [...curriculum.items.values()].filter((i) =>
+			templates["read-word"].itemKinds.includes(i.kind),
+		);
+		expect(palabras.length).toBeGreaterThan(0);
+		for (const palabra of palabras) {
+			for (const hint of templates["read-word"].hints) {
+				expect(
+					() => efecto(hint.action, palabra),
+					`${palabra.id}: ${hint.action}`,
+				).not.toThrow();
+				expect(efecto(hint.action, palabra).kind).not.toBe("none");
+			}
+		}
 	});
 
 	it("Y1: una acción desconocida no hace nada", () => {

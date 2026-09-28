@@ -15,6 +15,7 @@ import {
 	PlantillasDev,
 	planificar,
 } from "@/features/dev/PlantillasDev";
+import { COUNTDOWN_MS } from "@/features/session/voice/VoiceTurn";
 import { fakeAudio } from "@/features/test-support";
 
 beforeEach(() => {
@@ -57,6 +58,106 @@ describe("PlantillasDev", () => {
 		expect(evaluacion().querySelector("svg[data-shape]")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
 		expect(evaluacion().querySelector("svg[data-shape]")).not.toBeNull();
+	});
+
+	describe("W8: las plantillas de voz con un micrófono de guion", () => {
+		const mic = () =>
+			within(evaluacion()).getByRole("button", { name: "Micrófono" });
+		const elegirMicrofono = (m: string) =>
+			fireEvent.change(
+				screen.getByRole("combobox", { name: "Micrófono simulado" }),
+				{ target: { value: m } },
+			);
+		const tocarMicrofono = async () => {
+			fireEvent.click(mic());
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(COUNTDOWN_MS + 50);
+			});
+		};
+		const botonesDelAdulto = () =>
+			within(evaluacion()).queryByRole("button", { name: "Lo dijo bien" });
+		function montarConAudio() {
+			const audio = fakeAudio();
+			render(<PlantillasDev audio={audio} />);
+			return { audio };
+		}
+
+		it("say-it y read-word están en el selector", () => {
+			montar();
+			const opciones = within(
+				screen.getByRole("combobox", { name: "Plantilla" }),
+			)
+				.getAllByRole("option")
+				.map((o) => o.textContent);
+			expect(opciones).toContain("say-it");
+			expect(opciones).toContain("read-word");
+		});
+
+		it("read-word monta con micrófono, la imagen tapada, y el rung 1 separa las sílabas", () => {
+			montar();
+			elegirPlantilla("read-word");
+			expect(mic()).toBeTruthy();
+			expect(
+				within(evaluacion()).getByRole("img", { name: "Imagen tapada" }),
+			).toBeTruthy();
+			expect(evaluacion().querySelector("img[src*='/images/']")).toBeNull();
+			expect(within(evaluacion()).queryByText(/·/)).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
+			expect(within(evaluacion()).getByText(/·/)).toBeTruthy();
+		});
+
+		it("read-word: el rung 3 descubre la imagen", () => {
+			montar();
+			elegirPlantilla("read-word");
+			fireEvent.click(screen.getByRole("button", { name: "Rung 3" }));
+			expect(evaluacion().querySelector("img[src*='/images/']")).not.toBeNull();
+			expect(
+				within(evaluacion()).queryByRole("img", { name: "Imagen tapada" }),
+			).toBeNull();
+		});
+
+		it("«Oído»: tras tocar el micrófono salen los botones del adulto y el veredicto se anota", async () => {
+			vi.useFakeTimers();
+			montarConAudio();
+			elegirPlantilla("read-word");
+			elegirMicrofono("oido");
+			await tocarMicrofono();
+			fireEvent.click(botonesDelAdulto() as HTMLElement);
+			expect(screen.getByRole("status").textContent).toBe("Veredicto: ok");
+		});
+
+		it("«Silencio»: no salen los botones, suena «No te oí» y el micrófono vuelve a estar listo", async () => {
+			vi.useFakeTimers();
+			const { audio } = montarConAudio();
+			elegirPlantilla("say-it");
+			elegirMicrofono("silencio");
+			await tocarMicrofono();
+			expect(botonesDelAdulto()).toBeNull();
+			const claves = audio.play.mock.calls.map((c) => c[0].key);
+			expect(claves).toContain("feedback:no-speech");
+			expect(mic().getAttribute("aria-disabled")).not.toBe("true");
+		});
+
+		it("«Sin micrófono»: salen los botones del adulto en cuanto se intenta", async () => {
+			vi.useFakeTimers();
+			montarConAudio();
+			elegirPlantilla("say-it");
+			elegirMicrofono("sin-microfono");
+			await tocarMicrofono();
+			expect(botonesDelAdulto()).not.toBeNull();
+		});
+
+		it("el selector de micrófono solo aparece con las plantillas de voz", () => {
+			montar();
+			elegirPlantilla("listen-tap");
+			expect(
+				screen.queryByRole("combobox", { name: "Micrófono simulado" }),
+			).toBeNull();
+			elegirPlantilla("say-it");
+			expect(
+				screen.getByRole("combobox", { name: "Micrófono simulado" }),
+			).toBeTruthy();
+		});
 	});
 
 	it("ofrece listen-tap y build, que ninguna unidad ofrece todavía, además de las de la Fase 0", () => {
