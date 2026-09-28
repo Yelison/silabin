@@ -6,7 +6,12 @@ import type { SpokenVerdict } from "@/engine";
 import { useApp, useAudio, useSpeech } from "@/features/app-context";
 import { type ListenResult, pickEvaluator, type SpeechTarget } from "@/speech";
 
-/** La cuenta atrás de tres puntos: colchón para que la voz del dispositivo no se oiga (P7). */
+/**
+ * La cuenta atrás de tres puntos: colchón para que la voz del dispositivo no se oiga (P7). Se
+ * pasa como `warmupMs` a `listener.listen`, que la corre en paralelo con abrir el micrófono
+ * (`getUserMedia` puede tardar 800-1700 ms en dispositivos reales): gana el que tarde más. La
+ * fase solo pasa a `"listening"` cuando el `listener` avisa con `onReady` (ver `escuchar`).
+ */
 export const COUNTDOWN_MS = 900;
 /** Silencios seguidos tras los que el adulto tiene los botones (P4). */
 export const MAX_SILENT_TURNS = 2;
@@ -66,9 +71,6 @@ export function VoiceTurn(props: Props) {
 	const faseRef = useRef<Fase>("idle");
 	const silenciosRef = useRef(0);
 	const control = useRef<AbortController | null>(null);
-	const cuentaAtras = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
 	const guarda = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const topeEvaluacion = useRef<ReturnType<typeof setTimeout> | undefined>(
 		undefined,
@@ -87,7 +89,6 @@ export function VoiceTurn(props: Props) {
 	useEffect(
 		() => () => {
 			control.current?.abort();
-			clearTimeout(cuentaAtras.current);
 			clearTimeout(guarda.current);
 			clearTimeout(topeEvaluacion.current);
 		},
@@ -102,7 +103,6 @@ export function VoiceTurn(props: Props) {
 	const resolver = (dar: () => void) => {
 		if (faseRef.current === "resuelto") return;
 		control.current?.abort();
-		clearTimeout(cuentaAtras.current);
 		clearTimeout(topeEvaluacion.current);
 		ir("resuelto");
 		silenciosRef.current = 0;
@@ -164,11 +164,16 @@ export function VoiceTurn(props: Props) {
 	};
 
 	const escuchar = async (c: AbortController) => {
-		ir("listening");
 		let resultado: ListenResult;
 		try {
 			resultado = await vivo.current.listener.listen({
 				signal: c.signal,
+				// El colchón corre en paralelo con abrir el micrófono; solo cuando ambos se cumplen
+				// (ver docblock de COUNTDOWN_MS) el `listener` avisa y el botón se pone azul.
+				warmupMs: COUNTDOWN_MS,
+				onReady: () => {
+					if (!c.signal.aborted) ir("listening");
+				},
 				onLevel: (rms) => {
 					if (c.signal.aborted) return;
 					const paso =
@@ -220,7 +225,9 @@ export function VoiceTurn(props: Props) {
 		const c = new AbortController();
 		control.current = c;
 		ir("countdown");
-		cuentaAtras.current = setTimeout(() => void escuchar(c), COUNTDOWN_MS);
+		// `escuchar` abre el micrófono de inmediato: `warmupMs` es lo que se encarga de no llegar a
+		// "listening" antes de tiempo, no un `setTimeout` previo aquí.
+		void escuchar(c);
 	};
 
 	const sinMic = hideMic || sinMicrofono;

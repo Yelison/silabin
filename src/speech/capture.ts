@@ -9,6 +9,21 @@ export type ListenResult =
 export type Listener = {
 	listen(opts?: {
 		onLevel?(rms: number): void;
+		/**
+		 * Se llama una sola vez, exactamente cuando el micrófono está listo para medir Y ya pasó
+		 * `warmupMs` desde la llamada (lo que tarde más manda). Antes de este instante no llega
+		 * ningún frame: quien escucha puede usarlo para pasar su UI de "preparando" a "escuchando"
+		 * sin arriesgarse a que sea antes de tiempo.
+		 */
+		onReady?(): void;
+		/**
+		 * Colchón mínimo (P7) desde la llamada a `listen` antes de que un frame cuente para el VAD.
+		 * La preparación del micrófono (permiso, `AudioContext`, analizador) ocurre en paralelo con
+		 * este colchón, no después: si tarda más que `warmupMs` (como en iOS Safari, medido en
+		 * dispositivo real), se espera a que esté lista; si tarda menos, se espera igual a que se
+		 * cumpla `warmupMs`. Por defecto 0 (sin colchón forzado, el comportamiento previo).
+		 */
+		warmupMs?: number;
 		signal?: AbortSignal;
 	}): Promise<ListenResult>;
 };
@@ -65,6 +80,11 @@ function getUserMediaDelNavegador():
  * No se graba nada: solo se mide la energía de cada frame y se descarta. El analizador se conecta
  * a `ctx.destination` (en silencio) porque en WebKit/iOS Safari un `AnalyserNode` fuera del grafo
  * que llega hasta destination no procesa audio real y siempre mide silencio.
+ *
+ * `getUserMedia()` puede tardar 800-1700 ms en dispositivos reales (medido en iOS Safari):
+ * `warmupMs` corre en paralelo con esa preparación, no en serie. `onReady` avisa cuando ambas
+ * cosas se cumplen (mic listo y colchón agotado) y es el único instante desde el que un frame
+ * puede llegar a contar para el VAD.
  */
 export function createMicListener(deps?: {
 	getUserMedia?: (c: MediaStreamConstraints) => Promise<MediaStream>;
@@ -80,10 +100,26 @@ export function createMicListener(deps?: {
 			const signal = opts?.signal;
 			if (signal?.aborted) return { kind: "aborted" };
 
+			// El colchón (P7) corre desde ya, en paralelo con la apertura del micrófono: gana el que
+			// tarde más (Ruling post-PR). Se arranca antes de `getUserMedia` para que de verdad sean
+			// concurrentes, no en serie.
+			const warmupMs = opts?.warmupMs ?? 0;
+			let warmupListo = warmupMs <= 0;
+			let warmupTimer: ReturnType<typeof setTimeout> | undefined;
+			const warmup: Promise<void> = warmupListo
+				? Promise.resolve()
+				: new Promise((res) => {
+						warmupTimer = setTimeout(() => {
+							warmupListo = true;
+							res();
+						}, warmupMs);
+					});
+
 			let stream: MediaStream;
 			try {
 				stream = await getUserMedia(CONSTRAINTS);
 			} catch (e) {
+				clearTimeout(warmupTimer);
 				return { kind: "unavailable", reason: razonDeFallo(e) };
 			}
 
@@ -131,6 +167,17 @@ export function createMicListener(deps?: {
 				silencioso.gain.value = 0;
 				analyser.connect(silencioso);
 				silencioso.connect(ctx.destination);
+
+				if (!warmupListo) {
+					const espera = await Promise.race([
+						warmup.then(() => "listo" as const),
+						cancelacion.then(() => "aborto" as const),
+					]);
+					if (espera === "aborto") return { kind: "aborted" };
+				}
+				if (abortado) return { kind: "aborted" };
+				opts?.onReady?.();
+
 				const buffer = new Float32Array(analyser.fftSize);
 				return await new Promise<ListenResult>((resolve, reject) => {
 					let vad = createVad(now());
@@ -151,6 +198,7 @@ export function createMicListener(deps?: {
 				return { kind: "unavailable", reason: "error" };
 			} finally {
 				if (timer !== undefined) clearInterval(timer);
+				clearTimeout(warmupTimer);
 				signal?.removeEventListener("abort", alAbortar);
 				for (const pista of stream.getTracks()) {
 					try {

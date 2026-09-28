@@ -10,7 +10,12 @@ const FRAME = 50;
 
 /** Un micrófono falso: 2 pistas, un contexto que anota `close` y un analizador con nivel programable. */
 function montar(
-	opciones: { fallaEnFrame?: number; suspendido?: boolean } = {},
+	opciones: {
+		fallaEnFrame?: number;
+		suspendido?: boolean;
+		/** Cuánto tarda `getUserMedia` en resolver, para simular una preparación lenta. */
+		demoraGetUserMediaMs?: number;
+	} = {},
 ) {
 	let t = 0;
 	let nivel = 0.001;
@@ -45,7 +50,14 @@ function montar(
 		destination,
 		close,
 	} as unknown as AudioContext;
-	const getUserMedia = vi.fn(async (_c: MediaStreamConstraints) => stream);
+	const getUserMedia = vi.fn(async (_c: MediaStreamConstraints) => {
+		if (opciones.demoraGetUserMediaMs !== undefined) {
+			await new Promise<void>((res) => {
+				setTimeout(res, opciones.demoraGetUserMediaMs);
+			});
+		}
+		return stream;
+	});
 	const listener = createMicListener({
 		getUserMedia,
 		createAudioContext: () => ctx,
@@ -312,6 +324,94 @@ describe("createMicListener", () => {
 		await expect(listener.listen()).resolves.toEqual({
 			kind: "unavailable",
 			reason: "error",
+		});
+	});
+
+	describe("warmupMs (post-PR: la preparación corre en paralelo con el colchón)", () => {
+		it("preparación más lenta que warmupMs: ni onReady ni los frames llegan hasta que el micrófono esté listo, aunque ya pasó el colchón", async () => {
+			const m = montar({ demoraGetUserMediaMs: 500 });
+			const onReady = vi.fn();
+			const niveles: number[] = [];
+			const p = m.listener.listen({
+				warmupMs: 200,
+				onReady,
+				onLevel: (r) => niveles.push(r),
+			});
+			await vi.advanceTimersByTimeAsync(200);
+			expect(onReady).not.toHaveBeenCalled();
+			expect(niveles).toHaveLength(0);
+			await vi.advanceTimersByTimeAsync(299);
+			expect(onReady).not.toHaveBeenCalled();
+			expect(niveles).toHaveLength(0);
+			await vi.advanceTimersByTimeAsync(1);
+			await dejarAbierto();
+			expect(onReady).toHaveBeenCalledTimes(1);
+			await m.ticks(0.001, 60);
+			await expect(p).resolves.toEqual({ kind: "silence" });
+			expect(niveles.length).toBeGreaterThan(0);
+		});
+
+		it("preparación más rápida que warmupMs: se espera igual al colchón completo antes de dar onReady", async () => {
+			const m = montar();
+			const onReady = vi.fn();
+			const p = m.listener.listen({ warmupMs: 300, onReady });
+			await dejarAbierto();
+			expect(onReady).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(299);
+			expect(onReady).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(1);
+			expect(onReady).toHaveBeenCalledTimes(1);
+			await m.ticks(0.001, 60);
+			await expect(p).resolves.toEqual({ kind: "silence" });
+		});
+
+		it("abortar durante el colchón (con el micrófono ya listo) da aborted, sin onReady, y cierra todo", async () => {
+			const m = montar();
+			const ac = new AbortController();
+			const onReady = vi.fn();
+			const p = m.listener.listen({
+				signal: ac.signal,
+				warmupMs: 300,
+				onReady,
+			});
+			await dejarAbierto();
+			ac.abort();
+			await expect(p).resolves.toEqual({ kind: "aborted" });
+			expect(onReady).not.toHaveBeenCalled();
+			for (const pista of m.pistas) expect(pista.stop).toHaveBeenCalledTimes(1);
+			expect(m.close).toHaveBeenCalledTimes(1);
+			expect(vi.getTimerCount()).toBe(0);
+		});
+
+		it("abortar mientras getUserMedia está pendiente, con warmupMs, no deja el temporizador del colchón pendiente", async () => {
+			const pistas = [{ stop: vi.fn() }];
+			let entregar: (s: MediaStream) => void = () => {};
+			const listener = createMicListener({
+				getUserMedia: () =>
+					new Promise<MediaStream>((res) => {
+						entregar = res;
+					}),
+				createAudioContext: () => {
+					throw new Error("no debería crearse");
+				},
+			});
+			const ac = new AbortController();
+			const p = listener.listen({ signal: ac.signal, warmupMs: 300 });
+			ac.abort();
+			entregar({ getTracks: () => pistas } as unknown as MediaStream);
+			await expect(p).resolves.toEqual({ kind: "aborted" });
+			expect(pistas[0]?.stop).toHaveBeenCalledTimes(1);
+			expect(vi.getTimerCount()).toBe(0);
+		});
+
+		it("sin warmupMs, onReady llega en cuanto el micrófono está listo (comportamiento previo intacto)", async () => {
+			const m = montar();
+			const onReady = vi.fn();
+			const p = m.listener.listen({ onReady });
+			await dejarAbierto();
+			expect(onReady).toHaveBeenCalledTimes(1);
+			await m.ticks(0.001, 60);
+			await expect(p).resolves.toEqual({ kind: "silence" });
 		});
 	});
 });

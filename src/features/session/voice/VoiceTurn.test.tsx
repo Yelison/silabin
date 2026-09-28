@@ -86,6 +86,8 @@ async function montar(
 		async (o?: {
 			signal?: AbortSignal;
 			onLevel?(r: number): void;
+			onReady?(): void;
+			warmupMs?: number;
 		}): Promise<ListenResult> => {
 			orden.push("listen");
 			if (o?.signal !== undefined) senales.push(o.signal);
@@ -96,6 +98,14 @@ async function montar(
 					);
 				});
 			}
+			// Simula la preparación real del micrófono (capture.ts): se llama de inmediato, pero
+			// `onReady` (y el resultado) no llegan hasta que pasa `warmupMs`, como el colchón P7.
+			if (o?.warmupMs !== undefined && o.warmupMs > 0) {
+				await new Promise<void>((res) => {
+					setTimeout(res, o.warmupMs);
+				});
+			}
+			o?.onReady?.();
 			const r = resultados[Math.min(n, resultados.length - 1)];
 			n += 1;
 			return r ?? { kind: "aborted" as const };
@@ -151,16 +161,51 @@ async function turno() {
 }
 
 describe("VoiceTurn: el turno", () => {
-	it("V5: al pulsar suena audio.stop() antes que listen, y listen espera a COUNTDOWN_MS", async () => {
+	it("V5 (post-PR): audio.stop() suena y listen se llama de inmediato, con warmupMs: COUNTDOWN_MS (el micrófono se prepara en paralelo con la cuenta atrás, no después)", async () => {
 		const t = await montar();
 		fireEvent.click(mic() as HTMLElement);
 		expect(t.audio.stop).toHaveBeenCalledTimes(1);
-		expect(t.listen).not.toHaveBeenCalled();
-		await avanzar(COUNTDOWN_MS - 1);
-		expect(t.listen).not.toHaveBeenCalled();
-		await avanzar(1);
 		expect(t.listen).toHaveBeenCalledTimes(1);
 		expect(t.orden).toEqual(["stop", "listen"]);
+		const opts = t.listen.mock.calls[0]?.[0];
+		expect(opts?.warmupMs).toBe(COUNTDOWN_MS);
+		expect(typeof opts?.onReady).toBe("function");
+	});
+
+	it("la fase no pasa a listening hasta que el listener avisa con onReady, aunque ya pasó COUNTDOWN_MS", async () => {
+		const t = await montar();
+		const prep = (() => {
+			let resolver: () => void = () => {};
+			const promesa = new Promise<void>((res) => {
+				resolver = res;
+			});
+			return { promesa, resolver };
+		})();
+		const resultado = (() => {
+			let resolver: (v: ListenResult) => void = () => {};
+			const promesa = new Promise<ListenResult>((res) => {
+				resolver = res;
+			});
+			return { promesa, resolver };
+		})();
+		t.listen.mockImplementationOnce(async (o) => {
+			await prep.promesa;
+			o?.onReady?.();
+			return resultado.promesa;
+		});
+		fireEvent.click(mic() as HTMLElement);
+		await avanzar(COUNTDOWN_MS);
+		expect(mic()?.getAttribute("data-state")).toBe("countdown");
+		await act(async () => {
+			prep.resolver();
+			await vi.advanceTimersByTimeAsync(0);
+		});
+		expect(mic()?.getAttribute("data-state")).toBe("listening");
+		await act(async () => {
+			resultado.resolver({ kind: "silence" });
+			await vi.advanceTimersByTimeAsync(0);
+		});
+		expect(t.onVerdict).not.toHaveBeenCalled();
 	});
 
 	it("un segundo toque durante la cuenta atrás o la escucha no abre otra escucha ni corta el audio de nuevo", async () => {
@@ -371,12 +416,14 @@ describe("VoiceTurn: limpieza", () => {
 		expect(t.senales[0]?.aborted).toBe(true);
 	});
 
-	it("desmontar durante la cuenta atrás cancela: nunca se llama a listen", async () => {
-		const t = await montar();
+	it("desmontar durante la cuenta atrás (post-PR: listen ya se llamó, en paralelo) aborta la señal y no deja timers", async () => {
+		const t = await montar({ colgado: true });
 		fireEvent.click(mic() as HTMLElement);
+		expect(t.listen).toHaveBeenCalledTimes(1);
+		expect(t.senales[0]?.aborted).toBe(false);
 		t.unmount();
-		await avanzar(COUNTDOWN_MS * 3);
-		expect(t.listen).not.toHaveBeenCalled();
+		expect(t.senales[0]?.aborted).toBe(true);
+		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it("un resultado que llega tras desmontar no da veredicto", async () => {
