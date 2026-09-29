@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import manifest from "@/app/manifest";
+import { THEME_COLORS } from "@/app/theme-colors";
 
 describe("manifest", () => {
 	it("H1: devuelve los campos del contrato", () => {
@@ -12,8 +13,8 @@ describe("manifest", () => {
 		expect(m.display).toBe("standalone");
 		expect(m.orientation).toBe("any");
 		expect(m.start_url).toBe("/");
-		expect(m.background_color).toBe("#fff8ec");
-		expect(m.theme_color).toBe("#f5b83d");
+		expect(m.background_color).toBe(THEME_COLORS.surface);
+		expect(m.theme_color).toBe(THEME_COLORS.action);
 		expect(m.icons?.map((i) => i.sizes)).toEqual(
 			expect.arrayContaining(["192x192", "512x512"]),
 		);

@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
+import { THEME_COLORS } from "@/app/theme-colors";
 
 /**
- * Manifiesto de la PWA. Los colores son los de `surface` y `action`
- * (ver `src/app/globals.css`, sección `@theme inline`).
+ * Manifiesto de la PWA. Los colores son los de `surface` y `action`, que viven en
+ * `src/app/theme-colors.ts` (y en `@theme inline` de `src/app/globals.css`).
  *
  * Los iconos son el arte final del Plan 7. `app-512.png` se declara además `maskable`: el
  * personaje ocupa el centro y un lanzador con máscara solo recorta el fondo. La entrada
@@ -18,8 +19,8 @@ export default function manifest(): MetadataRoute.Manifest {
 		start_url: "/",
 		display: "standalone",
 		orientation: "any",
-		background_color: "#fff8ec",
-		theme_color: "#f5b83d",
+		background_color: THEME_COLORS.surface,
+		theme_color: THEME_COLORS.action,
 		icons: [
 			{
 				src: "/icons/app-192.png",
