@@ -487,6 +487,7 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 6 construidos.
 | ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | 7 | **Identidad visual (D24):** integrar el arte que el autor genera con `docs/arte-plan-7-prompts.md` (compañero, fondos, pegatinas, trofeo, rastros, **la boca**, iconos), paleta final, y la **lista de verificación en iPad** (`docs/checklist-ipad.md`) sobre la versión final | La versión con cara propia, probada en dispositivo real |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
+| Idea aparcada | **Objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa), como capas transparentes ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor y un punto de anclaje por compañero; ver el ledger del Plan 7 | Personalización del compañero |
 
 > **Recordatorio para el Plan 7:** al empezarlo, instala el plugin
 > `frontend-design@claude-plugins-official` (`/plugin install

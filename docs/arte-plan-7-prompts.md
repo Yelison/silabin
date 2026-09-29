@@ -22,8 +22,8 @@ todos.
 > y 100 estrellas **no llevan el número escrito**, y la interfaz tampoco lo pinta (V6, spec
 > §9: el niño no ve texto). La serie se reconoce porque crece en tamaño y en adornos.
 
-**Compañeros decididos con el autor (D33):** un **pollito** (`companion:first`, también es el
-icono de la app) y un **zorrito** (`companion:second`).
+**Compañeros (D36, sustituye a D33):** un **loro** (`companion:first`, también es el icono de la
+app) y un **elefantito** (`companion:second`). Antes eran un pollito y un zorrito.
 
 **Tamaños:** si el chat no puede dar el tamaño exacto, vale lo más parecido: un fondo de
 1024 × 1536 o una pieza cuadrada de 1024 × 1024 sirven. El script recorta al centro y reduce.
@@ -56,10 +56,10 @@ el logro `ten-sessions` («Gorra del compañero», 10 sesiones).
 
 | Fichero | Tamaño | Sustituye a | Descripción para el prompt |
 |---|---|---|---|
-| `companion-1.png` | 1024 × 1024, transparente | `companion:first` (emoji 🐣) | Un personaje pequeño, redondeado y tierno (por ejemplo un pollito), de cuerpo entero, de frente, sonriendo, sin nada en la cabeza. Colores cálidos, amarillo y naranja suave. |
-| `companion-1-gorra.png` | 1024 × 1024, transparente | `companion:first` + logro `ten-sessions` | El mismo personaje, idéntico, con una gorra de béisbol azul suave puesta, sin ningún texto ni logotipo en la gorra. |
-| `companion-2.png` | 1024 × 1024, transparente | `companion:second` (emoji 🦊) | Un segundo personaje distinto del primero (por ejemplo un zorrito), redondeado y tierno, de cuerpo entero, de frente, sonriendo, sin nada en la cabeza. Naranja suave y crema, sin rojo intenso. |
-| `companion-2-gorra.png` | 1024 × 1024, transparente | `companion:second` + logro `ten-sessions` | El mismo zorrito, idéntico, con una gorra de béisbol azul suave puesta, sin ningún texto ni logotipo. |
+| `companion-1.png` | 1024 × 1024, transparente | `companion:first` (respaldo 🦜) | Un loro pequeño, redondeado y tierno, de cuerpo entero, de frente, sonriendo con el pico entreabierto, alas pegadas al cuerpo y nada en la cabeza. Amarillo cálido en el cuerpo y azul suave en alas y cola, sin rojo ni verde intensos. |
+| `companion-1-gorra.png` | 1024 × 1024, transparente | `companion:first` + logro `ten-sessions` | El mismo loro, idéntico, con una gorra de béisbol naranja suave puesta, sin ningún texto ni logotipo en la gorra. |
+| `companion-2.png` | 1024 × 1024, transparente | `companion:second` (respaldo 🐘) | Un elefantito pequeño, redondeado y tierno, de la misma colección que el loro y del mismo tamaño en el cuadro, de cuerpo entero, de frente, sonriendo, orejas grandes, trompa caída y nada en la cabeza. Gris azulado suave y lila claro, sin rojo ni verde intensos. |
+| `companion-2-gorra.png` | 1024 × 1024, transparente | `companion:second` + logro `ten-sessions` | El mismo elefantito, idéntico, con una gorra de béisbol amarilla suave puesta, sin ningún texto ni logotipo. |
 
 ## 2. Fondos
 
@@ -134,7 +134,7 @@ uniforme, relleno liso sin brillo, sin fondo, legible a 72 px. Sin rojo ni verde
 | `ui-done.png` | 512 × 512, transparente | botón «Listo» de `trace` (emoji 👍) | Un pulgar hacia arriba amable, redondeado, de color piel cálido. Sin verde. |
 | `ui-gallery.png` | 512 × 512, transparente | botón «Mis premios» del mapa (emoji 🎁) | Un regalo pequeño con lazo, en amarillo y azul suave. |
 | `ui-lock.png` | 512 × 512, transparente | unidad bloqueada del mapa y cosméticos por descubrir (emoji 🔒) | Un candado pequeño y redondeado, cerrado, en gris azulado suave, con el arco grueso. Amable, nada amenazante. |
-| `app-512.png` | 1024 × 1024 o 512 × 512, opaco | `public/icons/app-512.png`, `app-192.png` y `apple-touch-icon.png` («S» provisional) | Icono de la app: el pollito (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea), **ocupando el 70 % central** (zona segura de icono enmascarable). Sin texto. **Estilo 3D del chat de ilustraciones, no plano.** |
+| `app-512.png` | 1024 × 1024 o 512 × 512, opaco | `public/icons/app-512.png`, `app-192.png` y `apple-touch-icon.png` («S» provisional) | Icono de la app: el loro (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea), **ocupando el 70 % central** (zona segura de icono enmascarable). Sin texto. **Estilo 3D del chat de ilustraciones, no plano.** |
 
 Solo hace falta `app-512.png` (V5): el script saca de él los de 192 y 180 px
 (`apple-touch-icon.png`). Ya no se pide un `app-192.png` aparte.

@@ -14,7 +14,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | Rulings de planificación (V1-V16) | **fijados** (abajo) |
 | Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
 | Arte (D32) | **pendiente**: lo genera el autor en `C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Bloquea la T4 y las siguientes, no la T1 ni la T3 |
-| Ejecución | en curso: T1 hecha (2026-09-29) |
+| Ejecución | en curso: T1 y T2 hechas (2026-09-29) |
 
 ## Decisiones tomadas con el autor (2026-09-29)
 
@@ -24,6 +24,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | D33 | **Compañeros: pollito (`companion:first`) y zorrito (`companion:second`)**, los que sugerían los marcadores. Los prompts no cambian |
 | D34 | **La paleta final se deriva del arte.** Una tarea ajusta los tokens de `globals.css` para que casen con los compañeros y los fondos, con una vista previa (`/dev/arte`) que el autor aprueba. Un test automático exige el contraste AA |
 | D35 | **La prueba manual del Plan 6 no se hizo** (ni el despliegue en Vercel). Sus 11 puntos y los dos añadidos entran en `docs/checklist-ipad.md`, y hay una sola pasada en el dispositivo, sobre la versión final desplegada por el autor (D29). El README decía que faltaba el PR del Plan 6, pero el PR #7 ya estaba fusionado |
+| D36 | **Los compañeros pasan a ser un loro (`companion:first`, icono de la app) y un elefantito (`companion:second`)**, en lugar de pollito y zorrito (D33, sustituida). Por qué: encarnan «escuchar y repetir sonidos» (loro = `say-it`, orejas grandes = `listen-tap` y `hear-it`); el loro va amarillo y azul para respetar «sin rojo ni verde intensos». Las gorras se mantienen (naranja suave y amarilla suave, por contraste con cada animal). Los nombres de fichero no cambian. Prompts en `docs/arte-plan-7-prompts.md`. **Pendiente de código (T4):** emojis de respaldo en `visuals.ts` 🐣→🦜 y 🦊→🐘, con sus asertos (AR2, AR3, AR6-AR8 y los de rewards/EndScreen que los nombren) |
 
 ## Rulings de planificación (prefijo V)
 
@@ -146,7 +147,7 @@ El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
 | Tarea | Estado | Rondas | Mutaciones supervivientes |
 |---|---|---|---|
 | 1 | **completa** (`6a73cc3`) | 0 | 0 (las 2 mutaciones mueren) |
-| 2 | pendiente | | |
+| 2 | **completa** (`5629e15`) | 0 | 0 (las 4 mutaciones mueren) |
 | 3 | pendiente | | |
 | 4 | pendiente (precondición D32) | | |
 | 5 | pendiente | | |
@@ -175,3 +176,12 @@ Sin conflictos que exijan `Ruling:` antes de la T1.
 - Task 1: minor (deferred): docstring de `optimizar-arte.py:118` dice «cuenta» donde quiere decir «lista»; comentario de `manifest.ts` (~l. 9) redundante tras quitar la «S»
 - Task 1: minor (deferred): la escritura no es atómica (disco lleno a mitad deja un lote parcial); V4 solo cubre la validación
 - Nota: los tests del script tardan ~30 s (method=6); la T4 lanza el script en segundo plano.
+- Task 2: complete (commits 4131a26..5629e15, review clean; effort high, 0 rondas de corrección, 4 mutaciones muertas: AR5, AR7, AR9, AR3)
+- Task 2: minor (deferred): `cosmeticVisual` usa `COSMETIC_VISUALS[id] ?? …` (visuals.ts:85-89), así que `cosmeticVisual("toString")` devuelve una función; igualar con `Object.hasOwn` como `rewardArt`. No se dispara hoy (los ids vienen de `resolveEquipped`)
+- Task 2: minor (deferred): cast `REWARD_ART[rewardId] as Art` evitable (visuals.ts ~121)
+- Task 2: minor (deferred): `withCap` reutiliza el emoji del compañero: si falla `companion-N-gorra.webp`, el respaldo es el animal sin gorra (así lo dice el brief)
+- Task 2: minor (deferred): `className="block"` en `TrailLayer` (~93) choca con `inline-flex` del respaldo; solo cosmético
+- Task 2: minor (deferred): AR9 comprueba 2 de las 6 clases del `img` de fondo; no hay test de que la miniatura de fondo del álbum caiga al degradado tras `error`
+- Task 2: ⚠️ para T4/T5 (no verificable sin arte): `bg-espacio` detrás de texto del mapa (LE1-LE3), y `Companion` a 112 px junto al botón 🎁 de 72 px en `MapScreen`; `onError` con el arte ausente en `pnpm build`/e2e
+- Ruling: los emojis de respaldo se cambian en la T4, no ahora — la T2 ya está revisada y aprobada, y es una línea por compañero; si fuera un error, alguien ve 🐣 en vez de 🦜 solo cuando la imagen no carga
+- Idea aparcada (no es del Plan 7): **objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa) como capas transparentes sueltas, ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor, y resolver el anclaje por compañero. Va a «Después» del README
