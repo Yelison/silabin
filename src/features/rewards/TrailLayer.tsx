@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
+import { ArtImage } from "@/components/ArtImage";
 import { resolveEquipped } from "@/engine";
 import { useApp } from "@/features/app-context";
 import { cosmeticVisual } from "@/features/rewards/visuals";
@@ -31,14 +32,11 @@ export function TrailLayer() {
 	const prefersReducedMotion = useReducedMotion();
 	const equipped = resolveEquipped(rewards);
 	const visual = cosmeticVisual(equipped.trail);
-	const trailVisual = visual.slot === "trail" ? visual : null;
+	const particle = visual.slot === "trail" ? visual.particle : null;
 	const [particles, setParticles] = useState<Particle[]>([]);
 
 	const enabled =
-		trailVisual !== null &&
-		trailVisual.shape !== "none" &&
-		!prefersReducedMotion &&
-		!reducedCelebrations;
+		particle !== null && !prefersReducedMotion && !reducedCelebrations;
 
 	useEffect(() => {
 		if (!enabled) {
@@ -68,9 +66,7 @@ export function TrailLayer() {
 		};
 	}, [enabled]);
 
-	if (!enabled || trailVisual === null) return null;
-
-	const emoji = trailVisual.emoji;
+	if (!enabled || particle === null) return null;
 
 	return (
 		<div
@@ -96,9 +92,8 @@ export function TrailLayer() {
 							setParticles((prev) => prev.filter((x) => x.id !== p.id))
 						}
 						style={{ position: "fixed", left: p.x, top: p.y }}
-						className="text-2xl"
 					>
-						{emoji}
+						<ArtImage art={particle} size={28} className="block" />
 					</motion.span>
 				))}
 			</AnimatePresence>

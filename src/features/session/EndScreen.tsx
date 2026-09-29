@@ -2,10 +2,11 @@
 
 import { MotionConfig, motion } from "motion/react";
 import { useEffect, useRef } from "react";
+import { ArtImage } from "@/components/ArtImage";
 import { REWARDS, type Reward } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
 import { Companion } from "@/features/rewards/Companion";
-import { rewardIcon } from "@/features/rewards/visuals";
+import { rewardArt } from "@/features/rewards/visuals";
 
 function etiquetaEstrellas(n: number): string {
 	return n === 1 ? "1 estrella" : `${n} estrellas`;
@@ -18,7 +19,7 @@ const REBOTE = {
 };
 
 /**
- * La celebración del final: las estrellas ganadas y, si hay, un icono por logro nuevo, más el
+ * La celebración del final: las estrellas ganadas y, si hay, la pieza de cada logro nuevo, más el
  * compañero equipado. El nombre del logro es para el adulto y solo va en `aria-label`. Dura
  * menos de 4 s y un toque en cualquier sitio la cierra.
  *
@@ -72,7 +73,7 @@ export function EndScreen(props: { onDone: () => void }) {
 				}}
 				className="flex min-h-screen w-full flex-col items-center justify-center gap-10 p-6"
 			>
-				<Companion />
+				<Companion size={160} />
 				{reducedCelebrations ? (
 					<span
 						role="img"
@@ -101,9 +102,8 @@ export function EndScreen(props: { onDone: () => void }) {
 									role="img"
 									data-reward={r.id}
 									aria-label={r.name}
-									className="text-7xl"
 								>
-									{rewardIcon(r.id)}
+									<ArtImage art={rewardArt(r.id)} size={96} />
 								</span>
 							) : (
 								<motion.span
@@ -111,11 +111,10 @@ export function EndScreen(props: { onDone: () => void }) {
 									role="img"
 									data-reward={r.id}
 									aria-label={r.name}
-									className="text-7xl"
 									animate={REBOTE.animate}
 									transition={REBOTE.transition}
 								>
-									{rewardIcon(r.id)}
+									<ArtImage art={rewardArt(r.id)} size={96} />
 								</motion.span>
 							),
 						)}

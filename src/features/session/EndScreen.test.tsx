@@ -112,4 +112,40 @@ describe("EndScreen", () => {
 		expect(onDone).toHaveBeenCalledTimes(1);
 		expect(store.getState().summary).toBeNull();
 	});
+
+	it.each([[false], [true]])(
+		"AR12: cada logro nuevo pinta la pieza que desbloquea a 96 px, con su aria-label (reducedCelebrations=%s)",
+		async (reducida) => {
+			const { container } = await montar(
+				resumen(2, ["first-session", "stars:10"]),
+				{ reducedCelebrations: reducida },
+			);
+			const premios = container.querySelectorAll<HTMLElement>("[data-reward]");
+			expect(premios).toHaveLength(2);
+			const [primero, segundo] = premios;
+			expect(primero?.getAttribute("data-reward")).toBe("first-session");
+			expect(primero?.getAttribute("aria-label")).toBe(
+				REWARDS.find((r) => r.id === "first-session")?.name,
+			);
+			const img1 = primero?.querySelector("img");
+			expect(img1?.getAttribute("src")).toMatch(/\/bg-pradera\.webp$/);
+			expect(img1?.getAttribute("width")).toBe("96");
+			expect(segundo?.getAttribute("aria-label")).toBe(
+				REWARDS.find((r) => r.id === "stars:10")?.name,
+			);
+			const img2 = segundo?.querySelector("img");
+			expect(img2?.getAttribute("src")).toMatch(/\/sticker-10\.webp$/);
+			expect(img2?.getAttribute("width")).toBe("96");
+			if (reducida) {
+				expect(primero?.getAttribute("style")).toBeNull();
+				expect(segundo?.getAttribute("style")).toBeNull();
+			}
+		},
+	);
+
+	it("el compañero del final se pinta a 160 px", async () => {
+		const { container } = await montar(resumen(1));
+		const img = container.querySelector("[data-companion] img");
+		expect(img?.getAttribute("width")).toBe("160");
+	});
 });

@@ -52,7 +52,10 @@ async function storeConTrail(
 				reducedCelebrations: opciones.reducedCelebrations ?? false,
 			},
 			rewards: {
-				unlockedAt: { "word-reader": "2026-09-26T12:00:00.000Z" },
+				unlockedAt: {
+					"word-reader": "2026-09-26T12:00:00.000Z",
+					"first-syllable-voice": "2026-09-26T12:00:00.000Z",
+				},
 				equipped: { background: null, companion: null, trail: cosmeticId },
 			},
 		}),
@@ -310,6 +313,29 @@ describe("TrailLayer", () => {
 				'[data-testid="trail-layer"] span',
 			);
 			expect(nodos.length).toBeLessThanOrEqual(MAX_PARTICLES);
+		});
+	});
+
+	describe("AR13: la partícula es la imagen del rastro", () => {
+		it("con trail:estrellitas un pointerdown crea una partícula que es una imagen de 28 px, sin emoji", async () => {
+			const store = await storeConTrail("trail:estrellitas");
+			const { container } = render(
+				conProveedoresDefault(<TrailLayer />, store),
+			);
+			act(() => {
+				document.body.dispatchEvent(
+					new PointerEvent("pointerdown", {
+						bubbles: true,
+						clientX: 5,
+						clientY: 5,
+					}),
+				);
+			});
+			const capa = container.querySelector('[data-testid="trail-layer"]');
+			const img = capa?.querySelector("img");
+			expect(img?.getAttribute("src")).toMatch(/\/particle-estrellita\.webp$/);
+			expect(img?.getAttribute("width")).toBe("28");
+			expect(capa?.textContent).not.toContain("✨");
 		});
 	});
 
