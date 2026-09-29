@@ -170,10 +170,12 @@ en los bordes; nada importante se tapa porque el contenido va en las bandas).
 ## Pendiente (Plan 7, identidad visual)
 
 - **Bocas: el arte está aplazado.** No hay ningún `mouth-*.webp` (el autor rechazó dos veces el
-  arte fotorrealista; D21 pide una boca esquemática, no realista). `Mouth` pinta su dibujo
-  esquemático de respaldo por el `onError` y `/dev/arte` lo dice en una nota visible. Cuando haya
-  arte aprobado se rehace la sección 5 de `docs/arte-plan-7-prompts.md` y se publican los seis
-  (FI2 exige los seis o ninguno).
+  arte fotorrealista; D21 pide una boca esquemática, no realista). `BOCAS_PUBLICADAS = false`
+  (exportada de `Mouth.tsx`) hace que `Mouth` pinte siempre su dibujo esquemático, sin ningún
+  `<img>` ni petición, y `/dev/arte` lo dice en una nota visible. FI2 exige que no haya ningún
+  `mouth-*.webp` mientras esté en `false`, y las seis (menos de 30 KB) si está en `true`. Cuando
+  haya arte aprobado se rehace la sección 5 de `docs/arte-plan-7-prompts.md`, se publican los
+  seis y se pone `BOCAS_PUBLICADAS = true`.
 - **Glifos que quedan sin arte (V10):** 🔁 de «Repasar» (solo sale con el currículo agotado), ✓ del
   equipado y de «guardado», ✕ de salir (del adulto) y ★/☆ (glifos tipográficos con colores de
   token). Aceptados como `minor (deferred)`.
