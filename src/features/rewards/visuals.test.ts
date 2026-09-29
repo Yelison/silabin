@@ -98,6 +98,45 @@ describe("visuals", () => {
 		expect(rewardArt("inventado")).toEqual({ src: "", emoji: "🏅" });
 	});
 
+	// El respaldo tiene que casar con el arte: si la imagen no carga, el niño ve lo mismo en
+	// emoji (`five-vowels` pinta el elefantito, no el zorro que fue el marcador).
+	it.each([
+		["first-session", "🌄"],
+		["vowel-a", "✈️"],
+		["five-vowels", "🐘"],
+		["first-syllable-voice", "✨"],
+		["steady-hand", "🌌"],
+		["ten-sessions", "🧢"],
+		["word-reader", "🫧"],
+		["phase2-done", "🏆"],
+		["stars:10", "🌟"],
+		["stars:25", "🌟"],
+		["stars:50", "🌟"],
+		["stars:100", "🌟"],
+	] as const)("AR5: el emoji de respaldo de %s es %s", (id, emoji) => {
+		expect(rewardArt(id).emoji).toBe(emoji);
+	});
+
+	it("AR5: la tabla de respaldos cubre cada logro del motor", () => {
+		// Si sale un logro nuevo, este test obliga a añadirlo a la tabla de arriba.
+		const conocidos = new Set([
+			"first-session",
+			"vowel-a",
+			"five-vowels",
+			"first-syllable-voice",
+			"steady-hand",
+			"ten-sessions",
+			"word-reader",
+			"phase2-done",
+			"stars:10",
+			"stars:25",
+			"stars:50",
+			"stars:100",
+		]);
+		for (const reward of REWARDS) expect(conocidos.has(reward.id)).toBe(true);
+		expect(REWARDS.length).toBe(conocidos.size);
+	});
+
 	it("AR4: el emoji de respaldo de un logro nunca es una letra ni una cifra (el niño lee sonidos, no nombres)", () => {
 		for (const reward of REWARDS) {
 			const { emoji } = rewardArt(reward.id);

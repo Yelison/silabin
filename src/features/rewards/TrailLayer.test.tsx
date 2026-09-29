@@ -467,6 +467,20 @@ describe("TrailLayer: cursor de PC por rastro (V11)", () => {
 		expect(container.querySelector("img")).toBeNull();
 	});
 
+	it("RA6: cambiar directo de un rastro con cursor a otro cambia el cursor, sin pasar por trail:none", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		await act(async () => {
+			await store.getState().equip("trail:burbujas");
+		});
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:burbujas");
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe(
+			'url("/icons/cursor-burbuja.png") 16 16',
+		);
+	});
+
 	it("RA5: si el puntero pasa de coarse a fine, el cursor aparece sin volver a montar", async () => {
 		const mq = conPuntero("coarse");
 		const store = await storeConTrail("trail:estrellitas");
