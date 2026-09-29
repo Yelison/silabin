@@ -165,9 +165,20 @@ en los bordes; nada importante se tapa porque el contenido va en las bandas).
 
 ## Pendiente (Plan 7, identidad visual)
 
-- Bocas: el arte está aplazado (no hay ningún `mouth-*.webp`); `Mouth` pinta su dibujo
-  esquemático de respaldo. `/dev/arte` lo dice en una nota visible.
-- Paleta: aplicada y aprobada por el autor (2026-09-29, «SE VE BIEN»). Sigue abierta solo la
-  decisión de los ★ a 2.34 : 1 (ver «Abierto para el autor»): el autor no se pronunció aparte.
-- La lista de verificación en iPad/iPhone (`docs/checklist-ipad.md`) se escribe en el Plan 7,
-  sobre la versión con el arte final.
+- **Decisión abierta del autor: los ★ de `celebrate`.** Quedan a 2,34 : 1 sobre `card`, 2,22 : 1
+  sobre `surface` y 1,93 : 1 sobre `calm` (ver «Abierto para el autor»). Opciones: aceptarlo tal
+  cual (van con un número, la pegatina o la forma de ★ llenas y vacías, y el `aria-label` de la
+  unidad dice las estrellas) o pasar a un ocre oscuro (~`#C47A00`, 3,4 : 1 sobre `card`), que ya
+  no se lee como celebración. Hay que decidirlo antes de la revisión final de la rama; el autor
+  aprobó la paleta (2026-09-29, «SE VE BIEN») pero no se pronunció aparte sobre esto.
+- **Bocas: el arte está aplazado.** No hay ningún `mouth-*.webp` (el autor rechazó dos veces el
+  arte fotorrealista; D21 pide una boca esquemática, no realista). `Mouth` pinta su dibujo
+  esquemático de respaldo por el `onError` y `/dev/arte` lo dice en una nota visible. Cuando haya
+  arte aprobado se rehace la sección 5 de `docs/arte-plan-7-prompts.md` y se publican los seis
+  (FI2 exige los seis o ninguno).
+- **Glifos que quedan sin arte (V10):** 🔁 de «Repasar» (solo sale con el currículo agotado), ✓ del
+  equipado y de «guardado», ✕ de salir (del adulto) y ★/☆ (glifos tipográficos con colores de
+  token). Aceptados como `minor (deferred)`.
+- **Prueba en dispositivo real:** `docs/checklist-ipad.md` (escrita; la pasa el autor sobre el
+  despliegue de Vercel). Ahí se juzga lo que no se ve en el navegador de escritorio: la boca a
+  128 px con un niño, el icono con máscara, el `theme_color` y el cursor con trackpad.

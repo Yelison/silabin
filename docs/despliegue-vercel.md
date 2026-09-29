@@ -21,7 +21,8 @@ que hay que hacer a mano.
 Después de que el despliegue esté listo, con un iPad real:
 
 1. **Se instala:** abrir la URL en Safari, tocar «Compartir» → «Añadir a pantalla de inicio».
-   El icono debe verse (la «S» provisional, S13) y el nombre debe ser «Silabín».
+   El icono debe verse (el loro del Plan 7) y el nombre debe ser «Silabín».
+   La lista completa para el autor es `docs/checklist-ipad.md`.
 2. **Funciona sin red:** abrir la app ya instalada, esperar a que cargue una vez con red, y
    luego activar el modo avión. Volver a abrir la app: debe entrar y enseñar la pantalla de
    inicio sin red (sirve `/` precacheado). No hace falta que funcione todo sin red — solo que

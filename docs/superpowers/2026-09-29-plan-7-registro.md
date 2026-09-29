@@ -13,8 +13,8 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | Decisiones con el autor (D32-D35) | **hechas** (2026-09-29, abajo) |
 | Rulings de planificación (V1-V16) | **fijados** (abajo) |
 | Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
-| Arte (D32) | **pendiente**: lo genera el autor en `C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Bloquea la T4 y las siguientes, no la T1 ni la T3 |
-| Ejecución | en curso: T1 y T2 hechas (2026-09-29) |
+| Arte (D32) | **hecho salvo las bocas** (2026-09-29): 21 de las 27 piezas integradas; las 6 bocas se aplazaron (Ruling de la T3) |
+| Ejecución | **T1-T6 hechas** (2026-09-29). Pendientes: decisión del autor sobre los ★, revisión final de la rama (Opus), despliegue y checklist del autor, y el PR. Ver «Estado final» al pie |
 
 ## Decisiones tomadas con el autor (2026-09-29)
 
@@ -148,10 +148,10 @@ El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
 |---|---|---|---|
 | 1 | **completa** (`6a73cc3`) | 0 | 0 (las 2 mutaciones mueren) |
 | 2 | **completa** (`5629e15`) | 0 | 0 (las 4 mutaciones mueren) |
-| 3 | pendiente | | |
-| 4 | pendiente (precondición D32) | | |
-| 5 | pendiente | | |
-| 6 | pendiente | | |
+| 3 | **completa** (`04017e4..21915fc`) | 0 | 1 (la mutación de deps `[cursor === null, fino]` de `TrailLayer`; diferida y cerrada después en `79566f6`) |
+| 4 | **completa** (`76c07b1..f80f3fb`) | 0 | 2 (una: 🦊 por 🐘 en `five-vowels`, cerrada en `79566f6`; la otra n/d, el ledger no la nombra) |
+| 5 | **completa** (`e3f53ca..943baa2`; `79566f6` viene de su primer despacho abortado) | 1 | 3 de 16 tras la revisión completa (b4 banda «Álbum», c1 lector de tokens, h atenuación de bloqueadas); las 3 cerradas en la ronda 1 y las 3 mueren en la repetición del revisor |
+| 6 | **completa** (commit de cierre; revisión de cumplimiento pendiente, la despacha el coordinador) | n/d | n/a (docs, sin mutación) |
 
 ## Escaneo previo (2026-09-29, sesión de ejecución 1)
 
@@ -232,3 +232,40 @@ Sin conflictos que exijan `Ruling:` antes de la T1.
 - Task 5: complete (commits e3f53ca..943baa2, review clean tras 1 ronda; effort medium; 1 ronda de corrección; mutaciones que sobreviven a la revisión completa: 3 de 16, todas cerradas en la ronda). Coordinador: `pnpm test` 1394 pasan; el ⚠️ del origen de `celebrate` resuelto (dominante de `sticker-10` medido con Pillow: #E99812 ≈ #E99810)
 - Task 5: minor (deferred): un `--color-x: #rrggbb` sin `;` antes de `}` lo ignora `leerTokens` (exige CSS mal formado); y `cierra = css.indexOf("}", abre)` corta en la primera `}` del bloque `@theme inline` si algún día hay una dentro
 - Task 5: ⚠️ ABIERTA para el autor: decidir si los ★ (`celebrate`) se quedan a 2,34:1 sobre `card`, 2,22:1 sobre `surface` y 1,93:1 sobre `calm`, o pasan a un ocre oscuro (~#C47A00, 3,4:1 sobre `card`); decidir antes de la revisión final de la rama
+- Task 6: complete (cierre del plan, docs; revisión de cumplimiento pendiente). `docs/checklist-ipad.md` creada (4 grupos: iPad I1-I15, iPhone H1-H5, PWA P1-P9, PC C1-C6, con tabla de resultados); README (estado, sección del Plan 7, hoja de ruta, D32-D36, `images/`, `optimizar-arte.py` y `/dev/arte`, siguientes pasos), poda al archivo, `diseno-visual.md` («Pendiente»), cabecera de `arte-plan-7-prompts.md` y comentario de `manifest.ts:7-9` corregido. Puertas: `pnpm test` 1394 pasan (1 omitido), typecheck, lint, `pnpm build` y `pnpm e2e` en verde
+- Ruling: la poda funde entradas en vez de resolverlas — para caber en 10 deudas al añadir las bocas y los minors del Plan 7, se fundieron la 5 (ilustraciones) con los glifos V10, y la 6, la 7 y la 9 (minors de los Planes 2, 3 y 6) en una; ninguna se pudo convertir en test ni cerrar sin tocar código. El texto original está en `docs/archivo-trampas-y-deuda.md`. Coste si es equivocado: una entrada fundida pierde detalle en el README, pero no en el archivo
+- Ruling: entra **una trampa viva** (`optimizar-arte.py` genera las seis bocas y no deben copiarse a `public/`) — FI2 acepta «ninguna o las seis», así que un test no la ve; coste si es equivocado: una línea del README de más
+- Ruling: el test del emoji de respaldo de `REWARD_ART` (menor de la T4) **no** va a la deuda porque ya lo cubre `79566f6` (`visuals.test.ts`, incluido `five-vowels` → 🐘); el brief lo daba por pendiente. Tampoco el test de cambio entre rastros (menor de la T3), ya en `TrailLayer.test.tsx`
+- Ruling: se corrige también la línea de `docs/despliegue-vercel.md` que aún decía «la «S» provisional» (el icono ya es el loro) y se enlaza el checklist — es un doc que ya era falso, una línea; coste si es equivocado: ninguno
+- Ruling: la lista del Plan 5 no aporta puntos al checklist — sus 8 puntos constan como confirmados (2026-09-28); solo se repiten I1, I3 y P8 porque cambian con el despliegue HTTPS real y con la PWA
+- Ruling: la decisión de los ★ **no se resuelve** aquí; consta como abierta en el README («Siguientes pasos») y en `diseno-visual.md` («Pendiente»)
+- Task 6: minor (deferred): la deuda 7 del README (minors del Plan 6) dice que faltan tests de `{capture, passive}` en `TrailLayer` y de la navegación del 🎁; no se ha reverificado si el Plan 7 (T3, `79566f6`) cubrió alguno. Comprobar al tocar `TrailLayer`
+
+## Estado final (2026-09-29)
+
+**El Plan 7 está ejecutado en su rama (T1-T6) y sin fusionar.**
+
+| Tarea | Estado | Rondas de corrección | Mutaciones supervivientes |
+|---|---|---|---|
+| 1 · Tubería del arte | completa | 0 | 0 |
+| 2 · El arte en la interfaz | completa | 0 | 0 |
+| 3 · Cursor y boca | completa | 0 | 1 (diferida, cerrada en `79566f6`) |
+| 4 · Integración del arte | completa | 0 | 2 (una cerrada en `79566f6`; la otra n/d) |
+| 5 · Paleta y legibilidad | completa | 1 | 3 (cerradas en la ronda) |
+| 6 · Cierre | completa, revisión pendiente | n/d | n/a |
+
+Puertas al cierre de la T6: `pnpm test` 1394 pasan (1 omitido), `typecheck`, `lint`,
+`pnpm build` y `pnpm e2e` en verde.
+
+**Lo que queda, en orden:**
+1. **⚠️ Decisión del autor sobre los ★ de `celebrate`** (2,34 : 1 sobre `card`, 2,22 : 1 sobre
+   `surface`, 1,93 : 1 sobre `calm`, o un ocre oscuro ~#C47A00). Abierta; decidir antes de la
+   revisión final.
+2. Revisión final de la rama (Opus).
+3. El autor despliega en Vercel y pasa `docs/checklist-ipad.md` (cierra la deuda 1 y la prueba
+   manual del Plan 6, D35). Los fallos vuelven a este ledger.
+4. PR de `feat/plan-7-identidad-visual` contra `main`.
+
+**Deuda viva que sale del plan** (README): las bocas aplazadas (deuda 5), los glifos sin arte
+(V10, en la 6) y los `minor (deferred)` de T1-T5 (deuda 8). Trampa viva: no publicar `mouth-*`
+desde `optimizar-arte.py`.

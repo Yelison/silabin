@@ -1,5 +1,13 @@
 # Prompts del arte del Plan 7 (D25)
 
+> **Estado (al cerrar el Plan 7, 2026-09-29): integrado, salvo las bocas.** Las secciones 1-4 y 6 (21
+> piezas) están publicadas en `public/`. La **sección 5 (la boca) queda «por rehacer»**: el autor
+> probó dos veces el arte y lo rechazó (fotorrealista y desagradable; D21 pide esquemática, no
+> realista), así que no hay ningún `mouth-*.webp` y la boca sigue siendo el SVG esquemático.
+> Antes de volver a generarla, decide si el estilo es otro (por ejemplo plano y esquemático, como
+> los iconos) y cuidado con `scripts/optimizar-arte.py`: genera las seis bocas si están los
+> 27 orígenes, y no deben copiarse a `public/` mientras no haya arte aprobado.
+
 Prompts para que el autor genere, mientras se ejecuta el Plan 6, el arte que hoy son marcadores
 provisionales (S21). El Plan 7 (`docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md`)
 los integra con `scripts/optimizar-arte.py`. `src/features/rewards/visuals.ts` sigue siendo el
