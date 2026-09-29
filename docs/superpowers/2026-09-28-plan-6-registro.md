@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-5/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-6/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -148,7 +148,8 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 | 3 | completa (commit `6bf2f44`), Approved | 0/5 | 0 (5 mutaciones: las 4 del brief más `acceptsModelTrace`, todas atrapadas y confirmadas por el revisor contra el diff) |
 | 4 | completa (commit `65f606a`), Approved | 0/5 | 0 (2 mutaciones del brief, ambas atrapadas, verificadas por el revisor contra la lógica del diff) |
 | 5 | completa (commits `06be294`..`5522970`), Needs fixes → fix round 1/5 → Approved | 1/5 | 0 (3 mutaciones del brief, todas atrapadas, verificadas por el revisor contra el diff) |
-| 6-11 | pendientes | | |
+| 6 | completa (commit `b525553`), Approved | 0/5 | 0 (1 mutación del brief, atrapada con `toBe` de identidad de referencia, verificada por el revisor contra el diff) |
+| 7-11 | pendientes | | |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -290,3 +291,16 @@ propio). El implementador original lo corrigió con el mismo patrón de `keydown
 `ADDRESSED` y que los dos listeners de `keydown` (puerta y panel) nunca coexisten — el de
 `ParentGate` se desactiva con `if (authenticated) return`, así que no hay doble disparo de
 `onClose` — sin ruptura nueva.
+
+**Ruling (Tarea 6):** `exportFilename` amplía su firma a `(date, childName)` — cambio no listado
+en «Files» del brief, pero necesario para cumplir D3 (el nombre del fichero exportado lleva el
+nombre del niño). — Por qué: el único punto de llamada (`ParentPanel.tsx`) se actualizó en el
+mismo diff, sin dejar llamadas rotas; el revisor lo verificó como riesgo nombrado. — Coste si
+fuera un error: cambio acotado a `download.ts` y su único punto de llamada.
+
+**Minor (deferred) de la Tarea 6:** el `<input type="file">` nativo del selector de importar no
+tiene garantizado un área táctil ≥44px (lo controla el navegador); verificar a ojo en el
+dispositivo real durante el QA visual del plan. No hay mensaje de éxito explícito tras
+«Reiniciar todo» más allá de cerrar el diálogo — el brief solo pide texto para `read-failed`, no
+es un incumplimiento. `DataSection.tsx` queda en 220 líneas (export/import/reset); vigilar si
+una tarea futura le añade más antes de dividirlo.
