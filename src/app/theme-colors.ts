@@ -7,5 +7,5 @@
  */
 export const THEME_COLORS = {
 	surface: "#fff8ec",
-	action: "#f5b83d",
+	action: "#f9be23",
 } as const;

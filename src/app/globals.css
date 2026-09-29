@@ -5,12 +5,14 @@
 }
 
 @theme inline {
-	/* Ver docs/diseno-visual.md: propuesta inicial, identidad final pendiente. */
+	/* Paleta final del Plan 7 (T5): ver docs/diseno-visual.md, con el arte del que sale cada
+	   valor. Todo token nuevo o cambiado pasa `src/app/tokens.test.ts`. */
 	--color-surface: #fff8ec;
 	--color-card: #ffffff;
 	--color-ink: #2b2a33;
 	--color-ink-soft: #6b6772;
-	--color-action: #f5b83d;
+	/* El amarillo del cuerpo del loro (#F9BE23 en `companion-1`); antes #F5B83D. */
+	--color-action: #f9be23;
 	--color-action-ink: #3a2a00;
 	--color-calm: #dcebfa;
 	/* Oscurecido desde #7FA7D6 (mismo tono azul) para llegar a 3:1 contra surface/card/calm. */
@@ -18,7 +20,8 @@
 	--color-mark: #ffe27a;
 	/* Oscurecido desde #C98A00 (mismo tono ámbar) para llegar a 3:1 contra surface/card/mark. */
 	--color-mark-border: #ac7600;
-	--color-celebrate: #ff9f1c;
+	/* El ámbar de las pegatinas y el trofeo (#E99810 en `sticker-10`); antes #FF9F1C. */
+	--color-celebrate: #e99810;
 	/* Tinta del trazo (Plan 4): un morado vivo, distinto del azul de la guía y del ámbar de
 	   `action`, para que el niño distinga sin duda lo que ha dibujado él de la guía. */
 	--color-trace-ink: #6a4cff;
