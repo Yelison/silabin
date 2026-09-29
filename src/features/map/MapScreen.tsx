@@ -4,10 +4,13 @@ import { BigButton } from "@/components/BigButton";
 import {
 	activeUnitId,
 	curriculum,
+	nextMilestone,
 	type ProgressState,
 	type TemplateId,
+	totalStars,
 	type Unit,
 	type UnitProgress,
+	unitProgress,
 } from "@/engine";
 import { AdultDoor } from "@/features/adult/AdultDoor";
 import { useApp } from "@/features/app-context";
@@ -33,6 +36,102 @@ function unidadesPorFase(): { phase: number; units: Unit[] }[] {
 }
 
 const FASES = unidadesPorFase();
+
+function horaHHMM(iso: string): string {
+	const fecha = new Date(iso);
+	const hh = String(fecha.getHours()).padStart(2, "0");
+	const mm = String(fecha.getMinutes()).padStart(2, "0");
+	return `${hh}:${mm}`;
+}
+
+/**
+ * ✓ discreto, para el adulto: no se toca ni compite con el aviso de fallo de guardado
+ * (`SaveWarning`, arriba a la derecha). Sin `lastSavedAt` o con `saveFailed` no hay nada que
+ * mostrar; el fallo ya lo cuenta `SaveWarning`.
+ */
+function SavedMark({
+	lastSavedAt,
+	saveFailed,
+}: {
+	lastSavedAt: string | null;
+	saveFailed: boolean;
+}) {
+	if (lastSavedAt === null || saveFailed) return null;
+	const etiqueta = `Guardado a las ${horaHHMM(lastSavedAt)}`;
+	return (
+		<span
+			role="img"
+			aria-label={etiqueta}
+			title={etiqueta}
+			className="fixed top-2 left-2 z-10 text-2xl text-ink-soft"
+		>
+			✓
+		</span>
+	);
+}
+
+/**
+ * El total de estrellas ganadas (un número, no texto para leer) y, mientras quede hito por
+ * delante, una barra hasta el próximo de `STAR_MILESTONES`. Pasado el último hito (100) solo
+ * queda el total.
+ */
+function StarCounter({
+	total,
+	milestone,
+}: {
+	total: number;
+	milestone: { from: number; to: number } | null;
+}) {
+	return (
+		<div className="flex flex-col items-center gap-2">
+			<span className="flex items-center gap-1 text-2xl font-semibold">
+				<span aria-hidden="true" className="text-celebrate">
+					★
+				</span>
+				<span>{total}</span>
+			</span>
+			{milestone !== null && (
+				<div
+					role="progressbar"
+					aria-valuemin={milestone.from}
+					aria-valuemax={milestone.to}
+					aria-valuenow={total}
+					className="h-2 w-40 overflow-hidden rounded-full bg-card"
+				>
+					<div
+						className="h-full rounded-full bg-celebrate"
+						style={{
+							width: `${((total - milestone.from) / (milestone.to - milestone.from)) * 100}%`,
+						}}
+					/>
+				</div>
+			)}
+		</div>
+	);
+}
+
+/**
+ * Avance de la unidad activa (S17): un punto lleno por ítem dominado, sin huecos vacíos —el
+ * niño ve lo ganado, no lo que falta. Con 0 dominados no se pinta nada (lo decide quien llama).
+ */
+function UnitDots({ mastered }: { mastered: number }) {
+	return (
+		<div
+			role="img"
+			aria-label={`${mastered} letras aprendidas`}
+			className="flex flex-wrap items-center justify-center gap-1"
+		>
+			{Array.from({ length: mastered }, (_, i) => (
+				<span
+					// biome-ignore lint/suspicious/noArrayIndexKey: puntos idénticos sin identidad propia
+					key={i}
+					aria-hidden="true"
+					className="h-3 w-3 rounded-full bg-calm"
+				/>
+			))}
+		</div>
+	);
+}
 
 function Estrellas({ n }: { n: number }) {
 	return (
@@ -93,7 +192,8 @@ function UnitButton(props: {
 /**
  * El mapa de unidades. Pinta lo que dice `progress.units` (el estado recalculado por el
  * motor, nunca el documento del disco tal cual) y no decide nada: solo avisa de qué se tocó.
- * No hay barras de dominio: el niño ve estrellas ganadas, no lo que le falta.
+ * No hay barras de dominio: el niño ve estrellas ganadas, no lo que le falta. La unidad activa
+ * sí muestra un punto lleno por ítem dominado (S17), sin huecos vacíos.
  */
 export function MapScreen(props: {
 	onStart: () => void;
@@ -102,14 +202,26 @@ export function MapScreen(props: {
 }) {
 	const { onStart, onOpenPanel, implemented = IMPLEMENTED_TEMPLATES } = props;
 	const progress: ProgressState = useApp((s) => s.progress);
+	const lastSavedAt = useApp((s) => s.lastSavedAt);
+	const saveFailed = useApp((s) => s.saveFailed);
 	const playable = isSessionPlayable(curriculum, progress, implemented);
-	const sinActiva = activeUnitId(curriculum, progress) === null;
+	const idActivo = activeUnitId(curriculum, progress);
+	const sinActiva = idActivo === null;
+	const avanceActivo =
+		idActivo === null ? null : unitProgress(curriculum, progress, idActivo);
+	const estrellas = totalStars(progress);
+	const hito = nextMilestone(estrellas);
 
 	return (
 		<main className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4">
+			<SavedMark lastSavedAt={lastSavedAt} saveFailed={saveFailed} />
 			<AdultDoor onOpen={onOpenPanel}>
 				<h1 className="text-center text-3xl font-bold">Silabín</h1>
 			</AdultDoor>
+			<StarCounter total={estrellas} milestone={hito} />
+			{avanceActivo !== null && avanceActivo.mastered > 0 && (
+				<UnitDots mastered={avanceActivo.mastered} />
+			)}
 			{FASES.map(({ phase, units }) => (
 				<section
 					key={phase}
