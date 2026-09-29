@@ -157,12 +157,17 @@ en los bordes; nada importante se tapa porque el contenido va en las bandas).
 - `celebrate` (los ★) no llega a 3 : 1 sobre `card` ni `surface` (2.34 y 2.22). Llegar
   obligaría a un ocre oscuro (~`#C47A00`, 3.4 : 1 sobre `card`), que ya no se lee como celebración. Los ★ acompañan
   a un número o a la pegatina y son grandes; se dejan así salvo que el autor pida otra cosa.
+- El ★ `celebrate` también se pinta sobre `calm` en las unidades hechas del mapa
+  (`Estrellas`, en `MapScreen.tsx`): 1.93 : 1 (antes, con `#FF9F1C`: 1.69). Va con la misma
+  decisión: la forma (★ llenas y vacías) y el `aria-label` de la unidad dicen las estrellas,
+  no el color.
 - `--color-*` no incluye un lila que case con el elefantito: nada lo pinta hoy sobre el fondo.
 
 ## Pendiente (Plan 7, identidad visual)
 
 - Bocas: el arte está aplazado (no hay ningún `mouth-*.webp`); `Mouth` pinta su dibujo
   esquemático de respaldo. `/dev/arte` lo dice en una nota visible.
-- Paleta: aplicada; pendiente solo de la aprobación del autor (puerta de la T5).
+- Paleta: aplicada y aprobada por el autor (2026-09-29, «SE VE BIEN»). Sigue abierta solo la
+  decisión de los ★ a 2.34 : 1 (ver «Abierto para el autor»): el autor no se pronunció aparte.
 - La lista de verificación en iPad/iPhone (`docs/checklist-ipad.md`) se escribe en el Plan 7,
   sobre la versión con el arte final.
