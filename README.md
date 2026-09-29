@@ -11,7 +11,7 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > **funcional** que faltaba: panel de padres con PIN, ajustes, importar el progreso, trazo en
 > minúsculas, recompensas y cosméticos (con marcadores provisionales), avance en el mapa,
 > «borrar» y «listo» en `trace`, PWA con service worker y pruebas e2e con Playwright. Hoy son
-> jugables las tres fases. 1312 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y
+> jugables las tres fases. 1322 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y
 > `pnpm e2e` en verde. **Falta**, en este orden: la revisión final de la rama con Opus, que el
 > autor **despliegue en Vercel** (D29) y haga la **prueba manual** (lista en
 > `docs/superpowers/2026-09-28-plan-6-registro.md`, sección «Prueba manual del autor») y abrir
@@ -46,7 +46,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1311 tests + 1 omitido (el de ficheros de audio)
+pnpm test        # Vitest: 1322 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
