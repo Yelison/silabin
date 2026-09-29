@@ -35,10 +35,26 @@ const SUPERFICIE = /\bbg-(card|surface|action|calm|mark)(?![\w/-])/;
 /** Lo que se pinta sin texto pero se tiene que ver: la barra, los puntos y las fichas de la galería. */
 const INDICADORES = '[role="progressbar"], [data-unit-dot], [data-cosmetic]';
 
+/** Una clase de opacidad que no sea la total: `opacity-60`, `opacity-[0.15]`, no `opacity-100`. */
+const ATENUADO = /\bopacity-(?!100(?![\w/-]))/;
+
+/**
+ * Una superficie con `opacity-*` propia o en un ancestro deja ver el fondo a su través: no es
+ * opaca. Se sube desde `n` hasta el fondo cosmético.
+ */
+function atenuadoHasta(n: Element): boolean {
+	for (let e: Element | null = n; e !== null; e = e.parentElement) {
+		if (e.hasAttribute("data-cosmetic-background")) return false;
+		if (ATENUADO.test(e.getAttribute("class") ?? "")) return true;
+	}
+	return false;
+}
+
 function tieneSuperficie(el: Element): boolean {
 	for (let n: Element | null = el; n !== null; n = n.parentElement) {
 		if (n.hasAttribute("data-cosmetic-background")) return false;
-		if (SUPERFICIE.test(n.getAttribute("class") ?? "")) return true;
+		if (SUPERFICIE.test(n.getAttribute("class") ?? "") && !atenuadoHasta(n))
+			return true;
 	}
 	return false;
 }
@@ -204,13 +220,16 @@ describe("legibilidad sobre el fondo (V13)", () => {
 		expect(sinSuperficie(container)).toEqual([]);
 	});
 
-	it("LE5: el ayudante no pasa en falso: solo `bg-card` sin opacidad cuenta, no `bg-calm-border` ni `bg-card/80`", () => {
+	it("LE5: el ayudante no pasa en falso: solo `bg-card` opaco cuenta, no `bg-calm-border`, `bg-card/80` ni una ficha con `opacity-*`", () => {
 		const raiz = document.createElement("div");
 		raiz.innerHTML = `
 			<div data-cosmetic-background="bg:espacio">
 				<div class="bg-calm-border"><span>borde</span></div>
 				<div class="bg-card/80"><span>translúcida</span></div>
 				<div class="rounded-card bg-card p-3"><span>superficie</span></div>
+				<div class="bg-card opacity-60"><span>ficha atenuada</span></div>
+				<div class="opacity-40"><div class="bg-card"><span>ficha bajo un atenuado</span></div></div>
+				<div class="bg-card"><span class="opacity-50">contenido atenuado</span></div>
 				<span>suelto</span>
 			</div>`;
 		document.body.append(raiz);
@@ -220,6 +239,9 @@ describe("legibilidad sobre el fondo (V13)", () => {
 			["texto «borde»", false],
 			["texto «translúcida»", false],
 			["texto «superficie»", true],
+			["texto «ficha atenuada»", false],
+			["texto «ficha bajo un atenuado»", false],
+			["texto «contenido atenuado»", true],
 			["texto «suelto»", false],
 		]);
 	});

@@ -158,6 +158,7 @@ function UnitButton(props: {
 	const stars = progress?.bestStars ?? 0;
 	const aparte = status === "active" && !playable;
 	const jugable = status === "active" && playable;
+	const atenuada = status === "locked" || aparte;
 
 	let label: string;
 	if (aparte) label = LLEGA_DESPUES;
@@ -167,7 +168,7 @@ function UnitButton(props: {
 
 	const estilo = {
 		done: "bg-calm",
-		locked: "bg-card text-ink-soft opacity-60",
+		locked: "bg-card text-ink-soft",
 		active: "bg-action ring-4 ring-action font-semibold",
 	}[status];
 
@@ -182,12 +183,20 @@ function UnitButton(props: {
 			onClick={() => {
 				if (jugable) onStart();
 			}}
-			className={`flex min-h-18 w-full items-center justify-between gap-3 rounded-2xl p-4 text-left text-xl ${estilo} ${aparte ? "opacity-50" : ""}`}
+			className={`flex min-h-18 w-full rounded-2xl p-4 text-left text-xl ${estilo}`}
 		>
-			<span>{unit.title}</span>
-			{status === "done" && <Estrellas n={stars} />}
-			{status === "locked" && <Icon name="lock" size={32} />}
-			{status === "active" && <span aria-hidden="true">▶</span>}
+			{/* Lo atenuado (bloqueada, o activa pero «llega después») baja la opacidad del
+			    contenido y no de la ficha: el fondo de la ficha sigue opaco (V13) y no deja ver
+			    el fondo equipado a través. */}
+			<span
+				data-dim={atenuada}
+				className={`flex w-full items-center justify-between gap-3 ${atenuada ? (aparte ? "opacity-50" : "opacity-60") : ""}`}
+			>
+				<span>{unit.title}</span>
+				{status === "done" && <Estrellas n={stars} />}
+				{status === "locked" && <Icon name="lock" size={32} />}
+				{status === "active" && <span aria-hidden="true">▶</span>}
+			</span>
 		</button>
 	);
 }
@@ -267,12 +276,11 @@ export function MapScreen(props: {
 				<BigButton
 					aria-label={playable ? "Repasar" : LLEGA_DESPUES}
 					aria-disabled={playable ? undefined : true}
-					className={playable ? "" : "opacity-50"}
 					onClick={() => {
 						if (playable) onStart();
 					}}
 				>
-					🔁
+					<span className={playable ? "" : "opacity-50"}>🔁</span>
 				</BigButton>
 			)}
 		</main>

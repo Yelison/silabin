@@ -321,7 +321,11 @@ describe("MapScreen", () => {
 		const clap = unidad("phase0:clap");
 		expect(clap.getAttribute("aria-label")).toBe(LLEGA_DESPUES);
 		expect(clap.getAttribute("aria-disabled")).toBe("true");
-		expect(clap.className).toMatch(/opacity/);
+		// La ficha sigue opaca (V13): lo que baja de opacidad es su contenido.
+		expect(clap.className).not.toMatch(/opacity/);
+		expect(clap.querySelector('[data-dim="true"]')?.className ?? "").toMatch(
+			/opacity-50/,
+		);
 		await userEvent.click(clap);
 		expect(onStart).not.toHaveBeenCalled();
 	});

@@ -318,7 +318,20 @@ function Pegatinas() {
 	);
 }
 
+/**
+ * Devuelve `true` solo en el navegador, tras hidratar. `Mouth` cae al dibujo esquemático con el
+ * `onError` de sus `<img>`, pero React no ve un error de carga que ocurre antes de hidratar: si
+ * el servidor pinta los `<img>` de fotogramas que no existen, se quedan rotos. Aquí las bocas
+ * se pintan ya en el cliente, como en la app (donde salen tras un toque, nunca del servidor).
+ */
+function useMontado(): boolean {
+	const [montado, setMontado] = useState(false);
+	useEffect(() => setMontado(true), []);
+	return montado;
+}
+
 function Bocas() {
+	const montado = useMontado();
 	return (
 		<section aria-labelledby="arte-bocas" className="flex flex-col gap-4">
 			<h2 id="arte-bocas" className="text-2xl font-bold">
@@ -338,7 +351,11 @@ function Bocas() {
 						key={forma}
 						className="flex flex-col items-center gap-1 rounded-card bg-surface p-3"
 					>
-						<Mouth shapes={[forma]} playing={false} />
+						{montado ? (
+							<Mouth shapes={[forma]} playing={false} />
+						) : (
+							<span className="size-32" />
+						)}
 						<span className="text-xs text-ink-soft">{forma}</span>
 					</li>
 				))}
