@@ -23,12 +23,18 @@ function leerTokens(css: string): Record<string, string> {
 	const abre = css.indexOf("{", inicio);
 	const cierra = css.indexOf("}", abre);
 	if (abre === -1 || cierra === -1) throw new Error("@theme inline sin cerrar");
-	const bloque = css.slice(abre + 1, cierra);
+	// Sin comentarios: un `--color-x:` citado en un comentario no es una declaración.
+	const bloque = css.slice(abre + 1, cierra).replace(/\/\*[\s\S]*?\*\//g, "");
 	const tokens: Record<string, string> = {};
+	// Toda declaración `--color-*` tiene que ser `#rrggbb`: una en `rgb()` u `oklch()` no la
+	// leería este test y se saltaría CO1 y CO2 en silencio.
 	for (const m of bloque.matchAll(
-		/--color-([a-z][a-z0-9-]*)\s*:\s*(#[0-9a-fA-F]{6})\s*;/g,
+		/--color-([a-z][a-z0-9-]*)\s*:\s*([^;]*);/g,
 	)) {
-		tokens[m[1] as string] = (m[2] as string).toLowerCase();
+		const valor = (m[2] as string).trim();
+		if (!/^#[0-9a-fA-F]{6}$/.test(valor))
+			throw new Error(`--color-${m[1]}: «${valor}» no es #rrggbb`);
+		tokens[m[1] as string] = valor.toLowerCase();
 	}
 	return tokens;
 }
@@ -162,5 +168,13 @@ describe("tokens de color (V14)", () => {
 		const tokens = leerTokens(sinInk);
 		expect(() => token(tokens, "ink")).toThrow(/--color-ink/);
 		expect(() => leerTokens("body { color: red; }")).toThrow(/@theme inline/);
+		// Un color que no es #rrggbb no se ignora: se rechaza.
+		const conRgb =
+			"@theme inline {\n\t--color-ink: #2b2a33;\n\t--color-danger: rgb(229 57 53);\n}";
+		expect(() => leerTokens(conRgb)).toThrow(/--color-danger/);
+		// ...y un color citado en un comentario no cuenta como declaración.
+		const comentado =
+			"@theme inline {\n\t/* antes --color-ink: rgb(0 0 0); */\n\t--color-ink: #2b2a33;\n}";
+		expect(leerTokens(comentado)).toEqual({ ink: "#2b2a33" });
 	});
 });

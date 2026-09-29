@@ -330,6 +330,20 @@ describe("MapScreen", () => {
 		expect(onStart).not.toHaveBeenCalled();
 	});
 
+	it("U7b: una unidad bloqueada atenúa su contenido (opacity-60), no la ficha, que sigue opaca", async () => {
+		const { unidad } = montar(await storeConDisco(() => {}));
+		const rimas = unidad("phase0:rhyme");
+		expect(rimas.getAttribute("data-status")).toBe("locked");
+		expect(rimas.className).toContain("bg-card");
+		expect(rimas.className).not.toMatch(/opacity/);
+		const contenido = rimas.querySelector('[data-dim="true"]');
+		expect(contenido?.className ?? "").toMatch(/\bopacity-60\b/);
+		// La activa jugable no se atenúa.
+		const clap = unidad("phase0:clap");
+		expect(clap.querySelector('[data-dim="true"]')).toBeNull();
+		expect(clap.querySelector('[data-dim="false"]')).not.toBeNull();
+	});
+
 	it("sin unidad activa ofrece el repaso, sujeto a la misma comprobación", async () => {
 		const store = await storeConDisco((doc) => {
 			todoHechoSalvoFase3(doc);

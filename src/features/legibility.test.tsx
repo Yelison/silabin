@@ -33,7 +33,8 @@ afterEach(cleanup);
 const SUPERFICIE = /\bbg-(card|surface|action|calm|mark)(?![\w/-])/;
 
 /** Lo que se pinta sin texto pero se tiene que ver: la barra, los puntos y las fichas de la galería. */
-const INDICADORES = '[role="progressbar"], [data-unit-dot], [data-cosmetic]';
+const INDICADORES =
+	'[role="progressbar"], [data-unit-dot], [data-cosmetic], [data-reward]';
 
 /** Una clase de opacidad que no sea la total: `opacity-60`, `opacity-[0.15]`, no `opacity-100`. */
 const ATENUADO = /\bopacity-(?!100(?![\w/-]))/;
@@ -188,6 +189,35 @@ describe("legibilidad sobre el fondo (V13)", () => {
 		).toBeGreaterThan(6);
 		const todo = revisar(container);
 		expect(todo.filter((r) => r.que.includes("✓"))).toHaveLength(3);
+		expect(sinSuperficie(container)).toEqual([]);
+	});
+
+	it("LE2b: con solo algunos logros ganados, las entradas «por descubrir» (atenuadas) siguen sobre la banda del álbum", async () => {
+		// `opacity-40` en la propia entrada la deja sin superficie propia: solo la banda del
+		// álbum la sostiene. Con todos los logros ganados eso nunca se pinta.
+		const store = await storeConEspacio((doc) => {
+			const ganado = "2026-09-26T12:00:00.000Z";
+			doc.rewards.unlockedAt = {
+				"vowel-a": ganado,
+				"steady-hand": ganado,
+			};
+		});
+		const { container } = render(
+			conProveedores(
+				store,
+				fakeAudio(),
+				<CosmeticBackground>
+					<RewardsScreen onClose={vi.fn()} />
+				</CosmeticBackground>,
+			),
+		);
+		const sinGanar = container.querySelectorAll(
+			'[data-reward][data-earned="false"]',
+		);
+		expect(sinGanar.length).toBeGreaterThan(3);
+		expect(
+			container.querySelectorAll('[data-reward][data-earned="true"]').length,
+		).toBeGreaterThan(0);
 		expect(sinSuperficie(container)).toEqual([]);
 	});
 
