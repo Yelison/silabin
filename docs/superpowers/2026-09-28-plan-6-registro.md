@@ -125,6 +125,7 @@ estado; `medium` para el resto.
 | 7 | Mapa: contador de estrellas, barra al hito, avance de la unidad, «guardado» (D31a) | UI · medium |
 | 8 | Recompensas: galería y equipar, cosméticos aplicados con marcadores provisionales, rastro (S10), celebraciones con Framer Motion (S4) | UI · medium |
 | 9 | PWA: Serwist, manifest, iconos (S13), actualización en inicio (S11), pasos de Vercel (D29) | config · medium |
+| 10 | completa (commit `72c04b7`), Approved | 0/5 | n/a (revisión de cumplimiento, sin mutación) |
 | 10 | e2e con Playwright (S12) | tests · medium |
 | 11 | Cierre: prompts del arte para el Plan 7 (D25), README y poda, lista de la prueba manual del autor | docs · medium |
 
@@ -384,3 +385,22 @@ del test N8 (ajeno a esta tarea) apareció una vez bajo la suite completa; 5 cor
 posteriores en verde y siempre pasa en aislamiento.
 
 Task 9: complete (commits `2021614`..`9d1e89b`, review clean, 2 minor deferred).
+
+**Tarea 10 (e2e con Playwright, J1-J4):** implementador y revisor en Sonnet, sin rondas de
+corrección; revisión de cumplimiento, sin mutación (la exige el brief solo para lógica).
+- **Ruling: semilla 7 en vez de 42** (S22) — con 42 la sesión no saca ningún `trace`; probadas
+  1, 7, 13, 2026 y 1234, solo la 7 da uno. No se fuerza el planificador. Si J1/J2 fallan con
+  `trazosDibujados` a 0, un nuevo consumidor de `Math.random` desplazó la secuencia: buscar
+  otra semilla. Coste si es un error: re-buscar la semilla.
+- **Defecto de la Tarea 9 destapado por J4 y corregido en 72c04b7:** `src/app/serwist/[path]/route.ts`
+  volvía a listar `public/**`, que Serwist ya precachea; `add-to-cache-list-conflicting-entries`
+  impedía evaluar el SW y en producción nunca se registraba. Ahora solo añade `/`. Solo lo cubre J4.
+- Desviaciones aceptadas por el revisor: botón de inicio por `aria-label="Empezar"`; J4 comprueba
+  la ilustración con `fetch` a `/images/palabras/sol.webp` desde caché sin red, no con `<img>`.
+- **Minor (deferred) de la Tarea 10:** solver solo probado con initial-sound, say-it, listen-tap
+  y trace (build, rhyme y demás sin ejercitar); errores de `dibujarGlifo` tragados sin
+  diagnóstico en el timeout (`solve.ts`); espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`;
+  J3 usa `mouse`; selectores acoplados a `data-state`; `reuseExistingServer` puede reutilizar
+  un build viejo en el 3100; J1/J2 solo miran `glifos[0]`. WebKit (`PW_WEBKIT=1`) sin probar.
+
+Task 10: complete (commit `72c04b7`, review clean, minors deferred).
