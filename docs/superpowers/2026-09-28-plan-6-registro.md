@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | **Tareas 1-11/11 completas** (`/model sonnet`, `superpowers:subagent-driven-development`). Faltan: revisión final de la rama (Opus, `high`), despliegue y prueba manual del autor, PR |
+| Ejecución | **Tareas 1-11/11 completas y revisión final de la rama hecha** (Opus `high` + 1 ronda de corrección, 7/7 ADDRESSED). Faltan: despliegue y prueba manual del autor (D29, ahora 11 puntos), PR |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -453,6 +453,56 @@ declaró por error «sin revisor por instrucción» y la revisión se hizo igual
 **Siguiente:** revisión final de la rama con `model: "opus"`, effort `high`, sobre
 `git merge-base main HEAD`..HEAD; luego prueba manual del autor en Vercel (D29) y PR.
 
+## Revisión final de la rama (Opus, `high`, d70d997..b43adfb)
+
+Primer despacho parado y relanzado: la sesión no estaba en `high` y el Agent tool no fija el
+effort del subagente (lo hereda; con Opus la herencia no está comprobada). Veredicto: **Needs
+fixes**, 2 Important, 0 Critical. Puertas verdes (1311 tests + 1 omitido, typecheck, lint,
+build; e2e no se ejecutó). S17-S21 y S23 cumplidos, S22 cumplido (semilla 7; 72c04b7 añadió
+`data-template` y `data-exercise-kind` a `SessionScreen.tsx`, solo selectores del e2e), S24 sin
+verificar. El fix del SW (72c04b7) es correcto y no rompe la actualización en inicio. 6
+mutaciones, sobrevive 1 (quitar `{capture, passive}` del rastro, S10; ya diferido en la Tarea 8).
+
+- **I1** `layout.tsx`: `SerwistProvider` recargaba la app en cada evento `online`, también a
+  mitad de sesión (contradice S11). → `reloadOnOnline={false}` + test estático (812b59f).
+- **I2** `ParentGate.tsx`: «Cambiar PIN» no hacía nada visible. → `setAuthenticated(false)` +
+  recorrido completo en test (9ede166).
+- **M1** `serwist/[path]/route.ts`: `??` dejaba pasar cadena vacía como revisión. → `||`, cálculo
+  extraído a `serwist/revision.ts` para testearlo (d63eccf).
+- **M2** `StartScreen`/`pwa/update.ts`: tras el timeout de 1 s aún se enviaba `SKIP_WAITING` y se
+  recargaba; el botón podía quedar muerto. → `AbortSignal` + respaldo de 3 s (7c2c63d).
+- **M4+M5** `RewardsScreen`: títulos visibles (spec §9 no los permite) → `sr-only`; separación
+  `gap-3` → `gap-4` (c5b5a44). **M11** README (e75e7a8).
+- Ronda de corrección: 1 despacho (Sonnet), 4 mutaciones en M2 más una por cada otro fix, todas
+  atrapadas. Re-revisión acotada (Sonnet): **7/7 ADDRESSED**, sin Critical ni Important.
+
+- **Ruling: la ronda de corrección incluyó también M1, M2, M4, M5 y M11**, no solo los dos
+  Important. — Por qué: el revisor los marcó «arreglar antes del PR», son de una línea o de
+  poco riesgo y se comparte el mismo ciclo de revisión. — Coste si fuera un error: superficie
+  de cambio algo mayor (el respaldo de 3 s de M2 es lógica nueva) sin haberla pedido el autor.
+- **Ruling: M4 se arregló (títulos a `sr-only`)** porque ningún `Ruling`/`S<n>` del ledger
+  ampara los títulos visibles y el spec §9 (línea 337) no los permite. — Coste si fuera un
+  error: el adulto que mira la galería pierde el título visible; se revierte en una línea.
+- **Ruling: M3 (no exportar `pinHash`) no se toca y queda para el autor.** — Por qué: revierte
+  S2 y obliga a cambiar A4 y Z2; el PIN de 4 dígitos se saca por fuerza bruta, pero S18 ya
+  descarta el hash al importar. — Coste si fuera un error: el PIN es recuperable a partir de un
+  fichero de exportación compartido.
+- **Ruling: los tres Minor de la re-revisión y M6-M10 se dejan diferidos.** — Coste si fuera un
+  error: ver la lista.
+- **Minor (deferred) de la revisión final:** botones del panel de ~40 px en vez de 44; diálogos
+  sin `aria-modal` ni movimiento del foco; `progressbar` sin nombre accesible; «letras
+  aprendidas» también sale en las Fases 0 y 2; `adapter.clear()` sin captura si falla al
+  reiniciar; semilla por defecto 42 mientras J1/J2 usan 7.
+- **Minor (deferred) de la re-revisión:** (1) doble toque en ▶ crea dos `decidido` y dos
+  `AbortController`; `onStart` es idempotente (`setScreen("map")`), inocuo y previo al fix;
+  (2) al saltar el respaldo de 3 s `SKIP_WAITING` ya se envió: el SW nuevo puede activarse y
+  limpiar la precaché con la app arrancada sin recargar (a la prueba manual); (3)
+  `revision.test.ts`, caso `env: undefined`, no es hermético si `VERCEL_GIT_COMMIT_SHA` existe
+  en el entorno de test; (4) la mutación «quitar `if (decidido) return;`» del `.then` sobrevive
+  (equivalente casi total, deja un timer de 3 s inerte).
+
+Task final: complete (commits b43adfb..e75e7a8, review clean tras 1 ronda; 0 parked).
+
 ## Prueba manual del autor (antes del PR)
 
 En **dispositivo real**, sobre el **despliegue de Vercel** (D29: despliega el autor; nadie lo
@@ -477,6 +527,12 @@ hace por él, y la URL es pública). Marca cada punto y anota lo que falle.
    instalada y toca el inicio: debe recargarse una vez con la versión nueva, sin romper nada.
 9. **Acento cambiado en vivo.** Cambia el acento en el panel y comprueba que la voz cambia sin
    recargar.
+
+10. **Volver la red a mitad de una sesión no recarga la app** (I1): empieza una sesión, corta la
+    red y devuélvela; la sesión debe seguir donde estaba.
+11. **Actualización con el service worker nuevo esperando** (M2): tras un segundo despliegue,
+    toca ▶ dos veces seguidas y comprueba que no se rompe nada ni se queda el botón muerto; anota
+    si la app arranca sin recargar y si algo falla sin red después.
 
 Además (heredado de la Tarea 4): **franja de 3 botones de `trace` en apaisado 640 × 360**, que
 solo se razonó por aritmética. Y, de la Tarea 6, que el `<input type="file">` de importar sea
