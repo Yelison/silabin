@@ -233,7 +233,7 @@ Sin conflictos que exijan `Ruling:` antes de la T1.
 - Task 5: complete (commits e3f53ca..943baa2, review clean tras 1 ronda; effort medium; 1 ronda de corrección; mutaciones que sobreviven a la revisión completa: 3 de 16, todas cerradas en la ronda). Coordinador: `pnpm test` 1394 pasan; el ⚠️ del origen de `celebrate` resuelto (dominante de `sticker-10` medido con Pillow: #E99812 ≈ #E99810)
 - Task 5: minor (deferred): un `--color-x: #rrggbb` sin `;` antes de `}` lo ignora `leerTokens` (exige CSS mal formado); y `cierra = css.indexOf("}", abre)` corta en la primera `}` del bloque `@theme inline` si algún día hay una dentro
 - Task 5: ⚠️ ABIERTA para el autor: decidir si los ★ (`celebrate`) se quedan a 2,34:1 sobre `card`, 2,22:1 sobre `surface` y 1,93:1 sobre `calm`, o pasan a un ocre oscuro (~#C47A00, 3,4:1 sobre `card`); decidir antes de la revisión final de la rama
-- Task 6: complete (cierre del plan, docs; revisión de cumplimiento pendiente). `docs/checklist-ipad.md` creada (4 grupos: iPad I1-I15, iPhone H1-H5, PWA P1-P9, PC C1-C6, con tabla de resultados); README (estado, sección del Plan 7, hoja de ruta, D32-D36, `images/`, `optimizar-arte.py` y `/dev/arte`, siguientes pasos), poda al archivo, `diseno-visual.md` («Pendiente»), cabecera de `arte-plan-7-prompts.md` y comentario de `manifest.ts:7-9` corregido. Puertas: `pnpm test` 1394 pasan (1 omitido), typecheck, lint, `pnpm build` y `pnpm e2e` en verde
+- Task 6: complete (cierre del plan, docs; commits 431171a..8f2312b, revisión de cumplimiento con 1 ronda de corrección: Important = deudas del README de más de 2 líneas, corregido y re-revisado, all findings addressed). `docs/checklist-ipad.md` creada (4 grupos: iPad I1-I15, iPhone H1-H5, PWA P1-P9, PC C1-C6, con tabla de resultados); README (estado, sección del Plan 7, hoja de ruta, D32-D36, `images/`, `optimizar-arte.py` y `/dev/arte`, siguientes pasos), poda al archivo, `diseno-visual.md` («Pendiente»), cabecera de `arte-plan-7-prompts.md` y comentario de `manifest.ts:7-9` corregido. Puertas: `pnpm test` 1394 pasan (1 omitido), typecheck, lint, `pnpm build` y `pnpm e2e` en verde
 - Ruling: la poda funde entradas en vez de resolverlas — para caber en 10 deudas al añadir las bocas y los minors del Plan 7, se fundieron la 5 (ilustraciones) con los glifos V10, y la 6, la 7 y la 9 (minors de los Planes 2, 3 y 6) en una; ninguna se pudo convertir en test ni cerrar sin tocar código. El texto original está en `docs/archivo-trampas-y-deuda.md`. Coste si es equivocado: una entrada fundida pierde detalle en el README, pero no en el archivo
 - Ruling: entra **una trampa viva** (`optimizar-arte.py` genera las seis bocas y no deben copiarse a `public/`) — FI2 acepta «ninguna o las seis», así que un test no la ve; coste si es equivocado: una línea del README de más
 - Ruling: el test del emoji de respaldo de `REWARD_ART` (menor de la T4) **no** va a la deuda porque ya lo cubre `79566f6` (`visuals.test.ts`, incluido `five-vowels` → 🐘); el brief lo daba por pendiente. Tampoco el test de cambio entre rastros (menor de la T3), ya en `TrailLayer.test.tsx`
@@ -253,7 +253,7 @@ Sin conflictos que exijan `Ruling:` antes de la T1.
 | 3 · Cursor y boca | completa | 0 | 1 (diferida, cerrada en `79566f6`) |
 | 4 · Integración del arte | completa | 0 | 2 (una cerrada en `79566f6`; la otra n/d) |
 | 5 · Paleta y legibilidad | completa | 1 | 3 (cerradas en la ronda) |
-| 6 · Cierre | completa, revisión pendiente | n/d | n/a |
+| 6 · Cierre | completa (1 ronda: deudas del README > 2 líneas) | n/d (docs, sin mutación) | n/a |
 
 Puertas al cierre de la T6: `pnpm test` 1394 pasan (1 omitido), `typecheck`, `lint`,
 `pnpm build` y `pnpm e2e` en verde.
@@ -270,3 +270,5 @@ Puertas al cierre de la T6: `pnpm test` 1394 pasan (1 omitido), `typecheck`, `li
 **Deuda viva que sale del plan** (README): las bocas aplazadas (deuda 5), los glifos sin arte
 (V10, en la 6) y los `minor (deferred)` de T1-T5 (deuda 8). Trampa viva: no publicar `mouth-*`
 desde `optimizar-arte.py`.
+- Task 6: minor (deferred): la única trampa viva del README (`optimizar-arte.py` genera las 6 bocas y no deben copiarse a `public/`) ocupa 5 líneas (CLAUDE.md pide 1-2); recortar en el próximo cierre
+- Task 6: minor (deferred): al recortar la deuda 8 se perdió el paréntesis «(usa `@playwright/test` del repo)»; restaurarlo en el bloque de `docs/archivo-trampas-y-deuda.md`
