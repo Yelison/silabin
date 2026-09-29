@@ -81,15 +81,9 @@ function EquippableCosmetic(props: {
 			? `bg-gradient-to-b ${visual.gradient}`
 			: "bg-card";
 	const contenido =
-		visual.slot === "companion"
+		visual.slot === "companion" || visual.slot === "trail"
 			? visual.emoji
-			: visual.slot === "trail"
-				? visual.shape === "star"
-					? "✨"
-					: visual.shape === "circle"
-						? "🫧"
-						: "—"
-				: null;
+			: null;
 
 	return (
 		<button

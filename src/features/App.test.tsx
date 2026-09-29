@@ -278,4 +278,30 @@ describe("App", () => {
 		});
 		expect(audio.stop).not.toHaveBeenCalled();
 	});
+
+	it("el fondo cosmético envuelve el mapa y la galería, pero nunca la sesión", async () => {
+		const store = crearStore();
+		const { container } = render(<App store={store} audio={fakeAudio()} />);
+		const user = userEvent.setup();
+		await user.click(await iniciar());
+		// En el mapa, el fondo cosmético está presente.
+		expect(
+			container.querySelector("[data-cosmetic-background]"),
+		).not.toBeNull();
+
+		await user.click(screen.getByRole("button", { name: "Mis premios" }));
+		// En la galería también.
+		expect(
+			container.querySelector("[data-cosmetic-background]"),
+		).not.toBeNull();
+		await user.click(screen.getByRole("button", { name: "Volver al mapa" }));
+
+		await user.click(
+			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
+		);
+		// Este es el hallazgo del revisor: si alguien envolviera SessionScreen con
+		// CosmeticBackground, este `querySelector` dejaría de ser null y la prueba fallaría.
+		expect(container.querySelector('[data-screen="session"]')).not.toBeNull();
+		expect(container.querySelector("[data-cosmetic-background]")).toBeNull();
+	});
 });

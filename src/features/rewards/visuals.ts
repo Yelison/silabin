@@ -10,7 +10,7 @@ import { REWARDS, STAR_MILESTONES } from "@/engine";
 export type CosmeticVisual =
 	| { slot: "background"; gradient: string }
 	| { slot: "companion"; emoji: string }
-	| { slot: "trail"; shape: "none" | "star" | "circle" };
+	| { slot: "trail"; shape: "none" | "star" | "circle"; emoji: string };
 
 const COSMETIC_VISUALS: Record<string, CosmeticVisual> = {
 	"bg:default": { slot: "background", gradient: "from-surface to-calm" },
@@ -19,9 +19,9 @@ const COSMETIC_VISUALS: Record<string, CosmeticVisual> = {
 	"bg:bosque": { slot: "background", gradient: "from-calm-border to-mark" },
 	"companion:first": { slot: "companion", emoji: "🐣" },
 	"companion:second": { slot: "companion", emoji: "🦊" },
-	"trail:none": { slot: "trail", shape: "none" },
-	"trail:estrellitas": { slot: "trail", shape: "star" },
-	"trail:burbujas": { slot: "trail", shape: "circle" },
+	"trail:none": { slot: "trail", shape: "none", emoji: "—" },
+	"trail:estrellitas": { slot: "trail", shape: "star", emoji: "✨" },
+	"trail:burbujas": { slot: "trail", shape: "circle", emoji: "🫧" },
 };
 
 const REWARD_ICONS: Record<string, string> = {

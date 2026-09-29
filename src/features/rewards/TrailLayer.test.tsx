@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoreApi } from "zustand/vanilla";
 import { TraceCanvas } from "@/components/TraceCanvas";
 import { curriculum, glyphFor, type PlannedExercise } from "@/engine";
-import { TrailLayer } from "@/features/rewards/TrailLayer";
+import { MAX_PARTICLES, TrailLayer } from "@/features/rewards/TrailLayer";
 import { Evaluation as BuildEvaluation } from "@/features/session/build/Evaluation";
 import {
 	conProveedores,
@@ -290,6 +290,26 @@ describe("TrailLayer", () => {
 			// Si la capa llamara a stopPropagation en la fase de captura de window, este oyente
 			// (más abajo en el árbol) nunca vería el evento.
 			expect(burbujeo).toBe(true);
+		});
+	});
+
+	describe("el tope de partículas vivas se cumple en el DOM", () => {
+		it("30 pointermove disparados por separado (no en un único lote de estado) nunca montan más de MAX_PARTICLES nodos", async () => {
+			const store = await storeConTrail("trail:burbujas");
+			const { container } = render(
+				conProveedoresDefault(<TrailLayer />, store),
+			);
+			// Cada fireEvent aquí es su propio act()/render, tal y como ocurre en producción con
+			// gestos reales: no se agrupan en un solo array de estado. Si `AnimatePresence`
+			// retuviera los nodos recortados por el tope durante su animación de salida, el DOM
+			// tendría más de MAX_PARTICLES <span> aquí.
+			for (let i = 0; i < 30; i++) {
+				fireEvent.pointerMove(window, { clientX: i, clientY: i });
+			}
+			const nodos = container.querySelectorAll(
+				'[data-testid="trail-layer"] span',
+			);
+			expect(nodos.length).toBeLessThanOrEqual(MAX_PARTICLES);
 		});
 	});
 

@@ -15,8 +15,6 @@ type Particle = { id: number; x: number; y: number };
 
 let nextParticleId = 0;
 
-const EMOJI: Record<"star" | "circle", string> = { star: "✨", circle: "🫧" };
-
 /**
  * El rastro de dedo del cosmético equipado (S10), montado una sola vez en `App`. Escucha
  * `pointerdown`/`pointermove` en `window` con `{capture: true, passive: true}` y nunca llama a
@@ -33,11 +31,14 @@ export function TrailLayer() {
 	const prefersReducedMotion = useReducedMotion();
 	const equipped = resolveEquipped(rewards);
 	const visual = cosmeticVisual(equipped.trail);
-	const shape = visual.slot === "trail" ? visual.shape : "none";
+	const trailVisual = visual.slot === "trail" ? visual : null;
 	const [particles, setParticles] = useState<Particle[]>([]);
 
 	const enabled =
-		shape !== "none" && !prefersReducedMotion && !reducedCelebrations;
+		trailVisual !== null &&
+		trailVisual.shape !== "none" &&
+		!prefersReducedMotion &&
+		!reducedCelebrations;
 
 	useEffect(() => {
 		if (!enabled) {
@@ -67,9 +68,9 @@ export function TrailLayer() {
 		};
 	}, [enabled]);
 
-	if (!enabled) return null;
+	if (!enabled || trailVisual === null) return null;
 
-	const emoji = EMOJI[shape as "star" | "circle"];
+	const emoji = trailVisual.emoji;
 
 	return (
 		<div
@@ -77,13 +78,19 @@ export function TrailLayer() {
 			aria-hidden="true"
 			className="pointer-events-none fixed inset-0"
 		>
+			{/*
+			 * Sin `exit`: una partícula recortada por MAX_PARTICLES desaparece del DOM en el mismo
+			 * render en que sale del estado, en vez de quedar montada animándose hacia fuera. Con
+			 * `exit`, `AnimatePresence` retiene cada nodo saliente sus propios 600 ms, así que bajo
+			 * eventos separados (no en un único lote de estado) el tope de 24 en el estado no se
+			 * traducía en un tope de 24 nodos reales en el DOM.
+			 */}
 			<AnimatePresence>
 				{particles.map((p) => (
 					<motion.span
 						key={p.id}
 						initial={{ opacity: 1, scale: 0.5 }}
 						animate={{ opacity: 0, scale: 1.2 }}
-						exit={{ opacity: 0 }}
 						transition={{ duration: PARTICLE_LIFETIME_MS / 1000 }}
 						onAnimationComplete={() =>
 							setParticles((prev) => prev.filter((x) => x.id !== p.id))
