@@ -1,14 +1,7 @@
-import { spawnSync } from "node:child_process";
 import { createSerwistRoute } from "@serwist/turbopack";
+import { calcularRevision } from "@/app/serwist/revision";
 
-// S23: la revisión sale de `VERCEL_GIT_COMMIT_SHA` (Vercel la pone en el build) y, si no
-// existe, de `git rev-parse HEAD` (entorno local); en Vercel no conviene contar con `git`.
-const revision =
-	process.env.VERCEL_GIT_COMMIT_SHA ??
-	spawnSync("git", ["rev-parse", "HEAD"], {
-		encoding: "utf-8",
-	}).stdout?.trim() ??
-	crypto.randomUUID();
+const revision = calcularRevision();
 
 // Serwist ya precachea por sí solo todo `public/` (ilustraciones e iconos incluidos, con el hash
 // del contenido como revisión). Volver a listarlos aquí con otra revisión provoca
