@@ -39,6 +39,9 @@ export default function RootLayout({
 				    cambios en caliente con una app que no se actualiza. */}
 				<SerwistProvider
 					swUrl="/serwist/sw.js"
+					// Por defecto recarga la página en cada evento `online`, también a mitad de una
+					// sesión o de una importación (S11: las actualizaciones solo entran desde el inicio).
+					reloadOnOnline={false}
 					disable={process.env.NODE_ENV === "development"}
 				>
 					{children}
