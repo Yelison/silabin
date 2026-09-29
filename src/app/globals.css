@@ -36,3 +36,10 @@ body {
 	color: var(--color-ink);
 	font-family: var(--font-sans);
 }
+
+/* Cursor de PC del rastro equipado (V11): lo pone `TrailLayer` solo con `(pointer: fine)`.
+   Un atributo y una propiedad, y no `style.cursor`, para que enlaces y campos de texto
+   conserven el suyo. */
+html[data-trail-cursor] {
+	cursor: var(--trail-cursor), auto;
+}

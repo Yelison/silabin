@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MOUTH_STEP_MS, Mouth } from "@/components/Mouth";
+import {
+	MOUTH_SHAPES,
+	MOUTH_STEP_MS,
+	Mouth,
+	mouthFrameSrc,
+} from "@/components/Mouth";
 import type { MouthShape } from "@/engine";
 
 function movimientoReducido(activo: boolean) {
@@ -29,6 +34,106 @@ afterEach(() => {
 const FORMAS: MouthShape[] = ["closed", "open", "round"];
 const forma = (c: HTMLElement) =>
 	c.querySelector("[data-shape]")?.getAttribute("data-shape");
+
+const fotogramas = (c: HTMLElement) =>
+	Array.from(c.querySelectorAll<HTMLImageElement>("img[data-frame]"));
+const visibles = (c: HTMLElement) =>
+	fotogramas(c)
+		.filter((i) => i.className.split(" ").includes("opacity-100"))
+		.map((i) => i.getAttribute("data-frame"));
+
+describe("Mouth: fotogramas apilados (V12)", () => {
+	it("BO1: pinta los seis fotogramas desde el primer pintado, con su src", () => {
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} />,
+		);
+		const imgs = fotogramas(container);
+		expect(imgs).toHaveLength(6);
+		for (const img of imgs) {
+			const f = img.getAttribute("data-frame");
+			expect(img.getAttribute("src")).toBe(`/images/arte/mouth-${f}.webp`);
+			expect(img.getAttribute("alt")).toBe("");
+			expect(img.getAttribute("draggable")).toBe("false");
+			expect(img.className).toContain("absolute");
+			expect(img.className).toContain("inset-0");
+		}
+		expect(imgs.map((i) => i.getAttribute("data-frame")).sort()).toEqual(
+			[...MOUTH_SHAPES].sort(),
+		);
+	});
+
+	it("BO2: solo la forma actual es opaca, y avanza cada MOUTH_STEP_MS hasta onDone", () => {
+		const onDone = vi.fn();
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+		);
+		expect(forma(container)).toBe("open");
+		expect(visibles(container)).toEqual(["open"]);
+		expect(
+			fotogramas(container).filter((i) => i.className.includes("opacity-0")),
+		).toHaveLength(5);
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(forma(container)).toBe("closed");
+		expect(visibles(container)).toEqual(["closed"]);
+		expect(onDone).not.toHaveBeenCalled();
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(onDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("BO2: el contenedor es decorativo, relative size-32, y el cambio solo anima con motion-safe", () => {
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} />,
+		);
+		const raiz = container.firstElementChild;
+		expect(raiz?.getAttribute("aria-hidden")).toBe("true");
+		expect(raiz?.className).toContain("relative");
+		expect(raiz?.className).toContain("size-32");
+		const clases = fotogramas(container)[0]?.className ?? "";
+		expect(clases).toContain("motion-safe:transition-opacity");
+		expect(clases).toContain("motion-safe:duration-150");
+	});
+
+	it("BO3: con movimiento reducido, la última forma quieta y onDone al tiempo total", () => {
+		movimientoReducido(true);
+		const onDone = vi.fn();
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+		);
+		expect(forma(container)).toBe("closed");
+		expect(visibles(container)).toEqual(["closed"]);
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS * 2 - 1));
+		expect(onDone).not.toHaveBeenCalled();
+		act(() => vi.advanceTimersByTime(1));
+		expect(onDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("BO4: si un fotograma no carga, pinta el SVG esquemático y mantiene el paso y los tiempos", () => {
+		const onDone = vi.fn();
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+		);
+		const tercero = fotogramas(container)[2];
+		if (tercero === undefined) throw new Error("sin fotograma");
+		fireEvent.error(tercero);
+		expect(fotogramas(container)).toHaveLength(0);
+		const svg = container.querySelector("svg[data-shape]");
+		expect(svg?.getAttribute("data-shape")).toBe("open");
+		expect(svg?.getAttribute("aria-hidden")).toBe("true");
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(
+			container.querySelector("svg[data-shape]")?.getAttribute("data-shape"),
+		).toBe("closed");
+		expect(onDone).not.toHaveBeenCalled();
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(onDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("BO5: MOUTH_SHAPES tiene seis valores sin repetir y mouthFrameSrc apunta al WebP", () => {
+		expect(MOUTH_SHAPES).toHaveLength(6);
+		expect(new Set(MOUTH_SHAPES).size).toBe(6);
+		expect(mouthFrameSrc("round")).toBe("/images/arte/mouth-round.webp");
+	});
+});
 
 describe("Mouth", () => {
 	it("V2: es decorativa (aria-hidden)", () => {

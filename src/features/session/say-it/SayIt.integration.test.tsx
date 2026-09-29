@@ -88,7 +88,7 @@ async function montar() {
 	return { store, audio, container, pasar, run, claves, item };
 }
 
-const boca = (c: HTMLElement) => c.querySelector("svg[data-shape]");
+const boca = (c: HTMLElement) => c.querySelector("[data-shape]");
 
 describe("say-it de punta a punta, con el motor, el store y las vistas reales", () => {
 	it("Y5: tres «Otra vez» dan la boca, el sonido alargado y el modelo; hablar en el modelo avanza", async () => {

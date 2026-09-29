@@ -55,9 +55,9 @@ describe("PlantillasDev", () => {
 		expect(
 			within(evaluacion()).getByRole("button", { name: "Micrófono" }),
 		).toBeTruthy();
-		expect(evaluacion().querySelector("svg[data-shape]")).toBeNull();
+		expect(evaluacion().querySelector("[data-shape]")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Rung 1" }));
-		expect(evaluacion().querySelector("svg[data-shape]")).not.toBeNull();
+		expect(evaluacion().querySelector("[data-shape]")).not.toBeNull();
 	});
 
 	describe("W8: las plantillas de voz con un micrófono de guion", () => {

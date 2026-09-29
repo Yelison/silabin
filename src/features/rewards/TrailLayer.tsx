@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { ArtImage } from "@/components/ArtImage";
 import { resolveEquipped } from "@/engine";
 import { useApp } from "@/features/app-context";
@@ -13,6 +13,46 @@ export const PARTICLE_LIFETIME_MS = 600;
 export const MAX_PARTICLES = 24;
 
 type Particle = { id: number; x: number; y: number };
+
+const PUNTERO_FINO = "(pointer: fine)";
+
+function suscribirPuntero(aviso: () => void): () => void {
+	if (typeof window.matchMedia !== "function") return () => {};
+	const mq = window.matchMedia(PUNTERO_FINO);
+	mq.addEventListener("change", aviso);
+	return () => mq.removeEventListener("change", aviso);
+}
+
+function hayPunteroFino(): boolean {
+	return typeof window.matchMedia === "function"
+		? window.matchMedia(PUNTERO_FINO).matches
+		: false;
+}
+
+/**
+ * El cursor de PC del rastro equipado (V11). Es estático, así que no depende del movimiento
+ * reducido ni de `reducedCelebrations`; sí de que haya un puntero fino (ratón), porque en un
+ * dedo no hay cursor que cambiar. Va en `<html>` como un atributo y una propiedad CSS (la regla
+ * está en `globals.css`) y no como `style.cursor`: así los elementos con cursor propio, como
+ * los enlaces, lo conservan.
+ */
+function useCursorDeRastro(id: string, cursor: string | null): void {
+	const fino = useSyncExternalStore(
+		suscribirPuntero,
+		hayPunteroFino,
+		() => false,
+	);
+	useEffect(() => {
+		if (cursor === null || !fino) return;
+		const raiz = document.documentElement;
+		raiz.setAttribute("data-trail-cursor", id);
+		raiz.style.setProperty("--trail-cursor", `url("${cursor}") 16 16`);
+		return () => {
+			raiz.removeAttribute("data-trail-cursor");
+			raiz.style.removeProperty("--trail-cursor");
+		};
+	}, [id, cursor, fino]);
+}
 
 let nextParticleId = 0;
 
@@ -33,6 +73,8 @@ export function TrailLayer() {
 	const equipped = resolveEquipped(rewards);
 	const visual = cosmeticVisual(equipped.trail);
 	const particle = visual.slot === "trail" ? visual.particle : null;
+	const cursor = visual.slot === "trail" ? visual.cursor : null;
+	useCursorDeRastro(equipped.trail, cursor);
 	const [particles, setParticles] = useState<Particle[]>([]);
 
 	const enabled =
