@@ -2,9 +2,9 @@
 
 Texto completo de las trampas y la deuda menor tal como estaban en el README al cerrar el
 Plan 4 (2026-09-27), más lo que salió del README al cerrar los Planes 5, 6 y 7 (secciones
-«Plan 5», «Plan 6» y «Plan 7» del final). **No se lee al retomar**: el README solo guarda lo vivo (ver la regla de
-poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una entrada del README
-remita a él.
+«Plan 5», «Plan 6» y «Plan 7» del final). **No se lee al retomar**: el README solo guarda lo
+vivo (ver la regla de poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una
+entrada del README remita a él.
 
 ## Trampas conocidas
 
@@ -298,3 +298,42 @@ siguen vivas, con el mismo contenido, en menos líneas.
   token).
 - **Bocas aplazadas:** ver Ruling en el ledger del Plan 7 (2026-09-29). Seis peticiones 404
   silenciosas por sesión con boca hasta que llegue el arte nuevo; el respaldo pinta el SVG.
+
+**Plan 7, ronda de corrección 1 de la Tarea 6: texto completo de las deudas que se recortaron a dos líneas en el README**
+
+- **Deuda 1 (prueba en dispositivos reales):** `docs/checklist-ipad.md` (escrita en el Plan 7) la
+  pasa el autor una sola vez sobre el despliegue de Vercel: iPad, iPhone, la PWA instalada,
+  Chrome y Firefox (el arrastre de `build`), 360 × 640 y 640 × 360, y los adaptadores reales de
+  voz. Sigue viva hasta que la pase; no se automatiza porque depende de un dispositivo real (D11).
+- **Deuda 2 (`AudioPlayer`):** debe resolver o rechazar siempre: si `play` se queda colgado, las
+  presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan. No se puede
+  automatizar con un invariante: depende de cada reproductor real.
+- **Deuda 4 (accesibilidad y objetivos táctiles < 72 px):** círculos del modelo (56 px), icono de
+  `SaveWarning` (~36 px, sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos, y el
+  `<input type="file">` de importar (lo controla el navegador).
+- **Deuda 5 (la boca sigue esquemática, bocas aplazadas, Plan 7):** el autor rechazó dos veces el
+  arte fotorrealista y D21 pide una boca esquemática: no hay `mouth-*.webp` y `Mouth` pinta su SVG
+  por el `onError`. Falta rehacer la sección 5 de `docs/arte-plan-7-prompts.md` con un estilo que
+  apruebe el autor, y probar con un niño que cada forma se distingue a 128 px. Es una decisión de
+  arte, no se automatiza.
+- **Deuda 6 (arte y glifos a criterio del autor):** ilustraciones `una`, `asa`, `sumo`, contraste
+  de iglú y velo, imágenes al borde, estilo mixto y emojis de respaldo dudosos; y los glifos sin
+  arte (V10): 🔁 «Repasar», ✓ del equipado y de «guardado», ✕ de salir, ★/☆.
+- **Deuda 7 (minors de los Planes 2, 3 y 6):** duplicaciones del motor y mutaciones supervivientes
+  (`planReviewOnly` repite `makeExercise`), interfaz del Plan 2 sin reverificar, `ParentGate` sin
+  `.catch`, `DataSection` de 220 líneas y tests de `TrailLayer` y del 🎁 que faltan. **Corrección:**
+  lo del 🎁 ya no es cierto (el botón usa el icono de galería; `map/MapScreen.test.tsx` FI6 prohíbe el
+  emoji y `features/App.test.tsx` hace clic en «Mis premios»). Comprobado en el repo el resto que sigue
+  vigente: `ParentGate` sin `.catch` (`setPin`/`checkPin`), `DataSection` de 220 líneas y ningún
+  test de `{capture, passive}` en `TrailLayer`. Sin reverificar: la interfaz del Plan 2 y la
+  duplicación del motor.
+- **Deuda 8 (minors del Plan 7):** el script (sin comprobar `img.format`, escritura no atómica),
+  `visuals.ts` (`cosmeticVisual("toString")`), `art-files.test.ts` con `toBe(18)` y FI5 sin
+  `not.toBeNull()`, rama muerta en `Companion.tsx:22`, `Mouth` no funciona renderizada en
+  servidor, `ring-4 ring-action` invisible en la unidad activa, la regex `\bbg-` de
+  `legibility.test.tsx`, la fórmula de contraste duplicada (`ArteDev.tsx` y `tokens.test.ts`),
+  `leerTokens` con `}` o sin `;`, y el MCP de Playwright caído en este entorno. Desglose por tarea
+  arriba, en «Minors por tarea del Plan 7».
+- **Deuda 10 (e2e frágil):** semilla 7 (S22), el solver solo prueba `initial-sound`, `say-it`,
+  `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit
+  (`PW_WEBKIT=1`) sin probar. No se automatiza más sin forzar el planificador.

@@ -693,42 +693,26 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 [`docs/archivo-trampas-y-deuda.md`](docs/archivo-trampas-y-deuda.md) y en los registros
 (busca `minor (deferred)`). Notas visuales en [`docs/diseno-visual.md`](docs/diseno-visual.md).
 
-1. **Prueba en dispositivos reales → `docs/checklist-ipad.md` (escrita en el Plan 7).** La pasa el
-   autor una sola vez sobre el despliegue de Vercel: iPad, iPhone, la PWA instalada, Chrome y
-   Firefox (el arrastre de `build`), 360 × 640 y 640 × 360, y los adaptadores reales de voz. Sigue
-   viva hasta que la pase; no se automatiza porque depende de un dispositivo real (D11).
-2. **`AudioPlayer` debe resolver o rechazar siempre:** si `play` se queda colgado, las
-   presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan. No se puede
-   automatizar con un invariante: depende de cada reproductor real.
+1. **Prueba en dispositivos reales → `docs/checklist-ipad.md`** (escrita, Plan 7): la pasa el autor
+   sobre el despliegue. Viva hasta entonces; no se automatiza (dispositivo real, D11).
+2. **`AudioPlayer` debe resolver o rechazar siempre:** si `play` se cuelga, `hear-it`, `listen-tap` y
+   `rhyme` no avanzan. Sin invariante posible: depende de cada reproductor real.
 3. **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): «Reintentar» solo
    desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
-4. **Accesibilidad y objetivos táctiles < 72 px:** círculos del modelo (56 px), icono de
-   `SaveWarning` (~36 px, sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos, y el
-   `<input type="file">` de importar (lo controla el navegador).
-5. **La boca sigue esquemática (bocas aplazadas, Plan 7).** El autor rechazó dos veces el arte
-   fotorrealista y D21 pide una boca esquemática: no hay `mouth-*.webp` y `Mouth` pinta su SVG por
-   el `onError`. Falta rehacer la sección 5 de `docs/arte-plan-7-prompts.md` con un estilo que
-   apruebe el autor, y probar con un niño que cada forma se distingue a 128 px. Es una decisión
-   de arte, no se automatiza.
-6. **Arte y glifos a criterio del autor:** ilustraciones `una`, `asa`, `sumo`, contraste de iglú y
-   velo, imágenes al borde, estilo mixto y emojis de respaldo dudosos; y los glifos sin arte (V10):
-   🔁 «Repasar», ✓ del equipado y de «guardado», ✕ de salir, ★/☆.
-7. **Minors de los Planes 2, 3 y 6 sin arreglar** (ledgers, `minor (deferred)`): duplicaciones del
-   motor y mutaciones supervivientes (`planReviewOnly` repite `makeExercise`), interfaz del Plan 2
-   sin reverificar, `ParentGate` sin `.catch`, `DataSection` de 220 líneas y tests de `TrailLayer`
-   y del 🎁 que faltan. Ninguno toca pedagogía; se arreglan al tocar el fichero.
-8. **Minors del Plan 7 sin arreglar** (ledger, `minor (deferred)`): el script (sin comprobar
-   `img.format`, escritura no atómica), `visuals.ts` (`cosmeticVisual("toString")`), `art-files.test.ts`
-   con `toBe(18)` y FI5 sin `not.toBeNull()`, rama muerta en `Companion.tsx:22`, `Mouth` no funciona
-   renderizada en servidor, `ring-4 ring-action` invisible en la unidad activa, la regex `\bbg-`
-   de `legibility.test.tsx`, la fórmula de contraste duplicada (`ArteDev.tsx` y `tokens.test.ts`),
-   `leerTokens` con `}` o sin `;`, y el MCP de Playwright caído en este entorno (usa
-   `@playwright/test` del repo).
+4. **Accesibilidad y objetivos táctiles < 72 px:** modelo (56 px), `SaveWarning` (~36 px), tambor de
+   224 px fijos y el `<input type="file">` de importar (lo controla el navegador).
+5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
+   (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts. Arte, no test.
+6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
+   glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
+7. **Minors de los Planes 2, 3 y 6** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection` de
+   220 líneas, sin test de `{capture, passive}` en `TrailLayer`, duplicaciones del motor.
+8. **Minors del Plan 7** (ledger, `minor (deferred)`; lista completa en el archivo): script, `visuals.ts`,
+   `art-files.test.ts`, `Companion.tsx`, `Mouth` en servidor, `legibility.test.tsx`, `leerTokens`.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
-10. **El e2e es frágil por diseño:** semilla 7 (S22), el solver solo prueba `initial-sound`,
-    `say-it`, `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit
-    (`PW_WEBKIT=1`) sin probar. No se automatiza más sin forzar el planificador.
+10. **El e2e es frágil por diseño:** semilla 7 (S22), solver limitado, espera fija de 3300 ms y WebKit
+    sin probar. No se automatiza más sin forzar el planificador.
 
 ---
 
