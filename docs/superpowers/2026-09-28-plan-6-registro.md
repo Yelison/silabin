@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-2/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-5/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -147,7 +147,8 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 | 2 | completa (commits `c7ea145`..`80c0e13`), Approved | 0/5 | 0 (9 mutaciones: las 6 del brief más 3 que el implementador añadió por su cuenta, todas confirmadas por el revisor contra el diff) |
 | 3 | completa (commit `6bf2f44`), Approved | 0/5 | 0 (5 mutaciones: las 4 del brief más `acceptsModelTrace`, todas atrapadas y confirmadas por el revisor contra el diff) |
 | 4 | completa (commit `65f606a`), Approved | 0/5 | 0 (2 mutaciones del brief, ambas atrapadas, verificadas por el revisor contra la lógica del diff) |
-| 5-11 | pendientes | | |
+| 5 | completa (commits `06be294`..`5522970`), Needs fixes → fix round 1/5 → Approved | 1/5 | 0 (3 mutaciones del brief, todas atrapadas, verificadas por el revisor contra el diff) |
+| 6-11 | pendientes | | |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -249,3 +250,43 @@ aritmética (248 px de columna dentro de "~328 px libres" estimados, no derivado
 del diff) pero no se verificó con `browser-qa` ni dispositivo real — señalado tanto por el
 implementador como por el revisor. Queda para la prueba manual de cierre del plan (S11 ya
 prevé iPad/iPhone real; añadir landscape 640×360 a esa pasada antes del PR).
+
+**Ruling (Tarea 5):** el reparto exacto de responsabilidades entre `ParentGate.tsx`,
+`ParentPanel.tsx` y `App.tsx` lo decidió el implementador — el brief lo daba como orientación,
+no como contrato, y pedía priorizar lo que exigieran las pruebas N1-N10. — Por qué: el propio
+brief dice textualmente "si al implementar ves una forma más limpia... trata esta lectura como
+orientación, no como contrato". El revisor confirmó fichero por fichero que los 6 ficheros
+listados en el brief tienen su hunk correspondiente y que las N1-N10 pasan. — Coste si fuera un
+error: cambio acotado a esos dos ficheros (`ParentGate`/`ParentPanel`), sin tocar el store ni el
+contrato con `App`.
+
+**Ruling (Tarea 5, del implementador, aceptado sin ronda de corrección):** `crypto.subtle` ya
+está disponible en el entorno de test jsdom de este repo (Node trae `webcrypto` nativo); solo el
+test N1 lo quita con `vi.stubGlobal`/`vi.unstubAllGlobals`, en vez de inyectarlo en N2-N9 como
+sugería el brief. — Por qué: el brief preveía el caso de que faltara, pero el implementador lo
+confirmó con un test de scratch antes de decidir, y un error aquí fallaría de forma visible y
+consistente (`pinSupported() === false` en todos los tests), no como un falso verde silencioso.
+— Coste si fuera un error: ninguno oculto; el fallo sería ruidoso y se vería en la primera
+corrida.
+
+**Ruling (Tarea 5, del implementador):** el nombre del niño se recorta en cada pulsación
+(`onChange`) y el campo local no se resincroniza desde `settings.childName` tras el primer
+pintado. — Por qué: resincronizar borraría en vivo un espacio final que el adulto acaba de
+teclear. — Coste si fuera un error: bajo — nada más toca `childName` durante una sesión del
+panel hoy; si algo lo hiciera, el campo no lo reflejaría hasta cerrar y reabrir. Registrado
+también como Minor (deferred) por el revisor de tarea.
+
+**Minor (deferred) de la Tarea 5:** `ParentGate.tsx` no captura un rechazo de la promesa en
+`setPin`/`checkPin` (`void setPin(...).then(...)`, `void checkPin(...).then(...)`); bajo
+impacto porque el contrato de la Tarea 2 no documenta que estas funciones rechacen en uso
+normal. El campo "Nombre del niño" no se resincroniza si `settings.childName` cambia por fuera
+del propio campo mientras el panel está abierto (ver Ruling arriba).
+
+**Ronda de corrección de la Tarea 5 (1/5):** el revisor de tarea encontró un hallazgo
+Importante — `ParentPanel.tsx` no cerraba con `Escape` (la restricción global dice "Escape
+cierra los diálogos", en plural, y el panel ya autenticado es su propio diálogo sin listener
+propio). El implementador original lo corrigió con el mismo patrón de `keydown` que ya usaba
+`ParentGate.tsx`, con un test nuevo (RED/GREEN confirmado). La re-revisión acotada verificó
+`ADDRESSED` y que los dos listeners de `keydown` (puerta y panel) nunca coexisten — el de
+`ParentGate` se desactiva con `if (authenticated) return`, así que no hay doble disparo de
+`onClose` — sin ruptura nueva.
