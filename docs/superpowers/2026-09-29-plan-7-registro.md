@@ -1,0 +1,153 @@
+# Plan 7: registro de ejecución
+
+Rama: `feat/plan-7-identidad-visual`, creada desde `main` en `618e6b3`, después de fusionar el
+Plan 6 (PR #7).
+Plan: `docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md` (6 tareas).
+
+Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y el tramo final.
+
+## Estado
+
+| Fase | Estado |
+|---|---|
+| Decisiones con el autor (D32-D35) | **hechas** (2026-09-29, abajo) |
+| Rulings de planificación (V1-V16) | **fijados** (abajo) |
+| Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
+| Arte (D32) | **pendiente**: lo genera el autor en `C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Bloquea la T4 y las siguientes, no la T1 ni la T3 |
+| Ejecución | sin empezar |
+
+## Decisiones tomadas con el autor (2026-09-29)
+
+| # | Decisión |
+|---|---|
+| D32 | **El autor genera el arte antes de la integración**, en `C:\Users\Yelisson\Downloads\silabin-arte-plan-7` (`/mnt/c/Users/Yelisson/Downloads/silabin-arte-plan-7`), con los nombres de `docs/arte-plan-7-prompts.md`. Las tareas sin arte (T1-T3) se ejecutan primero, y las de integración (T4-T6) esperan a que estén todos los ficheros. El 2026-09-29 no había ninguno: en `Downloads` solo estaban las ilustraciones y los iconos del Plan 3 |
+| D33 | **Compañeros: pollito (`companion:first`) y zorrito (`companion:second`)**, los que sugerían los marcadores. Los prompts no cambian |
+| D34 | **La paleta final se deriva del arte.** Una tarea ajusta los tokens de `globals.css` para que casen con los compañeros y los fondos, con una vista previa (`/dev/arte`) que el autor aprueba. Un test automático exige el contraste AA |
+| D35 | **La prueba manual del Plan 6 no se hizo** (ni el despliegue en Vercel). Sus 11 puntos y los dos añadidos entran en `docs/checklist-ipad.md`, y hay una sola pasada en el dispositivo, sobre la versión final desplegada por el autor (D29). El README decía que faltaba el PR del Plan 6, pero el PR #7 ya estaba fusionado |
+
+## Rulings de planificación (prefijo V)
+
+El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
+
+- **V1 · Las tareas sin arte van primero, y la T4 tiene una precondición.**
+  - Orden: T1 (script con PNG sintéticos), T2 (contrato de `visuals.ts` con respaldo) y T3
+    (cursor y boca) no necesitan los ficheros.
+  - Antes de la T4, el coordinador ejecuta el bucle de la sección «Precondición del arte» del
+    plan.
+  - Coste si fuera un error: si el arte llega tarde, la rama espera. Nada se integra a medias.
+- **V2 · Un script nuevo (`optimizar-arte.py`) cubre las 27 piezas.**
+  - Por qué: `optimizar-ilustraciones.py` está atado a 65 ficheros, 384 px y `palabras/`, y
+    mezclar dos modos en él lo complica.
+  - `iconos-pwa.py` se borra: la «S» provisional ya no hace falta.
+  - D25 decía que el arte se integraba «con `optimizar-ilustraciones.py`»; se cumple la
+    intención (un script con Pillow), no el nombre.
+  - Coste si fuera un error: dos scripts parecidos.
+- **V3 · Formato, tamaño y presupuesto según la clase de pieza** (tabla de piezas del plan).
+  - WebP para todo lo que pinta un `<img>`.
+  - PNG para los iconos de la interfaz (convención de `Icon`), para los cursores (Safari no
+    acepta WebP en `cursor`) y para los iconos de la app (iOS).
+  - Los presupuestos salen del peso de hoy: las ilustraciones pesan < 60 KB a 384 px y los
+    iconos, 19-34 KB a 256 px.
+  - Coste si fuera un error: subir un presupuesto, que es una línea en `art-files.test.ts`.
+- **V4 · El script valida todo antes de escribir, recorta al centro y no amplía.**
+  - Por qué: el chat de imágenes da 1024 × 1536, no 1536 × 2048. Por eso los fondos se
+    recortan a 3:4 y se quedan en 960 × 1280.
+  - Una pieza transparente sin transparencia se vería como una caja en la interfaz.
+  - Un lote incompleto no debe dejar `public/` a medias.
+  - Coste si fuera un error: en un iPad Pro, el fondo se amplía unas 2 veces; los fondos son
+    suaves y el prompt pide el centro despejado.
+- **V5 · Del icono de la app solo se genera `app-512`.**
+  - Los de 192 y 180 px salen de él, y el manifest gana una entrada `purpose: "maskable"`
+    (el personaje ocupa el 70 % central, dentro de la zona segura).
+  - Es una imagen menos que generar.
+  - Coste si fuera un error: el personaje sale un poco más pequeño en el de 192.
+- **V6 · Las pegatinas de estrellas no llevan número pintado.**
+  - Por qué: el spec §9 dice que el niño no ve texto, y la revisión final del Plan 6 ya quitó
+    los títulos visibles de la galería (M4).
+  - La serie se lee por tamaño y adorno; el número va en el `aria-label`.
+  - Corrige la frase de `arte-plan-7-prompts.md` que decía que «el número lo pinta la
+    interfaz».
+  - Coste si fuera un error: pintar un número es una línea, pero violaría §9.
+- **V7 · Todo el arte tiene respaldo.**
+  - `ArtImage` cae al emoji, como `Picture` (D1).
+  - El fondo cae a su degradado.
+  - La boca cae al SVG esquemático de D21, que se conserva como `MouthSchematic`.
+  - Coste si fuera un error: algo más de código que un `<img>` a secas, a cambio de que una
+    vista nunca se quede vacía, sin red y con la precaché incompleta.
+- **V8 · Cada logro pinta la pieza que desbloquea** (`rewardArt` sustituye a `rewardIcon`).
+  - Pradera → su fondo, «Compañero nuevo» → el zorrito, Estrellitas → su partícula, etc.
+  - La gorra (`ten-sessions`) enseña al pollito con gorra.
+  - Ningún emoji de respaldo es una letra ni una cifra: 🅰️ pasa a ✈️ (sonido y no nombre).
+  - Coste si fuera un error: cambiar una fila de la tabla.
+- **V9 · Un cosmético bloqueado se ve como silueta gris de su propia imagen**, como en el
+  álbum, en vez de 🔒. Coste si fuera un error: volver al candado es una línea.
+- **V10 · Iconos nuevos: `erase`, `done`, `gallery` y `lock`.**
+  - `lock` se añade a los prompts: el 🔒 aparece en cada unidad bloqueada del mapa.
+  - «Volver al mapa» usa `next` en espejo, sin arte nuevo.
+  - **`minor (deferred)`**: 🔁 de «Repasar» (solo sale con el currículo agotado), ✓ del
+    equipado y de «guardado», ✕ de salir (del adulto) y ★/☆ (glifos tipográficos con colores
+    de token).
+  - Coste si fuera un error: un icono más que generar.
+- **V11 · El cursor de PC por rastro (S20) solo cambia con `(pointer: fine)`.**
+  - `TrailLayer` pone `data-trail-cursor` y `--trail-cursor` en `<html>`, y `globals.css`
+    aplica `cursor: var(--trail-cursor), auto`.
+  - No depende del movimiento reducido ni de `reducedCelebrations`: es estático.
+  - No se usa `style.cursor` porque jsdom puede descartar un `url()` y el test pasaría en falso.
+  - Coste si fuera un error: el cursor cambia también con las celebraciones reducidas.
+- **V12 · La boca apila sus seis fotogramas desde el montaje y solo cambia la opacidad.**
+  - Por qué: en el iPad, cambiar el `src` cada 450 ms dejaría huecos en blanco la primera vez.
+  - `MOUTH_STEP_MS`, `data-shape`, el movimiento reducido y `onDone` no cambian.
+  - Coste si fuera un error: seis imágenes de < 30 KB decodificadas a la vez.
+- **V13 · Todo texto sobre el fondo cosmético va sobre una superficie opaca de token.**
+  - Por qué: `bg:espacio` es oscuro, y hoy el título, el contador y la marca de «guardado»
+    del mapa se pintan directamente sobre el fondo.
+  - Lo comprueba un test (LE1-LE3), no una revisión visual.
+  - Coste si fuera un error: las bandas tapan algo del fondo.
+- **V14 · La paleta se propone con colores medidos en el arte y la aprueba el autor antes de
+  la revisión.**
+  - Los tests CO fijan tres invariantes: la tabla AA, «sin rojo ni verde intensos» y que el
+    manifest y el `viewport` usen los mismos colores que los tokens.
+  - Convierten en tests tres reglas que hoy solo están escritas (CLAUDE.md, forma preferida de
+    la poda).
+  - Coste si fuera un error: el umbral de «intenso» (S ≥ 0,5, L entre 0,25 y 0,75) puede
+    rechazar un verde apagado del bosque. Se ajusta en el test, con su porqué.
+- **V15 · `/dev/arte`**, solo en `pnpm dev` (404 en producción, como `/dev/plantillas`).
+  - Muestra una hoja con todo el arte, los fondos con piezas del mapa encima y la paleta con
+    sus ratios.
+  - Sirve para que el autor apruebe la paleta y para la prueba de legibilidad.
+  - Coste si fuera un error: una ruta de desarrollo más que mantener.
+- **V16 · Tamaños:**
+  - compañero: 112 px en el mapa y 160 px en el fin de sesión (hoy, unos 60 px de emoji);
+  - logros del fin de sesión: 96 px;
+  - partícula: 28 px;
+  - boca: 128 px, el tamaño al que el prompt pide que se distingan.
+  - Coste si fuera un error: son clases de tamaño.
+
+## Reparto de tareas
+
+| # | Tarea | Riesgo · Effort | ¿Arte? | Sesión |
+|---|---|---|---|---|
+| 1 | Tubería del arte: `optimizar-arte.py` y sus tests (OP1-OP8) | script · medium | no | 1 |
+| 2 | El arte en la interfaz: `ArtImage`, `visuals.ts` y sus cinco llamadores (AR1-AR13) | contrato de UI · high | no | 1 |
+| 3 | Cursor de PC por rastro y boca con fotogramas (RA1-RA5, BO1-BO5) | UI · medium | no | 2 |
+| 4 | Integración del arte: ficheros, iconos nuevos e invariantes de disco (FI1-FI7) | assets · medium | sí | 2 |
+| 5 | Paleta final, legibilidad y `/dev/arte` (CO1-CO4, LE1-LE4), con la puerta del autor | estilos · medium | sí | 3 |
+| 6 | Cierre: `docs/checklist-ipad.md`, README, poda y ledger | docs · medium | sí | 3 |
+
+**Review Focus:**
+1. arte que no carga;
+2. fondo oscuro detrás del texto;
+3. la primera vez que suena la boca en el iPad;
+4. cursor en dispositivos híbridos;
+5. el peso del arte en la precaché.
+
+## Progreso de ejecución
+
+| Tarea | Estado | Rondas | Mutaciones supervivientes |
+|---|---|---|---|
+| 1 | pendiente | | |
+| 2 | pendiente | | |
+| 3 | pendiente | | |
+| 4 | pendiente (precondición D32) | | |
+| 5 | pendiente | | |
+| 6 | pendiente | | |

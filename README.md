@@ -6,17 +6,14 @@ repaso espaciado, validación por voz y recompensas. Uso principal en iPad/iPhon
 como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acompaña.
 
 > **Estado a 2026-09-29:** el núcleo (Plan 1, PR #1), la primera sesión jugable (Plan 2, PR #3),
-> la Fase 0 (Plan 3, PR #4), `trace` (Plan 4, PR #5) y la voz (Plan 5) están fusionados en
-> `main`. El **Plan 6** (rama `feat/plan-6-padres-recompensas`, 11 tareas hechas) construye lo
-> **funcional** que faltaba: panel de padres con PIN, ajustes, importar el progreso, trazo en
-> minúsculas, recompensas y cosméticos (con marcadores provisionales), avance en el mapa,
-> «borrar» y «listo» en `trace`, PWA con service worker y pruebas e2e con Playwright. Hoy son
-> jugables las tres fases. 1322 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y
-> `pnpm e2e` en verde. **Falta**, en este orden: la revisión final de la rama con Opus, que el
-> autor **despliegue en Vercel** (D29) y haga la **prueba manual** (lista en
-> `docs/superpowers/2026-09-28-plan-6-registro.md`, sección «Prueba manual del autor») y abrir
-> el PR. Después, el **Plan 7**: identidad visual (arte, compañero, boca) y la lista de
-> verificación en iPad.
+> la Fase 0 (Plan 3, PR #4), `trace` (Plan 4, PR #5), la voz (Plan 5) y lo **funcional** del
+> Plan 6 (PR #7: panel de padres con PIN, ajustes, importar, trazo en minúsculas, recompensas
+> con marcadores provisionales, avance en el mapa, PWA y e2e) están fusionados en `main`. Hoy
+> son jugables las tres fases. 1322 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y
+> `pnpm e2e` en verde. El despliegue en Vercel y la prueba manual del Plan 6 **no se hicieron**:
+> entran en `docs/checklist-ipad.md` del Plan 7 (D35). El **Plan 7** (identidad visual y lista de
+> verificación en iPad) está **escrito** en la rama `feat/plan-7-identidad-visual`; su ejecución
+> empieza por las tareas sin arte, mientras el autor genera el arte (D32).
 
 ---
 
@@ -487,7 +484,7 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 6 construidos.
 | ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (PR #4) | La Fase 0 entera es jugable |
 | ~~4~~ | ~~`trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía~~ **hecho** (PR #5) | Escribir letras con el dedo |
 | ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** | Las Fases 1 y 2 son jugables |
-| ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (rama `feat/plan-6-padres-recompensas`; falta la prueba manual y el PR) | Una app completa y desplegable, aún con marcadores en vez de arte |
+| ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | 7 | **Identidad visual (D24):** integrar el arte que el autor genera con `docs/arte-plan-7-prompts.md` (compañero, fondos, pegatinas, trofeo, rastros, **la boca**, iconos), paleta final, y la **lista de verificación en iPad** (`docs/checklist-ipad.md`) sobre la versión final | La versión con cara propia, probada en dispositivo real |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 
@@ -515,21 +512,20 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 6 con las 11 tareas hechas (2026-09-29):** ledger en
-`docs/superpowers/2026-09-28-plan-6-registro.md`. Queda, en este orden:
+**Plan 7 escrito (2026-09-29):** plan en
+`docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md`, ledger en
+`docs/superpowers/2026-09-29-plan-7-registro.md` (D32-D35, V1-V16), rama
+`feat/plan-7-identidad-visual`. Queda, en este orden:
 
-1. **Revisión final de la rama** con `model: "opus"`, effort `high`.
-2. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; la URL es pública, D29) y hace
-   la **prueba manual** en dispositivo real (lista de 9 puntos en el ledger, sección «Prueba
-   manual del autor»). Nadie despliega por él.
-3. **Abrir el PR** de `feat/plan-6-padres-recompensas` contra `main`.
-4. Mientras tanto, el autor puede **generar el arte** con `docs/arte-plan-7-prompts.md`.
-5. **Escribir el Plan 7** (identidad visual y `docs/checklist-ipad.md`) con
-   `superpowers:writing-plans`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo
-   con `superpowers:subagent-driven-development` y `/model sonnet`. Instala entonces
-   `frontend-design@claude-plugins-official`. Pregunta al autor las decisiones abiertas.
-6. Llevar el ledger del plan **versionado desde el primer día** en
-   `docs/superpowers/<fecha>-plan-N-registro.md`.
+1. **El autor genera el arte** con `docs/arte-plan-7-prompts.md` (27 PNG) en
+   `C:\Users\Yelisson\Downloads\silabin-arte-plan-7` (D32), e instala
+   `frontend-design@claude-plugins-official` (lo usa la Tarea 5).
+2. **Ejecutar el Plan 7** con `superpowers:subagent-driven-development` y `/model sonnet`,
+   empezando por las tareas sin arte (T1-T3). La T4 no empieza hasta que estén los 27 ficheros.
+3. **Revisión final de la rama** con `model: "opus"`.
+4. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; D29) y pasa
+   `docs/checklist-ipad.md`, que incluye la prueba del Plan 6 (D35). Nadie despliega por él.
+5. **Abrir el PR** de `feat/plan-7-identidad-visual` contra `main`.
 
 ---
 

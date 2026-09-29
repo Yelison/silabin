@@ -1,22 +1,34 @@
 # Prompts del arte del Plan 7 (D25)
 
 Prompts para que el autor genere, mientras se ejecuta el Plan 6, el arte que hoy son marcadores
-provisionales (S21). El Plan 7 los integra con `scripts/optimizar-ilustraciones.py` y cambia solo
-`src/features/rewards/visuals.ts` y los assets; ninguna vista decide qué se pinta.
+provisionales (S21). El Plan 7 (`docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md`)
+los integra con `scripts/optimizar-arte.py`. `src/features/rewards/visuals.ts` sigue siendo el
+único sitio que traduce un id a una imagen.
 
 Sigue el método de [`docs/ilustraciones-prompts.md`](ilustraciones-prompts.md): **un chat para
 las piezas 3D** (pega primero su «Bloque de estilo», tal cual, y confirma que lo entiende), **un
 chat aparte para los iconos planos**. Genera de una en una; si una desentona, pide «Rehazla
 respetando el bloque de estilo del principio». Guarda cada una con el fichero de la tabla
-(sin tildes ni ñ). Los PNG originales no se versionan; se optimizan a WebP (menos de 60 KB).
+(sin tildes ni ñ). Los PNG originales no se versionan; `scripts/optimizar-arte.py` (Plan 7,
+Tarea 1) los convierte a WebP o PNG con el tamaño y el peso de cada clase.
+
+**Dónde guardarlas (D32):** todas juntas, sin subcarpetas, en
+`C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Son **27 ficheros** (la lista exacta está en
+la sección «Precondición del arte» del Plan 7). La Tarea 4 del plan no empieza hasta que estén
+todos.
 
 > **Las dos reglas del bloque de estilo que más importan aquí:** sin texto, letras ni números
-> en la imagen (las pegatinas de 10, 25, 50 y 100 estrellas **no llevan el número escrito**: el
-> número lo pinta la interfaz), y sin rojo ni verde intensos como color dominante.
+> en la imagen, y sin rojo ni verde intensos como color dominante. Las pegatinas de 10, 25, 50
+> y 100 estrellas **no llevan el número escrito**, y la interfaz tampoco lo pinta (V6, spec
+> §9: el niño no ve texto). La serie se reconoce porque crece en tamaño y en adornos.
 
-**Antes de generar, decide con el autor:** el compañero es un personaje nuevo (D8 lo dejó
-abierto). Los marcadores actuales son un pollito (`companion:first`) y un zorro
-(`companion:second`); son solo una sugerencia, no un requisito.
+**Compañeros decididos con el autor (D33):** un **pollito** (`companion:first`, también es el
+icono de la app) y un **zorrito** (`companion:second`).
+
+**Tamaños:** si el chat no puede dar el tamaño exacto, vale lo más parecido: un fondo de
+1024 × 1536 o una pieza cuadrada de 1024 × 1024 sirven. El script recorta al centro y reduce.
+Lo que no admite es una imagen **más pequeña** que su salida, ni una pieza que debe ser
+transparente con un fondo opaco: se vería como una caja.
 
 ---
 
@@ -121,16 +133,18 @@ uniforme, relleno liso sin brillo, sin fondo, legible a 72 px. Sin rojo ni verde
 | `ui-erase.png` | 512 × 512, transparente | botón «Borrar» de `trace` (emoji 🧽) | Una goma de borrar rosa suave, de perfil, con una pequeña estela de migas. |
 | `ui-done.png` | 512 × 512, transparente | botón «Listo» de `trace` (emoji 👍) | Un pulgar hacia arriba amable, redondeado, de color piel cálido. Sin verde. |
 | `ui-gallery.png` | 512 × 512, transparente | botón «Mis premios» del mapa (emoji 🎁) | Un regalo pequeño con lazo, en amarillo y azul suave. |
-| `app-192.png` | 192 × 192, opaco | `public/icons/app-192.png` («S» provisional) | Icono de la app: el compañero 1 (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea). Sin texto. Estilo 3D del chat de ilustraciones, no plano. |
-| `app-512.png` | 512 × 512, opaco | `public/icons/app-512.png` | El mismo icono, a 512 px, con el personaje ocupando el 70 % central (zona segura de icono enmascarable). |
+| `ui-lock.png` | 512 × 512, transparente | unidad bloqueada del mapa y cosméticos por descubrir (emoji 🔒) | Un candado pequeño y redondeado, cerrado, en gris azulado suave, con el arco grueso. Amable, nada amenazante. |
+| `app-512.png` | 1024 × 1024 o 512 × 512, opaco | `public/icons/app-512.png`, `app-192.png` y `apple-touch-icon.png` («S» provisional) | Icono de la app: el pollito (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea), **ocupando el 70 % central** (zona segura de icono enmascarable). Sin texto. **Estilo 3D del chat de ilustraciones, no plano.** |
 
-`apple-touch-icon.png` (180 × 180) se deriva de `app-512.png`; el Plan 7 lo regenera con
-`scripts/iconos-pwa.py`.
+Solo hace falta `app-512.png` (V5): el script saca de él los de 192 y 180 px
+(`apple-touch-icon.png`). Ya no se pide un `app-192.png` aparte.
 
 ---
 
 ## Después de generarlas
 
-- Guarda los originales fuera del repositorio y pásalos por `scripts/optimizar-ilustraciones.py`.
-- Que `visuals.ts` sirva estos ficheros en vez de los emoji es una tarea del Plan 7.
-- Instala entonces `frontend-design@claude-plugins-official` (no antes).
+- Guárdalos en la carpeta de D32. **No los metas en el repositorio**: la Tarea 4 del Plan 7
+  los pasa por `scripts/optimizar-arte.py`, y solo se versionan las salidas.
+- `visuals.ts` sirve estos ficheros en vez de los emoji (Plan 7, Tareas 2 y 4), con el emoji
+  como respaldo si alguno no carga.
+- El plugin `frontend-design@claude-plugins-official` lo usa la Tarea 5 (la paleta).
