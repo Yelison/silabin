@@ -75,6 +75,8 @@ export function ParentGate(props: {
 				now={now}
 				onClose={onClose}
 				onChangePin={() => {
+					// Sin salir del modo autenticado no se pintaría el paso de crear el PIN.
+					setAuthenticated(false);
 					setStep({ kind: "create", pending: null, mismatch: false });
 					setValue("");
 				}}

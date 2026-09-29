@@ -133,6 +133,42 @@ describe("ParentGate", () => {
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 
+	it("I2: «Cambiar PIN» del panel lleva a crear un PIN nuevo y con él se vuelve a entrar", async () => {
+		const store = crearStore();
+		await store.getState().load();
+		await store.getState().setPin("1234");
+		const abrirPuerta = () =>
+			render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<ParentGate onClose={vi.fn()} download={vi.fn()} />,
+				),
+			);
+		const { unmount } = abrirPuerta();
+
+		await userEvent.type(campoPin(), "1234");
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Cambiar PIN" }),
+		);
+		expect(await screen.findByText("Crea un PIN de 4 números")).toBeDefined();
+		expect(
+			screen.queryByRole("dialog", { name: "Panel de padres" }),
+		).toBeNull();
+
+		await userEvent.type(campoPin(), "5678");
+		await userEvent.type(campoPin(), "5678");
+		expect(await panelAbierto()).toBeDefined();
+		unmount();
+
+		// La puerta nueva pide el PIN nuevo: el viejo ya no abre.
+		abrirPuerta();
+		await userEvent.type(campoPin(), "1234");
+		expect(await screen.findByText("PIN incorrecto")).toBeDefined();
+		await userEvent.type(campoPin(), "5678");
+		expect(await panelAbierto()).toBeDefined();
+	});
+
 	it("mutación: sin llamar a checkPin, un PIN de cualquier valor no debería abrir (regresión de N3)", async () => {
 		await montar({ pin: "4321" });
 		fireEvent.change(campoPin(), { target: { value: "9999" } });
