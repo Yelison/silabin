@@ -1,6 +1,7 @@
 "use client";
 
 import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
 import {
 	activeUnitId,
 	curriculum,
@@ -184,7 +185,7 @@ function UnitButton(props: {
 		>
 			<span>{unit.title}</span>
 			{status === "done" && <Estrellas n={stars} />}
-			{status === "locked" && <span aria-hidden="true">🔒</span>}
+			{status === "locked" && <Icon name="lock" size={32} />}
 			{status === "active" && <span aria-hidden="true">▶</span>}
 		</button>
 	);
@@ -231,9 +232,9 @@ export function MapScreen(props: {
 					type="button"
 					aria-label="Mis premios"
 					onClick={onOpenRewards}
-					className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-card text-4xl"
+					className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-card"
 				>
-					🎁
+					<Icon name="gallery" />
 				</button>
 			</div>
 			<StarCounter total={estrellas} milestone={hito} />

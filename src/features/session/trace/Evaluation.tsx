@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon, type IconName } from "@/components/Icon";
 import { ReplayButton } from "@/components/ReplayButton";
 import { type TraceAnimation, TraceCanvas } from "@/components/TraceCanvas";
 import type { TraceGuide, TraceStroke } from "@/engine";
@@ -12,17 +13,15 @@ import { traceEffect } from "@/features/session/trace/hint-effects";
 export const TRACE_IDLE_MS = 1500;
 
 /**
- * Botón de «Borrar»/«Listo»: misma forma y tamaño que `ReplayButton`, con un emoji provisional
- * como contenido en vez de un `Icon`. S21 (registro del Plan 6) fija iconos provisionales con
- * emoji para borrar/listo hasta el Plan 7: darles una entrada en `ICON_NAMES` ahora exigiría un
- * PNG real que ese plan va a reemplazar de todos modos.
+ * Botón de «Borrar»/«Listo»: misma forma y tamaño que `ReplayButton`, con su `Icon` de arte como
+ * contenido. El nombre accesible va en el botón; el icono es decorativo.
  */
 function BotonAccion(props: {
-	emoji: string;
+	icon: IconName;
 	"aria-label": string;
 	onClick: () => void;
 }) {
-	const { emoji, onClick, ...rest } = props;
+	const { icon, onClick, ...rest } = props;
 	return (
 		<button
 			type="button"
@@ -30,7 +29,7 @@ function BotonAccion(props: {
 			className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-action p-4 text-action-ink shadow-md active:scale-95"
 			{...rest}
 		>
-			<span aria-hidden="true">{emoji}</span>
+			<Icon name={icon} />
 		</button>
 	);
 }
@@ -262,7 +261,7 @@ export function Evaluation(props: EvaluationProps) {
 				<div className="flex h-18 w-18 items-center justify-center">
 					{mostrarBotones && (
 						<BotonAccion
-							emoji="🧽"
+							icon="erase"
 							aria-label="Borrar"
 							onClick={handleBorrar}
 						/>
@@ -270,7 +269,7 @@ export function Evaluation(props: EvaluationProps) {
 				</div>
 				<div className="flex h-18 w-18 items-center justify-center">
 					{mostrarBotones && (
-						<BotonAccion emoji="👍" aria-label="Listo" onClick={handleListo} />
+						<BotonAccion icon="done" aria-label="Listo" onClick={handleListo} />
 					)}
 				</div>
 			</div>

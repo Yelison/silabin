@@ -2,6 +2,7 @@
 
 import { ArtImage } from "@/components/ArtImage";
 import { BigButton } from "@/components/BigButton";
+import { Icon } from "@/components/Icon";
 import {
 	type Cosmetic,
 	type CosmeticSlot,
@@ -220,7 +221,7 @@ export function RewardsScreen(props: { onClose: () => void }) {
 				/>
 			))}
 			<BigButton aria-label="Volver al mapa" onClick={onClose}>
-				↩️
+				<Icon name="next" className="-scale-x-100" />
 			</BigButton>
 		</main>
 	);

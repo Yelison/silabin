@@ -26,4 +26,14 @@ describe("manifest", () => {
 			expect(existsSync(ruta), `falta ${icono.src}`).toBe(true);
 		}
 	});
+
+	it("FI4: app-512.png se declara también maskable, en una entrada aparte de la «any»", () => {
+		const iconos = manifest().icons ?? [];
+		const maskable = iconos.filter((i) => i.purpose === "maskable");
+		expect(maskable.map((i) => i.src)).toEqual(["/icons/app-512.png"]);
+		const cualquiera = iconos.filter(
+			(i) => i.src === "/icons/app-512.png" && i.purpose !== "maskable",
+		);
+		expect(cualquiera).toHaveLength(1);
+	});
 });

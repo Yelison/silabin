@@ -534,6 +534,20 @@ describe("trace Evaluation", () => {
 			expect(queryByRole("button", { name: "Listo" })).not.toBeNull();
 		});
 
+		it("FI5: «Borrar» y «Listo» pintan su icono de arte, sin los emojis de marcador", () => {
+			vi.useFakeTimers();
+			const { svg, getByRole, container } = montar();
+			trazoSimple(svg);
+			const borrar = getByRole("button", { name: "Borrar" });
+			const listo = getByRole("button", { name: "Listo" });
+			const erase = borrar.querySelector('img[src="/icons/ui-erase.png"]');
+			const done = listo.querySelector('img[src="/icons/ui-done.png"]');
+			expect(erase?.getAttribute("aria-hidden")).toBe("true");
+			expect(done?.getAttribute("aria-hidden")).toBe("true");
+			expect(container.textContent).not.toContain("🧽");
+			expect(container.textContent).not.toContain("👍");
+		});
+
 		it("B2 (mutación: «Borrar» sin cancelar el temporizador): vacía la tinta, y pasados 2 s no llega ningún envío; el intento sigue abierto para un trazo nuevo", () => {
 			vi.useFakeTimers();
 			const {

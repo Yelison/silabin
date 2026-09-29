@@ -4,9 +4,10 @@ import type { MetadataRoute } from "next";
  * Manifiesto de la PWA. Los colores son los de `surface` y `action`
  * (ver `src/app/globals.css`, sección `@theme inline`).
  *
- * Los iconos son provisionales (S13): una «S» provisional, sin
- * margen de seguridad, así que no llevan `purpose: "any maskable"` (recortarían la letra en
- * un lanzador que aplique máscara). El Plan 7 los sustituye por la identidad visual final.
+ * Los iconos son el arte final del Plan 7. `app-512.png` se declara además `maskable`: el
+ * personaje ocupa el centro y un lanzador con máscara solo recorta el fondo. La entrada
+ * `any` y la `maskable` van separadas, porque `purpose: "any maskable"` en una sola haría
+ * que el lanzador usara siempre la versión con máscara.
  */
 export default function manifest(): MetadataRoute.Manifest {
 	return {
@@ -29,6 +30,12 @@ export default function manifest(): MetadataRoute.Manifest {
 				src: "/icons/app-512.png",
 				sizes: "512x512",
 				type: "image/png",
+			},
+			{
+				src: "/icons/app-512.png",
+				sizes: "512x512",
+				type: "image/png",
+				purpose: "maskable",
 			},
 		],
 	};

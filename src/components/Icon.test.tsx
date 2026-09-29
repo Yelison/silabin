@@ -26,8 +26,15 @@ describe("Icon", () => {
 		expect(img?.getAttribute("height")).toBe("72");
 	});
 
+	it("I11: acepta clases propias sin perder las suyas", () => {
+		const { container } = render(<Icon name="next" className="-scale-x-100" />);
+		const clases = container.querySelector("img")?.classList;
+		expect(clases?.contains("-scale-x-100")).toBe(true);
+		expect(clases?.contains("pointer-events-none")).toBe(true);
+	});
+
 	it("I10: existe el PNG de cada nombre en public/icons", () => {
-		expect(ICON_NAMES.length).toBe(6);
+		expect(ICON_NAMES.length).toBe(10);
 		for (const nombre of ICON_NAMES) {
 			const ruta = join(process.cwd(), "public", "icons", `ui-${nombre}.png`);
 			expect(existsSync(ruta), ruta).toBe(true);

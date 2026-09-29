@@ -157,9 +157,21 @@ describe("MapScreen", () => {
 	it("una unidad bloqueada lleva candado y no arranca nada al tocarla", async () => {
 		const { unidad, onStart } = montar(await storeConDisco(() => {}));
 		const rhyme = unidad("phase0:rhyme");
-		expect(within(rhyme).getByText("🔒")).toBeDefined();
+		const candado = rhyme.querySelector('img[src="/icons/ui-lock.png"]');
+		expect(candado?.getAttribute("aria-hidden")).toBe("true");
+		expect(candado?.getAttribute("width")).toBe("32");
+		expect(rhyme.textContent).not.toContain("🔒");
 		await userEvent.click(rhyme);
 		expect(onStart).not.toHaveBeenCalled();
+	});
+
+	it("FI6: «Mis premios» pinta el icono de galería, sin 🎁", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		const premios = screen.getByRole("button", { name: "Mis premios" });
+		expect(
+			premios.querySelector('img[src="/icons/ui-gallery.png"]'),
+		).not.toBeNull();
+		expect(container.textContent).not.toContain("🎁");
 	});
 
 	it("trampa 4: no pinta ninguna barra de dominio dentro de las unidades", async () => {

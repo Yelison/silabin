@@ -153,6 +153,15 @@ describe("RewardsScreen", () => {
 		expect(fondo?.querySelector("img")?.getAttribute("width")).toBe("72");
 	});
 
+	it("FI7: «Volver al mapa» pinta la flecha de arte en espejo, sin ↩️", async () => {
+		await montar();
+		const volver = screen.getByRole("button", { name: "Volver al mapa" });
+		const flecha = volver.querySelector('img[src="/icons/ui-next.png"]');
+		expect(flecha?.getAttribute("aria-hidden")).toBe("true");
+		expect(flecha?.classList.contains("-scale-x-100")).toBe(true);
+		expect(document.body.textContent).not.toContain("↩️");
+	});
+
 	it("tiene un botón para volver al mapa", async () => {
 		const { onClose } = await montar();
 		await userEvent
