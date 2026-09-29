@@ -120,8 +120,8 @@ function CosmeticRow(props: {
 	const cosmetics = cosmeticsFor(slot, unlockedAt);
 	return (
 		<section aria-label={label} className="flex flex-col gap-2">
-			<h2 className="text-lg font-semibold">{label}</h2>
-			<div className="flex flex-row flex-wrap gap-3">
+			<h2 className="sr-only">{label}</h2>
+			<div className="flex flex-row flex-wrap gap-4">
 				{cosmetics.map((cosmetic) =>
 					cosmetic.unlocked ? (
 						<EquippableCosmetic
@@ -159,10 +159,10 @@ export function RewardsScreen(props: { onClose: () => void }) {
 			aria-label="Mis premios"
 			className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4"
 		>
-			<h1 className="text-center text-3xl font-bold">Mis premios</h1>
+			<h1 className="sr-only">Mis premios</h1>
 			<section aria-label="Álbum" className="flex flex-col gap-2">
-				<h2 className="text-lg font-semibold">Álbum</h2>
-				<div className="flex flex-row flex-wrap gap-3">
+				<h2 className="sr-only">Álbum</h2>
+				<div className="flex flex-row flex-wrap gap-4">
 					{ALBUM_REWARDS.map((reward) => (
 						<AlbumEntry
 							key={reward.id}

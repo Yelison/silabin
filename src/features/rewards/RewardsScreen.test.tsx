@@ -34,6 +34,19 @@ async function montar(unlockedAt: Record<string, string> = {}) {
 }
 
 describe("RewardsScreen", () => {
+	it("M4/M5: los títulos son solo para lectores de pantalla (spec §9) y los objetivos táctiles van a 16 px", async () => {
+		await montar();
+		const titulos = screen.getAllByRole("heading");
+		expect(titulos.length).toBeGreaterThanOrEqual(5);
+		for (const titulo of titulos) expect(titulo.className).toContain("sr-only");
+		const filas = document.querySelectorAll("section > div");
+		expect(filas.length).toBe(4);
+		for (const fila of filas) {
+			expect(fila.className).toContain("gap-4");
+			expect(fila.className).not.toContain("gap-3");
+		}
+	});
+
 	it("F2: con first-session ganado, Pradera se puede equipar y queda marcada con ✓; Espacio no llama a nada", async () => {
 		const { store } = await montar({
 			"first-session": "2026-09-26T12:00:00.000Z",
