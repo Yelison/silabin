@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-6/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-7/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -304,3 +304,22 @@ dispositivo real durante el QA visual del plan. No hay mensaje de éxito explíc
 «Reiniciar todo» más allá de cerrar el diálogo — el brief solo pide texto para `read-failed`, no
 es un incumplimiento. `DataSection.tsx` queda en 220 líneas (export/import/reset); vigilar si
 una tarea futura le añade más antes de dividirlo.
+
+**Tarea 7 (Mapa: estrellas, hito, avance de la unidad y «guardado», D31a):** implementador y
+revisor (Sonnet) aprobaron sin rondas de corrección. `StarCounter`, `UnitDots` y `SavedMark`
+usan `nextMilestone`, `totalStars` y `unitProgress` del motor (Tarea 1) sin modificarlos. S17
+verificado: los puntos de avance de la unidad activa son solo `mastered`, sin huecos vacíos
+por lo que falta. El test «trampa 4» (ninguna unidad pinta su propia barra de dominio) se
+reescribió acotado a los botones de unidad porque la nueva barra global de hito rompía su
+aserción de "cero barras en todo el contenedor" — el revisor confirmó que la protección
+original se conserva intacta con el nuevo alcance, no se debilitó.
+
+**Minor (deferred) de la Tarea 7:** `role="img"` en `SavedMark`/`UnitDots` (MapScreen.tsx) es
+una elección de ARIA algo atípica para un check y unos puntos de progreso — `role="status"` o
+un nodo de texto oculto sería más convencional; sin impacto funcional, satisface el lint de
+Biome. Los tests de la hora «HH:MM» replican la misma lógica de formateo (`getHours`/
+`getMinutes`/`padStart`) que la implementación, así que no detectarían un bug sistemático ahí.
+El número de `StarCounter` no lleva contexto accesible más allá del dígito (el `★` es
+`aria-hidden`) — el brief no lo pedía.
+
+Task 7: complete (commits `8436835`..`572f08f`, review clean, 3 minor deferred).
