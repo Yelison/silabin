@@ -435,5 +435,5 @@ dónde viene cada punto para que, si falla, se sepa qué documento abrir.
 - Los fallos que sean de arte (una boca que se confunde, un icono recortado, un fondo ilegible)
   se apuntan en el registro del Plan 7 como `Ruling:` o `minor (deferred)`.
 - Cuando todo esté en OK o anotado, la **deuda 1 del README** se cierra y esta lista pasa al
-  archivo (`docs/archivo-trampas-y-deuda.md`). Falta decidir aún los ★ de `celebrate`
-  (`docs/diseno-visual.md`, «Abierto para el autor»).
+  archivo (`docs/archivo-trampas-y-deuda.md`). Los ★ de `celebrate` ya están decididos: el autor
+  los aceptó a 2,34 : 1 (2026-09-29; `docs/diseno-visual.md`, «Decisiones del autor»).

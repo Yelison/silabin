@@ -80,7 +80,8 @@ Todos estos pares los recalcula `src/app/tokens.test.ts` (CO1) leyendo `globals.
 de desarrollo `/dev/arte` los enseña con el color que pinta el navegador. Fuera de la tabla:
 `celebrate` (las estrellas) da 2.34 : 1 sobre `card` y 2.22 : 1 sobre `surface` (antes, con
 `#FF9F1C`: 2.05 y 1.94). No es texto —el número de estrellas va en `ink`— y el ★ del fin de
-sesión es grande, pero **no llega a 3 : 1**: ver «Abierto para el autor».
+sesión es grande, pero **no llega a 3 : 1**; el autor lo aceptó
+(2026-09-29, ver «Decisiones del autor»).
 
 El texto (`ink`, `ink-soft`, `action-ink`) cumple AA con holgura. Los bordes de estado
 (`calm-border`, `mark-border`) se oscurecieron manteniendo su tono (azul suave y ámbar,
