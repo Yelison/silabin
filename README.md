@@ -137,7 +137,7 @@ ningún agente despliega).
   inicio (`src/features/pwa/update.ts` + `StartScreen`) le pide que tome el control y recarga
   la página una vez, antes de empezar nada. Nunca pasa a mitad de una sesión.
 - Los iconos (`public/icons/app-192.png`, `app-512.png`, `apple-touch-icon.png`) son
-  provisionales: una «S» generada por `scripts/iconos-pwa.py` (S13). El Plan 7 los sustituye
+  provisionales: una «S» (S13). El Plan 7 los sustituye
 (prompt en `docs/arte-plan-7-prompts.md`).
 
 ---

@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
  * Manifiesto de la PWA. Los colores son los de `surface` y `action`
  * (ver `src/app/globals.css`, sección `@theme inline`).
  *
- * Los iconos son provisionales (S13): una «S» generada por `scripts/iconos-pwa.py`, sin
+ * Los iconos son provisionales (S13): una «S» provisional, sin
  * margen de seguridad, así que no llevan `purpose: "any maskable"` (recortarían la letra en
  * un lanzador que aplique máscara). El Plan 7 los sustituye por la identidad visual final.
  */
