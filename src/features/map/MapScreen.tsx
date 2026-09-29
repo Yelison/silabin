@@ -9,7 +9,7 @@ import {
 	type Unit,
 	type UnitProgress,
 } from "@/engine";
-import { type Download, ExportGesture } from "@/features/adult/ExportGesture";
+import { AdultDoor } from "@/features/adult/AdultDoor";
 import { useApp } from "@/features/app-context";
 import {
 	IMPLEMENTED_TEMPLATES,
@@ -97,19 +97,19 @@ function UnitButton(props: {
  */
 export function MapScreen(props: {
 	onStart: () => void;
-	download: Download;
+	onOpenPanel: () => void;
 	implemented?: ReadonlySet<TemplateId>;
 }) {
-	const { onStart, download, implemented = IMPLEMENTED_TEMPLATES } = props;
+	const { onStart, onOpenPanel, implemented = IMPLEMENTED_TEMPLATES } = props;
 	const progress: ProgressState = useApp((s) => s.progress);
 	const playable = isSessionPlayable(curriculum, progress, implemented);
 	const sinActiva = activeUnitId(curriculum, progress) === null;
 
 	return (
 		<main className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4">
-			<ExportGesture download={download}>
+			<AdultDoor onOpen={onOpenPanel}>
 				<h1 className="text-center text-3xl font-bold">Silabín</h1>
-			</ExportGesture>
+			</AdultDoor>
 			{FASES.map(({ phase, units }) => (
 				<section
 					key={phase}

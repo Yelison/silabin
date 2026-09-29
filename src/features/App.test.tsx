@@ -9,12 +9,26 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AudioPlayer, AudioRequest } from "@/audio";
 import { curriculum } from "@/engine";
 import { App } from "@/features/App";
 import { TAP_SETTLE_MS } from "@/features/session/count-syllables/Evaluation";
 import { templateViews } from "@/features/session/registry";
 import { crearStore, fakeAudio, vistasFalsas } from "@/features/test-support";
-import { createMemoryAdapter } from "@/store";
+import { createMemoryAdapter, type Settings } from "@/store";
+
+/** Como `fakeAudio`, pero anota el acento con el que la fábrica la creó. */
+function reproductorFalsoCon(accent: Settings["accent"]) {
+	const audio = {
+		accent,
+		unlocked: false,
+		unlock: vi.fn(async () => {}),
+		play: vi.fn(async (_request: AudioRequest) => {}),
+		stop: vi.fn(),
+		beat: vi.fn(),
+	} satisfies AudioPlayer & { accent: Settings["accent"] };
+	return audio;
+}
 
 // Las vistas reales de la plantilla, para devolverlas tras cada test que las sustituye.
 const vistasReales = templateViews["count-syllables"];
@@ -204,5 +218,64 @@ describe("App", () => {
 		expect(guardado.sessionCounter).toBe(1);
 		expect(Object.values(guardado.items).some((it) => it.presented)).toBe(true);
 		expect(audio.beat).toHaveBeenCalled();
+	});
+
+	it("N9: mantener el logo del mapa 3 s abre la puerta del panel, y Volver regresa al mapa", async () => {
+		const store = crearStore();
+		const { container } = render(<App store={store} audio={fakeAudio()} />);
+		const user = userEvent.setup();
+		await user.click(await iniciar());
+		vi.useFakeTimers();
+		try {
+			fireEvent.pointerDown(screen.getByText("Silabín"));
+			act(() => {
+				vi.advanceTimersByTime(3000);
+			});
+			expect(
+				screen.getByRole("dialog", { name: "Entrada al panel de padres" }),
+			).toBeDefined();
+			fireEvent.click(screen.getByRole("button", { name: "Volver" }));
+			expect(
+				screen.queryByRole("dialog", { name: "Entrada al panel de padres" }),
+			).toBeNull();
+			expect(
+				container.querySelector('[data-unit="phase0:clap"]'),
+			).not.toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("N8: cambiar el acento en el panel de padres para el reproductor anterior y crea uno nuevo con la fábrica inyectada", async () => {
+		const store = crearStore();
+		const fabrica = vi.fn((accent: Settings["accent"]) =>
+			reproductorFalsoCon(accent),
+		);
+		render(<App store={store} audioFactory={fabrica} />);
+		await iniciar();
+		expect(fabrica).toHaveBeenCalledTimes(1);
+		expect(fabrica).toHaveBeenLastCalledWith("neutro");
+		const primero = fabrica.mock.results[0]?.value as ReturnType<
+			typeof reproductorFalsoCon
+		>;
+
+		await act(async () => {
+			await store.getState().updateSettings({ accent: "mx" });
+		});
+
+		await waitFor(() => expect(fabrica).toHaveBeenCalledTimes(2));
+		expect(fabrica).toHaveBeenLastCalledWith("mx");
+		expect(primero.stop).toHaveBeenCalledTimes(1);
+	});
+
+	it("con `audio` inyectado, cambiar el acento no crea un reproductor nuevo", async () => {
+		const store = crearStore();
+		const audio = fakeAudio();
+		render(<App store={store} audio={audio} />);
+		await iniciar();
+		await act(async () => {
+			await store.getState().updateSettings({ accent: "mx" });
+		});
+		expect(audio.stop).not.toHaveBeenCalled();
 	});
 });

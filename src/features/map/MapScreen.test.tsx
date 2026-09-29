@@ -1,5 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { curriculum, emptyItemProgress, type TemplateId } from "@/engine";
@@ -41,7 +48,7 @@ function montar(
 			fakeAudio(),
 			<MapScreen
 				onStart={onStart}
-				download={vi.fn()}
+				onOpenPanel={vi.fn()}
 				{...(opciones.implemented === undefined
 					? {}
 					: { implemented: opciones.implemented })}
@@ -205,5 +212,28 @@ describe("MapScreen", () => {
 		expect(container.innerHTML.toLowerCase()).not.toMatch(
 			/error|fallo|incorrect|mal\b|perdiste|otra vez/,
 		);
+	});
+
+	it("N9: mantener el logo 3 s llama a onOpenPanel", async () => {
+		const store = await storeConDisco(() => {});
+		vi.useFakeTimers();
+		try {
+			const onOpenPanel = vi.fn();
+			render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<MapScreen onStart={vi.fn()} onOpenPanel={onOpenPanel} />,
+				),
+			);
+			const logo = screen.getByText("Silabín");
+			fireEvent.pointerDown(logo);
+			act(() => {
+				vi.advanceTimersByTime(3000);
+			});
+			expect(onOpenPanel).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
