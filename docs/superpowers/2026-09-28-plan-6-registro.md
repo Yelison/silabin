@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-9/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | **Tareas 1-11/11 completas** (`/model sonnet`, `superpowers:subagent-driven-development`). Faltan: revisión final de la rama (Opus, `high`), despliegue y prueba manual del autor, PR |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -149,7 +149,11 @@ caja entera, porque `TOLERANCE` se mide en alturas de caja).
 | 4 | completa (commit `65f606a`), Approved | 0/5 | 0 (2 mutaciones del brief, ambas atrapadas, verificadas por el revisor contra la lógica del diff) |
 | 5 | completa (commits `06be294`..`5522970`), Needs fixes → fix round 1/5 → Approved | 1/5 | 0 (3 mutaciones del brief, todas atrapadas, verificadas por el revisor contra el diff) |
 | 6 | completa (commit `b525553`), Approved | 0/5 | 0 (1 mutación del brief, atrapada con `toBe` de identidad de referencia, verificada por el revisor contra el diff) |
-| 7-11 | pendientes | | |
+| 7 | completa (commits `8436835`..`572f08f`), Approved | 0/5 | no aplica (revisión de cumplimiento) |
+| 8 | completa (commits `d0d8d34`..`fcf9801`), Needs fixes → fix round 1/5 → Approved | 1/5 | el revisor demostró una regla sin protección (mutación de `App.tsx`), corregida |
+| 9 | completa (commits `2021614`..`9d1e89b`), Approved | 0/5 | 1 mutación del brief (`skipWaiting: true`), atrapada por H5 |
+| 10 | completa (commit `72c04b7`), Approved | 0/5 | no aplica (e2e, cumplimiento) |
+| 11 | completa (commit del cierre) | 0/5 | no aplica (docs e integración) |
 
 **Ruling (Tarea 1):** el brief (K7) usa los ids abreviados `phase1:a`/`phase1:e`, pero los
 ids reales del currículo son `phase1:vowel-a`/`phase1:vowel-e` (`src/content/phase1.ts:34`
@@ -403,3 +407,66 @@ corrección; revisión de cumplimiento, sin mutación (la exige el brief solo pa
   un build viejo en el 3100; J1/J2 solo miran `glifos[0]`. WebKit (`PW_WEBKIT=1`) sin probar.
 
 Task 10: complete (commit `72c04b7`, review clean, minors deferred).
+
+**Tarea 11 (cierre: prompts del arte, integración, README y poda):** implementada por el
+coordinador delegado en una sola pasada, sin revisor de tarea (docs con una integración ligera;
+la revisión final de la rama la cubre).
+- `docs/arte-plan-7-prompts.md` (D25): un prompt por asset con fichero, tamaño e id de
+  `visuals.ts` que sustituye; compañeros 1 y 2 con y sin gorra, 4 fondos, pegatina «A de avión»,
+  pegatinas de 10/25/50/100, trofeo, 2 partículas, **6 bocas** (una por `MouthShape` de
+  `content/mouths.ts`: `open`, `spread`, `round`, `closed`, `teeth`, `tongue`) e iconos de
+  borrar, listo, galería y app (192 y 512). Reusa el bloque de estilo de
+  `docs/ilustraciones-prompts.md` por referencia, sin copiarlo.
+- `src/features/Panel.integration.test.tsx` (Z1-Z3), con store y vistas reales y adaptador en
+  memoria. Los tres pasaron a la primera porque la funcionalidad ya existía (tests de
+  integración, no de una función nueva); se comprobó que Z1 no es vacío con una mutación
+  (dejar la sesión en 5 hace fallar `toHaveLength(6)`). Z2 compara el documento importado con
+  el exportado; Z3 comprueba identidad de referencia de `doc` tras importar `{}`.
+- README y `docs/diseno-visual.md` al día; poda: 0 trampas vivas, 10 deudas (tope respetado; la
+  10 antigua se cerró por D31, la 1 apunta a `docs/checklist-ipad.md`); el texto completo pasó a
+  `docs/archivo-trampas-y-deuda.md`.
+- **Ruling: en Z2/Z3 el progreso se fabrica con el store** (`beginSession` + `presentationDone`,
+  y `abandonSession`), no jugando una sesión por la interfaz. — Por qué: lo que se prueba es
+  exportar/importar, no jugar; jugar ya lo cubren J1 y `Voice.integration`. — Coste si fuera un
+  error: un hueco entre «progreso real de una sesión completa» y «documento con una
+  presentación»; el esquema es el mismo.
+- **Ruling: Z1 usa `fireEvent.pointerDown` con reloj falso** para el gesto de 3 s (como
+  `AdultDoor.test`), no un mantenido real. — Coste si fuera un error: J3 (e2e) ya cubre el gesto
+  real con tiempo.
+- **S17-S23:** sin cambios de fondo salvo **S22 (semilla 7, no 42)**, ya registrado en la
+  Tarea 10. No se ha releído el texto completo de S17-S23 contra el código final; el revisor de
+  rama debería hacerlo.
+- **Minor (deferred):** el «tamaño» de los fondos (1536 × 2048) y de los iconos es una
+  sugerencia mía, no una decisión del autor; el Plan 7 puede ajustarlo. Las descripciones de
+  las seis bocas son esquemáticas y no se han probado con un generador de imágenes.
+
+Task 11: complete.
+
+## Prueba manual del autor (antes del PR)
+
+En **dispositivo real**, sobre el **despliegue de Vercel** (D29: despliega el autor; nadie lo
+hace por él, y la URL es pública). Marca cada punto y anota lo que falle.
+
+1. **PIN: alta, error y olvido.** Mantén el logo 3 s; crea un PIN de 4 números; sal; vuelve a
+   entrar con uno equivocado (mensaje neutro) y con el bueno; prueba «¿Olvidaste el PIN?»
+   (responde bien una multiplicación) y comprueba que el progreso sigue ahí.
+2. **Importar.** Una exportación **real de otro dispositivo** (debe salir el resumen y, al
+   confirmar, cambiar el progreso) y otra **rota** (editada a mano: mensaje de rechazo y nada
+   cambia).
+3. **Borrar y listo en `trace`.** ¿Sobra el temporizador de la detección automática (D19) ahora
+   que hay botones? Decide con el niño delante.
+4. **Minúsculas en `trace` con el dedo.** Activa «Trazo de minúsculas» en el panel y traza las 9;
+   apunta las que se confunden (a/o, a/u son conocidas).
+5. **Rastro encima de `trace` y de `build`.** ¿El rastro del dedo estorba al trazar o al
+   arrastrar sílabas?
+6. **Instalar en la pantalla de inicio** (Safari → Compartir → «Añadir a pantalla de inicio»):
+   icono, nombre y pantalla completa.
+7. **Sin red.** Con la app ya cargada, modo avión: arranca, se ve el mapa y las ilustraciones.
+8. **Actualización tras un segundo despliegue.** Despliega un cambio mínimo; abre la app
+   instalada y toca el inicio: debe recargarse una vez con la versión nueva, sin romper nada.
+9. **Acento cambiado en vivo.** Cambia el acento en el panel y comprueba que la voz cambia sin
+   recargar.
+
+Además (heredado de la Tarea 4): **franja de 3 botones de `trace` en apaisado 640 × 360**, que
+solo se razonó por aritmética. Y, de la Tarea 6, que el `<input type="file">` de importar sea
+cómodo de tocar.
