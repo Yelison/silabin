@@ -79,4 +79,38 @@ describe("applyWaitingUpdate", () => {
 		disparar("controllerchange");
 		expect(reload).toHaveBeenCalledTimes(1);
 	});
+
+	it("M2: si la señal ya está abortada cuando responde el registro, no envía SKIP_WAITING ni recarga", async () => {
+		const postMessage = vi.fn();
+		const { container, disparar } = contenedorFalso({
+			registro: { waiting: { postMessage } },
+		});
+		const reload = vi.fn();
+		const cancelar = new AbortController();
+		const pendiente = applyWaitingUpdate({
+			container,
+			reload,
+			signal: cancelar.signal,
+		});
+		cancelar.abort();
+		await expect(pendiente).resolves.toBe(false);
+		expect(postMessage).not.toHaveBeenCalled();
+		disparar("controllerchange");
+		expect(reload).not.toHaveBeenCalled();
+	});
+
+	it("M2: si se aborta después de enviar SKIP_WAITING, el cambio de controlador ya no recarga", async () => {
+		const postMessage = vi.fn();
+		const { container, disparar } = contenedorFalso({
+			registro: { waiting: { postMessage } },
+		});
+		const reload = vi.fn();
+		const cancelar = new AbortController();
+		await expect(
+			applyWaitingUpdate({ container, reload, signal: cancelar.signal }),
+		).resolves.toBe(true);
+		cancelar.abort();
+		disparar("controllerchange");
+		expect(reload).not.toHaveBeenCalled();
+	});
 });

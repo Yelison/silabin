@@ -5,6 +5,8 @@ import { useAudio } from "@/features/app-context";
 import { applyWaitingUpdate } from "@/features/pwa/update";
 
 const ESPERA_ACTUALIZACION_MS = 1000;
+/** Si se pidió la actualización pero la recarga no llega, el botón no se queda muerto. */
+const ESPERA_RECARGA_MS = 3000;
 
 /** El contenedor real, o `undefined` si el navegador no tiene Service Workers. */
 function contenedorReal():
@@ -16,10 +18,11 @@ function contenedorReal():
 }
 
 /** El `applyWaitingUpdate` real, con el `navigator` y `location` del navegador. */
-function actualizacionReal(): Promise<boolean> {
+function actualizacionReal(signal: AbortSignal): Promise<boolean> {
 	return applyWaitingUpdate({
 		container: contenedorReal(),
 		reload: () => window.location.reload(),
+		signal,
 	});
 }
 
@@ -29,14 +32,15 @@ function actualizacionReal(): Promise<boolean> {
  * esperar nada. Antes de este toque no suena nada.
  *
  * Al tocar, primero se comprueba si hay un Service Worker esperando (S11): si lo hay, se le
- * pide que tome el control y la página va a recargar sola, así que no se llama a `onStart`.
- * Si no hay actualización, o tarda más de 1 s en resolverse, se sigue como siempre. Esto
- * solo pasa aquí, nunca durante una sesión abierta.
+ * pide que tome el control y la página va a recargar sola, así que no se llama a `onStart`
+ * (salvo que la recarga no llegue en 3 s: entonces se empieza sin actualizar).
+ * Si no hay actualización, o tarda más de 1 s en resolverse, se sigue como siempre y la
+ * actualización se descarta (`AbortSignal`): nunca se recarga con la app ya en marcha.
  */
 export function StartScreen(props: {
 	onStart: () => void;
 	/** Para pruebas: sustituye la comprobación real del Service Worker. */
-	applyUpdate?: () => Promise<boolean>;
+	applyUpdate?: (signal: AbortSignal) => Promise<boolean>;
 }) {
 	const audio = useAudio();
 	return (
@@ -48,16 +52,25 @@ export function StartScreen(props: {
 					// Sin await: la llamada empieza dentro del gesto.
 					audio.unlock().catch(() => {});
 					let decidido = false;
+					const cancelar = new AbortController();
 					const empezar = () => {
 						if (decidido) return;
 						decidido = true;
+						// Desiste de la actualización: ni `SKIP_WAITING` ni recarga si llegan tarde.
+						cancelar.abort();
 						props.onStart();
 					};
-					const espera = setTimeout(empezar, ESPERA_ACTUALIZACION_MS);
-					(props.applyUpdate ?? actualizacionReal)().then(
+					let espera = setTimeout(empezar, ESPERA_ACTUALIZACION_MS);
+					(props.applyUpdate ?? actualizacionReal)(cancelar.signal).then(
 						(vaARecargar) => {
 							clearTimeout(espera);
-							if (!vaARecargar) empezar();
+							if (decidido) return;
+							if (!vaARecargar) {
+								empezar();
+								return;
+							}
+							// La recarga debería llegar sola; si no llega, se empieza igualmente.
+							espera = setTimeout(empezar, ESPERA_RECARGA_MS);
 						},
 						() => {
 							clearTimeout(espera);
