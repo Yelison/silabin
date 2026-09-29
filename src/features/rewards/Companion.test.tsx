@@ -73,7 +73,7 @@ describe("Companion", () => {
 		if (img === null) throw new Error("falta la imagen");
 		fireEvent.error(img);
 		expect(compa.querySelector("img")).toBeNull();
-		expect(compa.querySelector("[data-art-fallback]")?.textContent).toBe("🐣");
+		expect(compa.querySelector("[data-art-fallback]")?.textContent).toBe("🦜");
 	});
 
 	it("sin ten-sessions no lleva gorra", async () => {

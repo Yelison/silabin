@@ -19,7 +19,7 @@ export function Companion(props: { className?: string; size?: number }) {
 	const cap = wearsCap(rewards.unlockedAt);
 	const art =
 		cosmetic === null
-			? { src: "", emoji: "🐣" }
+			? { src: "", emoji: "🦜" }
 			: cap
 				? cosmetic.withCap
 				: cosmetic.art;

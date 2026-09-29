@@ -48,17 +48,17 @@ describe("visuals", () => {
 		if (segundo.slot !== "companion") throw new Error("no debería pasar");
 		expect(segundo.art).toEqual({
 			src: "/images/arte/companion-2.webp",
-			emoji: "🦊",
+			emoji: "🐘",
 		});
 		expect(segundo.withCap).toEqual({
 			src: "/images/arte/companion-2-gorra.webp",
-			emoji: "🦊",
+			emoji: "🐘",
 		});
 		const primero = cosmeticVisual("companion:first");
 		if (primero.slot !== "companion") throw new Error("no debería pasar");
 		expect(primero.art.src).toBe("/images/arte/companion-1.webp");
 		expect(primero.withCap.src).toBe("/images/arte/companion-1-gorra.webp");
-		expect(primero.art.emoji).toBe("🐣");
+		expect(primero.art.emoji).toBe("🦜");
 
 		for (const [id, nombre] of [
 			["bg:default", "bg-default"],
