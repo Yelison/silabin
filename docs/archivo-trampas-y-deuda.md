@@ -274,7 +274,7 @@ siguen vivas, con el mismo contenido, en menos líneas.
     `companion-N-gorra.webp` el respaldo es el animal sin gorra); `className="block"` de
     `TrailLayer` choca con el `inline-flex` del respaldo; AR9 comprueba 2 de las 6 clases del `img`
     de fondo y no hay test de que la miniatura de fondo del álbum caiga al degradado tras `error`.
-  - T3: JSDoc de `Mouth` con una línea de más de 150 caracteres.
+  - T3: JSDoc de `Mouth` con una línea de más de 150 caracteres (resuelto en la corrección final).
   - T4: `art-files.test.ts:57` `expect(rutas.length).toBe(18)` obliga a subir el número a mano al
     añadir un cosmético con fichero nuevo (mejor mínimo más presencia del conjunto obligatorio);
     FI5 falla con «expected undefined to be 'true'» si falta el icono (afirmar antes
@@ -296,8 +296,16 @@ siguen vivas, con el mismo contenido, en menos líneas.
 - **Glifos que quedan sin arte (V10):** 🔁 de «Repasar» (solo sale con el currículo agotado), ✓ del
   equipado y de «guardado», ✕ de salir (del adulto) y ★/☆ (glifos tipográficos con colores de
   token).
-- **Bocas aplazadas:** ver Ruling en el ledger del Plan 7 (2026-09-29). Seis peticiones 404
-  silenciosas por sesión con boca hasta que llegue el arte nuevo; el respaldo pinta el SVG.
+- **Bocas aplazadas:** ver Ruling en el ledger del Plan 7 (2026-09-29). Corrección final: el
+  interruptor `BOCAS_PUBLICADAS = false` de `Mouth.tsx` hace que `Mouth` pinte el SVG sin pedir
+  las seis imágenes, así que ya no hay 404 en cada montaje.
+- **Trampa 1 del Plan 7, convertida en test (FI2 + `BOCAS_PUBLICADAS`):** `optimizar-arte.py`
+  genera también las seis bocas y, por defecto, las escribe en `public/`; regenerar el arte habría
+  publicado las bocas fotorrealistas que el autor rechazó (deuda 5). El texto de la trampa decía
+  «usa `--destino` a una carpeta temporal y copia solo lo que no sea `mouth-*`» y «no se
+  automatiza: FI2 acepta ninguna o las seis». Ahora FI2 (`art-files.test.ts`) exige que no haya
+  ningún `mouth-*.webp` en `public/images/arte/` mientras `BOCAS_PUBLICADAS` sea `false`, y las seis
+  (< 30 KB) cuando sea `true`; el mensaje del fallo dice qué hacer.
 
 **Plan 7, ronda de corrección 1 de la Tarea 6: texto completo de las deudas que se recortaron a dos líneas en el README**
 
@@ -313,7 +321,7 @@ siguen vivas, con el mismo contenido, en menos líneas.
   `<input type="file">` de importar (lo controla el navegador).
 - **Deuda 5 (la boca sigue esquemática, bocas aplazadas, Plan 7):** el autor rechazó dos veces el
   arte fotorrealista y D21 pide una boca esquemática: no hay `mouth-*.webp` y `Mouth` pinta su SVG
-  por el `onError`. Falta rehacer la sección 5 de `docs/arte-plan-7-prompts.md` con un estilo que
+  sin pedir imágenes (`BOCAS_PUBLICADAS = false`). Falta rehacer la sección 5 de `docs/arte-plan-7-prompts.md` con un estilo que
   apruebe el autor, y probar con un niño que cada forma se distingue a 128 px. Es una decisión de
   arte, no se automatiza.
 - **Deuda 6 (arte y glifos a criterio del autor):** ilustraciones `una`, `asa`, `sumo`, contraste
@@ -332,7 +340,7 @@ siguen vivas, con el mismo contenido, en menos líneas.
   `not.toBeNull()`, rama muerta en `Companion.tsx:22`, `Mouth` no funciona renderizada en
   servidor, `ring-4 ring-action` invisible en la unidad activa, la regex `\bbg-` de
   `legibility.test.tsx`, la fórmula de contraste duplicada (`ArteDev.tsx` y `tokens.test.ts`),
-  `leerTokens` con `}` o sin `;`, y el MCP de Playwright caído en este entorno. Desglose por tarea
+  `leerTokens` con `}` o sin `;`, y el MCP de Playwright caído en este entorno (usa `@playwright/test` del repo). Desglose por tarea
   arriba, en «Minors por tarea del Plan 7».
 - **Deuda 10 (e2e frágil):** semilla 7 (S22), el solver solo prueba `initial-sound`, `say-it`,
   `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit

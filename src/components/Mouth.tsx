@@ -45,6 +45,9 @@ const _cubre: Exclude<MouthShape, (typeof MOUTH_SHAPES)[number]> extends never
 	? true
 	: never = true;
 
+/** Mientras el autor no apruebe las bocas, no se publican ni se piden: `Mouth` pinta su SVG. */
+export const BOCAS_PUBLICADAS: boolean = false;
+
 /** El fotograma de una forma, en `public/images/arte/`. */
 export function mouthFrameSrc(shape: MouthShape): string {
 	return `/images/arte/mouth-${shape}.webp`;
@@ -56,7 +59,7 @@ function contar(clave: string): number {
 
 /**
  * El interior de la boca de cada forma (D21). Es un dibujo esquemático y provisional: la
- * identidad visual llega en el Plan 6. Solo usa los tokens de `globals.css`.
+ * identidad visual del Plan 7 aplazó las bocas. Solo usa los tokens de `globals.css`.
  */
 function Interior({ forma }: { forma: MouthShape }) {
 	switch (forma) {
@@ -113,7 +116,8 @@ function Interior({ forma }: { forma: MouthShape }) {
 	}
 }
 
-/** El dibujo esquemático de una forma: el respaldo si algún fotograma no carga (V7). */
+/** El dibujo esquemático de una forma: lo que se ve mientras no haya bocas publicadas y el
+ * respaldo si con ellas algún fotograma no carga (V7). */
 function MouthSchematic({ forma }: { forma: MouthShape }) {
 	return (
 		<svg
@@ -136,18 +140,21 @@ function MouthSchematic({ forma }: { forma: MouthShape }) {
 }
 
 /**
- * Boca que recorre las formas de un sonido, una cada `MOUTH_STEP_MS`, y avisa con
- * `onDone` al acabar. Apila los seis fotogramas desde el montaje y solo cambia la opacidad
- * (V12): así la primera vez que suena no hay un hueco mientras se descarga cada imagen. Es decorativa: nada de lo que dice es necesario para jugar. Con movimiento
- * reducido enseña la última forma quieta, y `onDone` llega al mismo tiempo total, así que quien
- * espera a la boca avanza igual.
+ * Boca que recorre las formas de un sonido, una cada `MOUTH_STEP_MS`, y avisa con `onDone` al
+ * acabar. Con `BOCAS_PUBLICADAS` apagado (hoy) pinta el dibujo esquemático de cada forma y no
+ * pide ninguna imagen. Con él encendido apila los seis fotogramas desde el montaje y solo cambia
+ * la opacidad (V12): así, al pedir cada imagen la primera vez, no queda un hueco mientras se
+ * descarga. Es decorativa: nada de lo que dice es necesario para jugar. Con movimiento reducido
+ * enseña la última forma quieta, y `onDone` llega al mismo tiempo total, así que quien espera a
+ * la boca avanza igual. `publicadas` solo existe para probar la rama de los fotogramas.
  */
 export function Mouth(props: {
 	shapes: readonly MouthShape[];
 	playing: boolean;
 	onDone?(): void;
+	publicadas?: boolean;
 }) {
-	const { shapes, playing } = props;
+	const { shapes, playing, publicadas = BOCAS_PUBLICADAS } = props;
 	const reducido = useMovimientoReducido();
 	const [paso, setPaso] = useState(0);
 	// Si algún fotograma no carga, toda la boca cae al dibujo esquemático: el paso y los
@@ -179,7 +186,7 @@ export function Mouth(props: {
 
 	const indice = reducido ? total - 1 : Math.min(paso, total - 1);
 	const forma: MouthShape = shapes[Math.max(indice, 0)] ?? "closed";
-	if (fallida) return <MouthSchematic forma={forma} />;
+	if (!publicadas || fallida) return <MouthSchematic forma={forma} />;
 	return (
 		<div aria-hidden="true" data-shape={forma} className="relative size-32">
 			{MOUTH_SHAPES.map((f) => (

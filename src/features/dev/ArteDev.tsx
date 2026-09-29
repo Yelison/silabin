@@ -319,10 +319,10 @@ function Pegatinas() {
 }
 
 /**
- * Devuelve `true` solo en el navegador, tras hidratar. `Mouth` cae al dibujo esquemático con el
- * `onError` de sus `<img>`, pero React no ve un error de carga que ocurre antes de hidratar: si
- * el servidor pinta los `<img>` de fotogramas que no existen, se quedan rotos. Aquí las bocas
- * se pintan ya en el cliente, como en la app (donde salen tras un toque, nunca del servidor).
+ * Devuelve `true` solo en el navegador, tras hidratar. Con `BOCAS_PUBLICADAS` encendido, `Mouth`
+ * cae al dibujo esquemático con el `onError` de sus `<img>`, pero React no ve un error de carga
+ * que ocurre antes de hidratar: si el servidor pinta fotogramas que no existen, se quedan rotos.
+ * Aquí las bocas se pintan ya en el cliente, como en la app (donde salen tras un toque).
  */
 function useMontado(): boolean {
 	const [montado, setMontado] = useState(false);
@@ -342,8 +342,9 @@ function Bocas() {
 				className="max-w-xl rounded-card bg-mark p-3 text-sm"
 			>
 				El arte de las bocas está aplazado: todavía no hay ningún{" "}
-				<code>mouth-*.webp</code>, así que aquí se ve el dibujo esquemático de
-				respaldo del componente <code>Mouth</code>.
+				<code>mouth-*.webp</code> y <code>BOCAS_PUBLICADAS</code> está apagado,
+				así que aquí se ve el dibujo esquemático del componente{" "}
+				<code>Mouth</code>.
 			</p>
 			<ul className="flex flex-wrap items-center gap-4">
 				{MOUTH_SHAPES.map((forma) => (

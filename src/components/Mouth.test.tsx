@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	BOCAS_PUBLICADAS,
 	MOUTH_SHAPES,
 	MOUTH_STEP_MS,
 	Mouth,
@@ -42,10 +43,10 @@ const visibles = (c: HTMLElement) =>
 		.filter((i) => i.className.split(" ").includes("opacity-100"))
 		.map((i) => i.getAttribute("data-frame"));
 
-describe("Mouth: fotogramas apilados (V12)", () => {
+describe("Mouth: fotogramas apilados (V12), con las bocas publicadas", () => {
 	it("BO1: pinta los seis fotogramas desde el primer pintado, con su src", () => {
 		const { container } = render(
-			<Mouth shapes={["open", "closed"]} playing={true} />,
+			<Mouth shapes={["open", "closed"]} playing={true} publicadas={true} />,
 		);
 		const imgs = fotogramas(container);
 		expect(imgs).toHaveLength(6);
@@ -65,7 +66,12 @@ describe("Mouth: fotogramas apilados (V12)", () => {
 	it("BO2: solo la forma actual es opaca, y avanza cada MOUTH_STEP_MS hasta onDone", () => {
 		const onDone = vi.fn();
 		const { container } = render(
-			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+			<Mouth
+				shapes={["open", "closed"]}
+				playing={true}
+				publicadas={true}
+				onDone={onDone}
+			/>,
 		);
 		expect(forma(container)).toBe("open");
 		expect(visibles(container)).toEqual(["open"]);
@@ -82,7 +88,7 @@ describe("Mouth: fotogramas apilados (V12)", () => {
 
 	it("BO2: el contenedor es decorativo, relative size-32, y el cambio solo anima con motion-safe", () => {
 		const { container } = render(
-			<Mouth shapes={["open", "closed"]} playing={true} />,
+			<Mouth shapes={["open", "closed"]} playing={true} publicadas={true} />,
 		);
 		const raiz = container.firstElementChild;
 		expect(raiz?.getAttribute("aria-hidden")).toBe("true");
@@ -97,7 +103,12 @@ describe("Mouth: fotogramas apilados (V12)", () => {
 		movimientoReducido(true);
 		const onDone = vi.fn();
 		const { container } = render(
-			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+			<Mouth
+				shapes={["open", "closed"]}
+				playing={true}
+				publicadas={true}
+				onDone={onDone}
+			/>,
 		);
 		expect(forma(container)).toBe("closed");
 		expect(visibles(container)).toEqual(["closed"]);
@@ -110,7 +121,12 @@ describe("Mouth: fotogramas apilados (V12)", () => {
 	it("BO4: si un fotograma no carga, pinta el SVG esquemático y mantiene el paso y los tiempos", () => {
 		const onDone = vi.fn();
 		const { container } = render(
-			<Mouth shapes={["open", "closed"]} playing={true} onDone={onDone} />,
+			<Mouth
+				shapes={["open", "closed"]}
+				playing={true}
+				publicadas={true}
+				onDone={onDone}
+			/>,
 		);
 		const tercero = fotogramas(container)[2];
 		if (tercero === undefined) throw new Error("sin fotograma");
@@ -132,6 +148,53 @@ describe("Mouth: fotogramas apilados (V12)", () => {
 		expect(MOUTH_SHAPES).toHaveLength(6);
 		expect(new Set(MOUTH_SHAPES).size).toBe(6);
 		expect(mouthFrameSrc("round")).toBe("/images/arte/mouth-round.webp");
+	});
+});
+
+describe("Mouth: interruptor BOCAS_PUBLICADAS", () => {
+	it("BP1: sin la prop, Mouth sigue a BOCAS_PUBLICADAS (con cualquier valor de la constante)", () => {
+		const { container } = render(<Mouth shapes={["open"]} playing={false} />);
+		expect(container.querySelectorAll("img").length).toBe(
+			BOCAS_PUBLICADAS ? MOUTH_SHAPES.length : 0,
+		);
+	});
+
+	it("BP2: con el interruptor apagado no pide ninguna imagen: ni un <img>", () => {
+		const { container } = render(
+			<Mouth shapes={["open", "closed"]} playing={true} publicadas={false} />,
+		);
+		expect(container.querySelectorAll("img")).toHaveLength(0);
+		expect(container.innerHTML).not.toContain("mouth-");
+	});
+
+	it("BP3: con el interruptor apagado pinta la boca esquemática de cada forma", () => {
+		for (const f of MOUTH_SHAPES) {
+			const { container, unmount } = render(
+				<Mouth shapes={[f]} playing={false} publicadas={false} />,
+			);
+			const svg = container.querySelector("svg[data-shape]");
+			expect(svg?.getAttribute("data-shape"), f).toBe(f);
+			expect(svg?.getAttribute("aria-hidden")).toBe("true");
+			expect(container.querySelectorAll("img")).toHaveLength(0);
+			unmount();
+		}
+	});
+
+	it("BP4: apagado, el recorrido sigue igual: cambia de forma y llama onDone", () => {
+		const onDone = vi.fn();
+		const { container } = render(
+			<Mouth
+				shapes={["open", "closed"]}
+				playing={true}
+				publicadas={false}
+				onDone={onDone}
+			/>,
+		);
+		expect(forma(container)).toBe("open");
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(forma(container)).toBe("closed");
+		act(() => vi.advanceTimersByTime(MOUTH_STEP_MS));
+		expect(onDone).toHaveBeenCalledTimes(1);
 	});
 });
 

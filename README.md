@@ -115,8 +115,8 @@ interfaz, los cursores y los iconos de la app). Uso:
 `python3 scripts/optimizar-arte.py <carpeta-origen> [--destino <raíz>]`. Valida todo antes de
 escribir (si algo falla no toca ni un fichero), recorta al centro y no amplía. Con `method=6`
 sobre `/mnt/c` es lento: lánzalo en segundo plano. Los tests del script están en
-`scripts/test_optimizar_arte.py` (~30 s). **Trampa:** genera también las seis bocas, que no se
-publican (ver «Trampas conocidas»). El arte va a `public/images/arte/` y los iconos a
+`scripts/test_optimizar_arte.py` (~30 s). Genera también las seis bocas, que no se
+publican: si caen en `public/`, FI2 falla (`BOCAS_PUBLICADAS`). El arte va a `public/images/arte/` y los iconos a
 `public/icons/`. Los originales no se versionan.
 
 El test omitido comprueba que los ficheros de audio existen en disco en los 3 acentos. Solo
@@ -523,8 +523,9 @@ rama, el despliegue y la prueba del autor, y el PR (ver «Siguientes pasos»).
 - **Cursor de PC y boca (V11, V12):** con `(pointer: fine)` el cursor pasa a la estrellita o la
   burbuja del rastro equipado (`data-trail-cursor` y `--trail-cursor` en `<html>`); en táctil no
   cambia. La boca apila sus seis fotogramas desde el montaje y solo cambia la opacidad, para que
-  en el iPad no parpadee la primera vez. **Las bocas se aplazaron:** no hay ningún `mouth-*.webp`
-  y `Mouth` pinta el SVG esquemático de D21 por el `onError` (deuda 5).
+  en el iPad no parpadee la primera vez. **Las bocas se aplazaron:** no hay ningún `mouth-*.webp`,
+  `BOCAS_PUBLICADAS = false` (en `Mouth.tsx`) y `Mouth` pinta el SVG esquemático de D21 sin pedir
+  ninguna imagen (deuda 5). Con `true` pide las seis y FI2 las exige.
 - **Paleta final y legibilidad (D34, V13-V15):** dos tokens cambian para casar con el arte
   (`action` `#F9BE23`, el loro; `celebrate` `#E99810`, el ámbar de las pegatinas); el resto ya
   casaba. `src/app/tokens.test.ts` lee `globals.css` y comprueba el contraste AA, que no haya rojo
@@ -673,13 +674,10 @@ Solo las **vivas**, con tope de 8 (regla de poda en `CLAUDE.md`). Las resueltas 
 completo de cada una están en [`docs/archivo-trampas-y-deuda.md`](docs/archivo-trampas-y-deuda.md).
 Las trampas 1-9 de los Planes 1 a 5 están resueltas, y las que salieron del Plan 6 son test o
 regla (la semilla de J1/J2 se comprueba en el propio e2e y «el fondo cosmético nunca envuelve la
-sesión» tiene un test en `App`).
+sesión» tiene un test en `App`). La del Plan 7 (`optimizar-arte.py` genera también las seis
+bocas, que no deben publicarse) es test: FI2 y `BOCAS_PUBLICADAS`.
 
-1. **`scripts/optimizar-arte.py` genera también las seis bocas y no deben publicarse.** Copiar
-   `mouth-*.webp` a `public/` pondría a la vista del niño arte que el autor rechazó (deuda 5). Al
-   volver a lanzarlo, usa `--destino` a una carpeta temporal y copia solo lo que no sea `mouth-*`.
-   No se automatiza: FI2 (`art-files.test.ts`) acepta «ninguna o las seis» y no sabe si el arte
-   está aprobado.
+Ninguna trampa viva.
 
 ---
 
@@ -698,7 +696,7 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 4. **Accesibilidad y objetivos táctiles < 72 px:** modelo (56 px), `SaveWarning` (~36 px), tambor de
    224 px fijos y el `<input type="file">` de importar (lo controla el navegador).
 5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
-   (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts. Arte, no test.
+   (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
 6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
    glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
 7. **Minors de los Planes 2, 3 y 6** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection` de

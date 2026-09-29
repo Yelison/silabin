@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ICON_NAMES } from "@/components/Icon";
-import { MOUTH_SHAPES } from "@/components/Mouth";
+import { BOCAS_PUBLICADAS, MOUTH_SHAPES } from "@/components/Mouth";
 import { COSMETICS, REWARDS } from "@/engine";
 import { cosmeticVisual, rewardArt } from "./rewards/visuals";
 
@@ -68,14 +68,22 @@ describe("ficheros de arte", () => {
 		}
 	});
 
-	it("FI2: las bocas están aplazadas (ninguna) o están las seis y pesan menos de 30 KB", () => {
-		// Las bocas del Plan 7 se aplazaron: mientras no haya ningún `mouth-*.webp`, `Mouth`
-		// pinta su SVG esquemático por el `onError`. Si aparece uno suelto, deben estar los seis.
+	it("FI2: BOCAS_PUBLICADAS decide: apagado, ningún mouth-*.webp en public/; encendido, las seis y menos de 30 KB", () => {
 		const ruta = (forma: string) =>
 			join(PUBLIC, "images", "arte", `mouth-${forma}.webp`);
 		const hay = MOUTH_SHAPES.filter((f) => existsSync(ruta(f)));
-		if (hay.length === 0) return;
-		expect(hay, "bocas a medias: faltan formas").toEqual([...MOUTH_SHAPES]);
+		if (!BOCAS_PUBLICADAS) {
+			// `optimizar-arte.py` genera las bocas y, por defecto, las escribe en `public/`.
+			expect(
+				hay,
+				"hay mouth-*.webp en public/ con BOCAS_PUBLICADAS = false: borra los mouth-* de public/images/arte/, o pon BOCAS_PUBLICADAS = true en Mouth.tsx si el autor aprobó el arte",
+			).toEqual([]);
+			return;
+		}
+		expect(
+			hay,
+			"BOCAS_PUBLICADAS = true pide las seis bocas y faltan formas: añade los mouth-* que faltan a public/images/arte/ o vuelve a poner BOCAS_PUBLICADAS = false",
+		).toEqual([...MOUTH_SHAPES]);
 		for (const f of MOUTH_SHAPES) {
 			expect(statSync(ruta(f)).size, `mouth-${f}`).toBeLessThan(30 * KB);
 		}
