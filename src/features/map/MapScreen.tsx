@@ -65,7 +65,7 @@ function SavedMark({
 			role="img"
 			aria-label={etiqueta}
 			title={etiqueta}
-			className="fixed top-2 left-2 z-10 text-2xl text-ink-soft"
+			className="fixed top-2 left-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card text-2xl text-ink-soft"
 		>
 			✓
 		</span>
@@ -98,7 +98,7 @@ function StarCounter({
 					aria-valuemin={milestone.from}
 					aria-valuemax={milestone.to}
 					aria-valuenow={total}
-					className="h-2 w-40 overflow-hidden rounded-full bg-card"
+					className="h-3 w-40 overflow-hidden rounded-full border-2 border-calm-border bg-card"
 				>
 					<div
 						className="h-full rounded-full bg-celebrate"
@@ -128,7 +128,8 @@ function UnitDots({ mastered }: { mastered: number }) {
 					// biome-ignore lint/suspicious/noArrayIndexKey: puntos idénticos sin identidad propia
 					key={i}
 					aria-hidden="true"
-					className="h-3 w-3 rounded-full bg-calm"
+					data-unit-dot
+					className="h-3 w-3 rounded-full bg-calm-border"
 				/>
 			))}
 		</div>
@@ -223,24 +224,28 @@ export function MapScreen(props: {
 	return (
 		<main className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4">
 			<SavedMark lastSavedAt={lastSavedAt} saveFailed={saveFailed} />
-			<AdultDoor onOpen={onOpenPanel}>
-				<h1 className="text-center text-3xl font-bold">Silabín</h1>
-			</AdultDoor>
-			<div className="flex flex-row items-center justify-center gap-4">
-				<Companion />
-				<button
-					type="button"
-					aria-label="Mis premios"
-					onClick={onOpenRewards}
-					className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-card"
-				>
-					<Icon name="gallery" />
-				</button>
+			{/* Todo lo que se pinta suelto (título, compañero, estrellas, avance) va sobre una
+			    superficie opaca (V13): el fondo equipado puede ser un cielo de noche. */}
+			<div className="flex flex-col gap-6 rounded-card bg-surface p-4">
+				<AdultDoor onOpen={onOpenPanel}>
+					<h1 className="text-center text-3xl font-bold">Silabín</h1>
+				</AdultDoor>
+				<div className="flex flex-row items-center justify-center gap-4">
+					<Companion />
+					<button
+						type="button"
+						aria-label="Mis premios"
+						onClick={onOpenRewards}
+						className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-card"
+					>
+						<Icon name="gallery" />
+					</button>
+				</div>
+				<StarCounter total={estrellas} milestone={hito} />
+				{avanceActivo !== null && avanceActivo.mastered > 0 && (
+					<UnitDots mastered={avanceActivo.mastered} />
+				)}
 			</div>
-			<StarCounter total={estrellas} milestone={hito} />
-			{avanceActivo !== null && avanceActivo.mastered > 0 && (
-				<UnitDots mastered={avanceActivo.mastered} />
-			)}
 			{FASES.map(({ phase, units }) => (
 				<section
 					key={phase}
