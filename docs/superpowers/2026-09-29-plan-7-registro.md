@@ -221,3 +221,4 @@ Sin conflictos que exijan `Ruling:` antes de la T1.
 - Task 5: minor (deferred): el `ring-4 ring-action` de la unidad activa del mapa es del mismo color que su fondo y no se ve (anterior a la T5)
 - Task 5: minor (deferred): el MCP de Playwright no funciona en este entorno (pide `/opt/google/chrome/chrome`); browser-qa se hace con `@playwright/test` del repo
 - Ideas aparcadas (2026-09-29): refactor de diseño por pantallas con `frontend-design` en un plan aparte, tras aprobar la paleta
+- Task 5: PUERTA DEL AUTOR superada (2026-09-29): el autor vio /dev/arte y el mapa y dijo «SE VE BIEN». No se pronunció aparte sobre los ★ a 2,34:1; el ⚠️ sigue abierto en el ledger hasta que lo confirme. Revisión despachada (BASE e3f53ca, HEAD 26df843)
