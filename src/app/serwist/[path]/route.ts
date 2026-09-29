@@ -1,6 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
 import { createSerwistRoute } from "@serwist/turbopack";
 
 // S23: la revisión sale de `VERCEL_GIT_COMMIT_SHA` (Vercel la pone en el build) y, si no
@@ -12,26 +10,11 @@ const revision =
 	}).stdout?.trim() ??
 	crypto.randomUUID();
 
-/** Los ficheros de `public/<carpeta>` con alguna de las extensiones, como URL absolutas. */
-function urlsPublicas(
-	carpeta: string,
-	extensiones: readonly string[],
-): string[] {
-	const base = join(process.cwd(), "public", carpeta);
-	return readdirSync(base)
-		.filter((nombre) => extensiones.some((ext) => nombre.endsWith(ext)))
-		.map((nombre) => `/${carpeta}/${nombre}`);
-}
-
-// Lo que el build de Next no precachea por sí solo (no son módulos, son estáticos servidos
-// desde `public/`): la portada, las ilustraciones de las palabras y los iconos de la PWA.
-// Las fuentes de `next/font` sí quedan cubiertas: son parte del build y viajan con sus
-// fragmentos, que Serwist ya precachea.
-const entradasAdicionales = [
-	"/",
-	...urlsPublicas("images/palabras", [".webp"]),
-	...urlsPublicas("icons", [".png"]),
-].map((url) => ({ url, revision }));
+// Serwist ya precachea por sí solo todo `public/` (ilustraciones e iconos incluidos, con el hash
+// del contenido como revisión). Volver a listarlos aquí con otra revisión provoca
+// `add-to-cache-list-conflicting-entries` y el SW ni siquiera se evalúa (lo destapó el e2e J4).
+// Solo falta la portada `/`, que no es un fichero estático.
+const entradasAdicionales = [{ url: "/", revision }];
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
 	createSerwistRoute({
