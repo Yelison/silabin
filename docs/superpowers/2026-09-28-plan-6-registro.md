@@ -125,7 +125,6 @@ estado; `medium` para el resto.
 | 7 | Mapa: contador de estrellas, barra al hito, avance de la unidad, «guardado» (D31a) | UI · medium |
 | 8 | Recompensas: galería y equipar, cosméticos aplicados con marcadores provisionales, rastro (S10), celebraciones con Framer Motion (S4) | UI · medium |
 | 9 | PWA: Serwist, manifest, iconos (S13), actualización en inicio (S11), pasos de Vercel (D29) | config · medium |
-| 10 | completa (commit `72c04b7`), Approved | 0/5 | n/a (revisión de cumplimiento, sin mutación) |
 | 10 | e2e con Playwright (S12) | tests · medium |
 | 11 | Cierre: prompts del arte para el Plan 7 (D25), README y poda, lista de la prueba manual del autor | docs · medium |
 
