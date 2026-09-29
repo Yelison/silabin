@@ -196,7 +196,7 @@ Salen 27 orígenes y 31 salidas: 22 WebP y 9 PNG. Son transparentes todas las cl
    → T3, RA2-RA5.
 5. **Unos 1,5 MB de arte nuevos en la precaché.** El service worker sigue registrándose (sin
    entradas en conflicto), y la app arranca sin red. → T4, `pnpm build` y `pnpm e2e` (J4), y
-   FI1-FI2 con los presupuestos.
+   FI1-FI3 y FI8 con los presupuestos.
 
 ---
 
@@ -284,7 +284,10 @@ más **2 mutaciones**. **No necesita el arte:** se prueba con PNG sintéticos.
   clase. `method=6` sobre `/mnt/c` es lento: la T4 lo lanza en segundo plano.
 
 **Casos de test** (`unittest`, PNG sintéticos de colores lisos generados con Pillow en un
-`TemporaryDirectory`; las piezas transparentes llevan al menos un píxel con alfa 0):
+`TemporaryDirectory`; las piezas transparentes llevan al menos un píxel con alfa 0). El guion
+del nombre impide importar el script: los tests lo ejecutan con
+`subprocess.run([sys.executable, "scripts/optimizar-arte.py", origen, "--destino", destino], capture_output=True, text=True)`
+y comprueban el código de salida, `stdout`/`stderr` y los ficheros escritos.
 
 | Id | Entrada | Esperado |
 |---|---|---|
@@ -570,13 +573,16 @@ más **2 mutaciones** y una **hoja de contacto** del arte.
 |---|---|---|
 | FI1 | toda ruta de `cosmeticVisual` (`src`, `art`, `withCap`, `particle` y `cursor`) para todo `COSMETICS[].id`, y de `rewardArt` para todo `REWARDS[].id` | existe `public/<ruta>` (`node:fs`) y pesa menos que el presupuesto del prefijo de su nombre: `companion-` 80 KB, `bg-` 200 KB, `sticker-` y `trophy` 60 KB, `particle-` y `cursor-` 10 KB; un prefijo sin presupuesto hace fallar el test |
 | FI2 | todo `MOUTH_SHAPES` | existe `public/images/arte/mouth-<forma>.webp`, < 30 KB |
-| FI3 | `app-512.png`, `app-192.png` y `apple-touch-icon.png` | existen, con el tamaño de la tabla, y el byte 25 de la cabecera PNG (tipo de color del IHDR) es 2 (RGB), no 6 (RGBA) |
+| FI3 | `app-512.png`, `app-192.png` y `apple-touch-icon.png` | existen, con el tamaño de la tabla (ancho y alto en los bytes 16-23 del IHDR), pesan menos de 300, 60 y 60 KB, y el byte 25 de la cabecera PNG (tipo de color del IHDR) es 2 (RGB), no 6 (RGBA) |
 | FI4 | `manifest()` | una entrada `purpose: "maskable"` para `app-512.png` |
 | FI5 | `trace` con los botones visibles | «Borrar» contiene `img[src="/icons/ui-erase.png"]` y «Listo» `ui-done.png`; ni 🧽 ni 👍 en el DOM |
 | FI6 | mapa con una unidad bloqueada | «Mis premios» contiene `ui-gallery.png` y la unidad bloqueada `ui-lock.png`; ni 🎁 ni 🔒 |
 | FI7 | galería | «Volver al mapa» contiene `ui-next.png` con `-scale-x-100`; sin ↩️ |
 
+| FI8 | todo `IconName` | `public/icons/ui-<nombre>.png` pesa menos de 40 KB (el I10 de hoy ya comprueba que existe) |
+
 El I10 de hoy (todo `IconName` existe en disco) cubre los cuatro iconos nuevos sin cambios.
+Con FI1-FI3 y FI8, cada presupuesto de la tabla de piezas tiene su test.
 
 **Hoja de contacto (la hace el revisor):** monta las 22 WebP y los PNG de iconos con Pillow en
 `.superpowers/sdd/plan-7/hoja-arte.png` y la mira. Comprueba que:
@@ -592,7 +598,7 @@ El I10 de hoy (todo `IconName` existe en disco) cubre los cuatro iconos nuevos s
 
 - [ ] Ejecutar el script; commit de las salidas:
   `chore(assets): el arte del Plan 7 en WebP y PNG a su tamaño, porque los originales pesan decenas de MB`
-- [ ] Tests FI1-FI7; verlos fallar donde aplique; iconos, sustituciones y manifest
+- [ ] Tests FI1-FI8; verlos fallar donde aplique; iconos, sustituciones y manifest
 - [ ] Puertas en verde, más `pnpm build` y `pnpm e2e` (J4 arranca sin red con el arte en la precaché)
 - [ ] Commit: `feat(ui): iconos de borrar, listo, galería y candado con el arte final, para que ningún emoji de marcador quede en lo que toca el niño`
 
@@ -670,9 +676,10 @@ si el autor lo instaló) para la propuesta de paleta, y `frontend-a11y` para la 
 | CO2 | todo `--color-*` | ninguno es rojo ni verde intenso: con HSL `s ≥ 0,5` y `0,25 ≤ l ≤ 0,75`, el tono no cae en `[345°, 360°) ∪ [0°, 15°]` ni en `[90°, 160°]` |
 | CO3 | `THEME_COLORS`, `manifest()` y el fuente de `layout.tsx` | `THEME_COLORS.surface` = token `surface` y `THEME_COLORS.action` = token `action` (sin distinguir mayúsculas); `manifest()` devuelve esos valores; `layout.tsx` leído con `node:fs` no contiene ningún `#rrggbb` literal |
 | CO4 | un CSS de prueba sin `--color-ink` | el lector lanza un error; no hay pares vacíos |
-| LE1 | `MapScreen` dentro de `CosmeticBackground`, con `bg:espacio` equipado, logros ganados y una unidad hecha | todo nodo de texto no vacío fuera de `.sr-only` y de `[data-art-fallback]` tiene, antes de llegar a `[data-cosmetic-background]`, un ancestro con `bg-(card\|surface\|action\|calm\|mark)` **sin** `/opacidad` |
+| LE1 | `MapScreen` dentro de `CosmeticBackground`, con `bg:espacio` equipado, logros ganados y una unidad a medias (con puntos de avance) | todo nodo de texto no vacío fuera de `.sr-only` y de `[data-art-fallback]`, **y** todo indicador sin texto (`[role="progressbar"]` y cada punto de avance, que gana `data-unit-dot`), tiene un ancestro con superficie antes de llegar a `[data-cosmetic-background]`. Superficie = una clase que casa con `/\bbg-(card\|surface\|action\|calm\|mark)(?![\w/-])/`: sin `/opacidad`, y sin confundir `bg-calm` con `bg-calm-border` |
 | LE2 | lo mismo con `RewardsScreen` | ídem |
 | LE3 | lo mismo con `EndScreen` y un resumen con 3 estrellas y un logro | ídem (los ★ incluidos) |
+| LE5 | el ayudante de LE con un árbol a mano: texto dentro de `bg-calm-border`, texto dentro de `bg-card/80` y texto dentro de `bg-card` | solo el tercero cuenta como sobre superficie: el ayudante no pasa en falso |
 | LE4 | `/dev/arte` en producción | `notFound()` (como `/dev/plantillas`) |
 
 CO1-CO3 pasan con los tokens de hoy. Su «verlos fallar» se hace **rompiendo a mano** un token
@@ -685,7 +692,7 @@ CO1-CO3 pasan con los tokens de hoy. Su «verlos fallar» se hace **rompiendo a 
 4. `manifest.ts` con `theme_color: "#ffffff"` en vez de `THEME_COLORS.action`: CO3 debe fallar.
 
 - [ ] CO1-CO4 sobre los tokens de hoy; romper un token para verlos fallar; commit
-- [ ] LE1-LE3; verlos fallar; superficies en las tres pantallas; `/dev/arte` y LE4; commit
+- [ ] LE1-LE3 y LE5; verlos fallar; superficies en las tres pantallas; `/dev/arte` y LE4; commit
 - [ ] Medir el arte, proponer y aplicar la paleta, y actualizar `diseno-visual.md`; puertas,
   más `pnpm build`
 - [ ] Commit: `style(ui): paleta final derivada del arte y texto siempre sobre una superficie, para que se lea igual sobre cualquier fondo`

@@ -130,8 +130,8 @@ El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
 | 1 | Tubería del arte: `optimizar-arte.py` y sus tests (OP1-OP8) | script · medium | no | 1 |
 | 2 | El arte en la interfaz: `ArtImage`, `visuals.ts` y sus cinco llamadores (AR1-AR13) | contrato de UI · high | no | 1 |
 | 3 | Cursor de PC por rastro y boca con fotogramas (RA1-RA5, BO1-BO5) | UI · medium | no | 2 |
-| 4 | Integración del arte: ficheros, iconos nuevos e invariantes de disco (FI1-FI7) | assets · medium | sí | 2 |
-| 5 | Paleta final, legibilidad y `/dev/arte` (CO1-CO4, LE1-LE4), con la puerta del autor | estilos · medium | sí | 3 |
+| 4 | Integración del arte: ficheros, iconos nuevos e invariantes de disco (FI1-FI8) | assets · medium | sí | 2 |
+| 5 | Paleta final, legibilidad y `/dev/arte` (CO1-CO4, LE1-LE5), con la puerta del autor | estilos · medium | sí | 3 |
 | 6 | Cierre: `docs/checklist-ipad.md`, README, poda y ledger | docs · medium | sí | 3 |
 
 **Review Focus:**
