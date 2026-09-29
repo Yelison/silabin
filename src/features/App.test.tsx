@@ -73,8 +73,11 @@ describe("App", () => {
 		// Síncrono, sin esperar: unlock debe ir dentro del gesto de toque.
 		expect(audio.unlock).toHaveBeenCalledTimes(1);
 		expect(audio.play).not.toHaveBeenCalled();
-		const clap = container.querySelector('[data-unit="phase0:clap"]');
-		expect(clap?.getAttribute("data-status")).toBe("active");
+		// El mapa aparece tras comprobar el Service Worker (S11): ya no es síncrono.
+		await waitFor(() => {
+			const clap = container.querySelector('[data-unit="phase0:clap"]');
+			expect(clap?.getAttribute("data-status")).toBe("active");
+		});
 		expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
 	});
 

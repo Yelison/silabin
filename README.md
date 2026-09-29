@@ -97,15 +97,37 @@ El test omitido comprueba que los ficheros de audio existen en disco en los 3 ac
 corre con `SILABIN_CHECK_AUDIO_FILES=1`, que se enciende cuando lleguen los audios reales.
 
 Stack real instalado: Next.js 16.3.5 (App Router), React 19.2.8, TypeScript 5 estricto,
-Tailwind CSS 4, Zod 4, Zustand 5, idb-keyval, Vitest 5 con jsdom y Testing Library, y
-Biome 2.
+Tailwind CSS 4, Zod 4, Zustand 5, idb-keyval, Vitest 5 con jsdom y Testing Library, Biome 2,
+y Serwist con Turbopack (PWA, ver más abajo).
 
 > **Next.js 16 tiene cambios rompedores respecto a versiones anteriores.** Antes de escribir
 > código de Next, lee la guía correspondiente en `node_modules/next/dist/docs/` (ver
 > `AGENTS.md`).
 
-El spec también prevé Framer Motion, Serwist (PWA) y Playwright. **Aún no están
-instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
+El spec también prevé Framer Motion y Playwright. **Aún no están instalados**; llegan con los
+planes de interfaz (Plan 6, o antes si hace falta).
+
+### La PWA: instalación y actualización
+
+`pnpm dev` sirve la app sin service worker (`SerwistProvider` lleva `disable` en desarrollo:
+un SW cacheando confundiría los cambios en caliente con una app que no se actualiza). El
+service worker solo existe con `pnpm build && pnpm start`, o en un despliegue real (ver
+`docs/despliegue-vercel.md`, que además es lo único que tiene que hacer el autor a mano —
+ningún agente despliega).
+
+- **Se instala** desde el navegador (en iPad/iPhone, Safari → Compartir → «Añadir a pantalla
+  de inicio»). El icono y el nombre salen de `src/app/manifest.ts`.
+- **Funciona sin red:** la primera carga con red precachea la app, las ilustraciones de las
+  palabras y los iconos (`src/app/sw.ts` y el route handler en
+  `src/app/serwist/[path]/route.ts`). Una navegación sin red después sirve `/` precacheado en
+  vez de fallar. Los audios (`speechSynthesis`) no se precachean: no son ficheros propios.
+- **Cómo se actualiza:** sin `skipWaiting` automático (S11 del Plan 6) — un service worker
+  nuevo que tomara el control a mitad de una sesión rompería la carga de fragmentos ya en
+  curso. Cuando hay una versión nueva esperando, tocar «Toca para empezar» en la pantalla de
+  inicio (`src/features/pwa/update.ts` + `StartScreen`) le pide que tome el control y recarga
+  la página una vez, antes de empezar nada. Nunca pasa a mitad de una sesión.
+- Los iconos (`public/icons/app-192.png`, `app-512.png`, `apple-touch-icon.png`) son
+  provisionales: una «S» generada por `scripts/iconos-pwa.py` (S13). El Plan 7 los sustituye.
 
 ---
 
