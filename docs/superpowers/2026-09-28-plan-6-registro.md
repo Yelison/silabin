@@ -440,7 +440,18 @@ la revisión final de la rama la cubre).
   sugerencia mía, no una decisión del autor; el Plan 7 puede ajustarlo. Las descripciones de
   las seis bocas son esquemáticas y no se han probado con un generador de imágenes.
 
-Task 11: complete.
+Task 11: complete (commit `35230e2`, review clean, 4 minor deferred).
+
+**Revisión de la Tarea 11 (Sonnet, cumplimiento):** sin Critical ni Important; el implementador
+declaró por error «sin revisor por instrucción» y la revisión se hizo igualmente.
+- **Minor (deferred) de la Tarea 11:** README.md:14 dice «1312 tests (1 omitido)» y :49 «1311 +
+  1 omitido» (unificar); S17-S23 sin releer contra el código final (lo cubre la revisión de
+  rama); los logros `five-vowels`, `first-syllable-voice`, `word-reader` y `first-session`
+  siguen en emoji sin prompt de pegatina (falta una nota); los tamaños del arte (fondos
+  1536×2048, bocas 512) son propuesta del implementador, no del spec: confirmar con el autor.
+
+**Siguiente:** revisión final de la rama con `model: "opus"`, effort `high`, sobre
+`git merge-base main HEAD`..HEAD; luego prueba manual del autor en Vercel (D29) y PR.
 
 ## Prueba manual del autor (antes del PR)
 
