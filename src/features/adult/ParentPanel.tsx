@@ -60,6 +60,17 @@ export function ParentPanel(props: {
 		};
 	}, [evaluators, settings.speechMode]);
 
+	// Igual que en ParentGate: Escape cierra el diálogo sin depender de que el foco esté en
+	// "Cerrar". El panel es su propio diálogo (se monta al autenticar, reemplazando la puerta),
+	// así que necesita su propio listener en vez de heredar el de ParentGate.
+	useEffect(() => {
+		const alTeclado = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", alTeclado);
+		return () => window.removeEventListener("keydown", alTeclado);
+	}, [onClose]);
+
 	const idAcento = useId();
 	const idMinusculas = useId();
 	const idSesion = useId();

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ParentPanel } from "@/features/adult/ParentPanel";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
@@ -105,6 +106,12 @@ describe("ParentPanel", () => {
 	it("Cerrar llama a onClose", async () => {
 		const { onClose } = await montar();
 		fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("Escape cierra el panel ya autenticado, igual que el resto de diálogos de la puerta", async () => {
+		const { onClose } = await montar();
+		await userEvent.keyboard("{Escape}");
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 });
