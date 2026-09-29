@@ -12,8 +12,8 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > (identidad visual) está **ejecutado en su rama** `feat/plan-7-identidad-visual`, sin fusionar:
 > el arte del loro y el elefantito, los fondos, las pegatinas, los iconos y la paleta final ya
 > están integrados, y `docs/checklist-ipad.md` está escrita. **Faltan**: la revisión final de la
-> rama, la decisión del autor sobre los ★, el despliegue en Vercel y la prueba del autor con esa
-> lista (nada de eso se ha hecho: D29, D35), y el PR. La **boca sigue esquemática** (las bocas
+> rama, el despliegue en Vercel y la prueba del autor con esa lista
+> (nada de eso se ha hecho: D29, D35), y el PR. La **boca sigue esquemática** (las bocas
 > se aplazaron). 1394 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y `pnpm e2e` en
 > verde.
 
@@ -179,7 +179,7 @@ ningún agente despliega).
 | 6 | `docs/superpowers/plans/2026-09-27-silabin-trazo.md` | El Plan 4: la plantilla `trace`, con las decisiones D12-D18 |
 | 7 | `docs/superpowers/2026-09-26-plan-3-registro.md` | Registro de ejecución del Plan 3. Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-3-plantillas-toque` |
 | 8 | `docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md` | El Plan 3 (tareas 1-6, con la 5b): base visual, plantillas de toque y Fase 0 de punta a punta, con las decisiones D8-D11 al principio |
-| 9 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens, paleta final derivada del arte (Plan 7) y reglas visuales (D8). Lleva la decisión abierta de los ★ |
+| 9 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens, paleta final derivada del arte (Plan 7) y reglas visuales (D8). Recoge la decisión del autor sobre los ★ |
 | 10 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete); es la plantilla de `arte-plan-7-prompts.md` |
 | 11 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito |
 | 12 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
@@ -531,8 +531,8 @@ rama, el despliegue y la prueba del autor, y el PR (ver «Siguientes pasos»).
   ni verde intensos y que el manifest y el `viewport` usen los mismos colores que los tokens;
   `legibility.test.tsx` (LE1-LE5) exige que todo texto e indicador del mapa, la galería y el fin de
   sesión vaya sobre una superficie opaca de token, con cualquier fondo. `/dev/arte` enseña todo.
-  El autor aprobó la paleta (2026-09-29, «SE VE BIEN»). **Sigue abierta** la decisión de los ★
-  (ver «Siguientes pasos» y `docs/diseno-visual.md`).
+  El autor aprobó la paleta (2026-09-29, «SE VE BIEN») y aceptó los ★ a 2,34 : 1
+  (2026-09-29); detalle en `docs/diseno-visual.md`.
 - **Checklist (D35):** `docs/checklist-ipad.md` reúne los cuatro puntos del spec §10, los 11 del
   Plan 6 y sus añadidos, la deuda 1 y las pruebas del arte, agrupados por dispositivo, con una
   tabla de resultados. No se ha pasado.
@@ -581,17 +581,13 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 **Plan 7 ejecutado en su rama (2026-09-29).** Queda, en este orden:
 
-1. **Decisión abierta del autor: los ★ de `celebrate`.** Quedan a 2,34 : 1 sobre `card`, 2,22 : 1
-   sobre `surface` y 1,93 : 1 sobre `calm` (por debajo de 3 : 1). Aceptarlo, o pasar a un ocre
-   oscuro (~`#C47A00`, 3,4 : 1 sobre `card`, que ya no se lee como celebración). Decidir **antes
-   de la revisión final**; detalle en `docs/diseno-visual.md`.
-2. **Revisión final de la rama** con `model: "opus"` (`/model sonnet` para el resto).
-3. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; D29) y pasa
+1. **Revisión final de la rama** con `model: "opus"` (`/model sonnet` para el resto).
+2. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; D29) y pasa
    `docs/checklist-ipad.md`, que incluye la prueba del Plan 6 (D35). Nadie despliega por él. Los
    fallos entran al ledger del Plan 7 antes del PR; cuando todo esté OK o anotado, se cierra la
    deuda 1.
-4. **Abrir el PR** de `feat/plan-7-identidad-visual` contra `main`.
-5. **Después:** rehacer la boca con un estilo que apruebe el autor (deuda 5) y, si procede, el
+3. **Abrir el PR** de `feat/plan-7-identidad-visual` contra `main`.
+4. **Después:** rehacer la boca con un estilo que apruebe el autor (deuda 5) y, si procede, el
    refactor de diseño o los objetos de los compañeros.
 
 ---

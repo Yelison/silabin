@@ -152,25 +152,22 @@ en los bordes; nada importante se tapa porque el contenido va en las bandas).
 - **Tema claro fijo:** no hay modo oscuro. Una pantalla infantil que cambia de colores según
   el sistema del adulto confunde, y la paleta está pensada para fondo claro.
 
+## Decisiones del autor
+
+- **Los ★ de `celebrate` se aceptan por debajo de 3 : 1** (decisión del autor, 2026-09-29):
+  2,34 : 1 sobre `card`, 2,22 : 1 sobre `surface` y 1,93 : 1 sobre `calm`. Llegar a 3 : 1
+  obligaría a un ocre oscuro (~`#C47A00`, 3,4 : 1 sobre `card`) que ya no se lee como
+  celebración. Los ★ van siempre con un número, la pegatina o la forma (★ llenas y vacías), y
+  la unidad lleva `aria-label` con las estrellas: el color no es lo único que las dice.
+- El ★ también se pinta sobre `calm` en las unidades hechas del mapa (`Estrellas`, en
+  `MapScreen.tsx`); entra en la misma decisión (1,93 : 1; antes, con `#FF9F1C`, 1,69).
+
 ## Abierto para el autor
 
-- `celebrate` (los ★) no llega a 3 : 1 sobre `card` ni `surface` (2.34 y 2.22). Llegar
-  obligaría a un ocre oscuro (~`#C47A00`, 3.4 : 1 sobre `card`), que ya no se lee como celebración. Los ★ acompañan
-  a un número o a la pegatina y son grandes; se dejan así salvo que el autor pida otra cosa.
-- El ★ `celebrate` también se pinta sobre `calm` en las unidades hechas del mapa
-  (`Estrellas`, en `MapScreen.tsx`): 1.93 : 1 (antes, con `#FF9F1C`: 1.69). Va con la misma
-  decisión: la forma (★ llenas y vacías) y el `aria-label` de la unidad dicen las estrellas,
-  no el color.
 - `--color-*` no incluye un lila que case con el elefantito: nada lo pinta hoy sobre el fondo.
 
 ## Pendiente (Plan 7, identidad visual)
 
-- **Decisión abierta del autor: los ★ de `celebrate`.** Quedan a 2,34 : 1 sobre `card`, 2,22 : 1
-  sobre `surface` y 1,93 : 1 sobre `calm` (ver «Abierto para el autor»). Opciones: aceptarlo tal
-  cual (van con un número, la pegatina o la forma de ★ llenas y vacías, y el `aria-label` de la
-  unidad dice las estrellas) o pasar a un ocre oscuro (~`#C47A00`, 3,4 : 1 sobre `card`), que ya
-  no se lee como celebración. Hay que decidirlo antes de la revisión final de la rama; el autor
-  aprobó la paleta (2026-09-29, «SE VE BIEN») pero no se pronunció aparte sobre esto.
 - **Bocas: el arte está aplazado.** No hay ningún `mouth-*.webp` (el autor rechazó dos veces el
   arte fotorrealista; D21 pide una boca esquemática, no realista). `Mouth` pinta su dibujo
   esquemático de respaldo por el `onError` y `/dev/arte` lo dice en una nota visible. Cuando haya
