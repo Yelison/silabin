@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-7/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-8/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -323,3 +323,39 @@ El número de `StarCounter` no lleva contexto accesible más allá del dígito (
 `aria-hidden`) — el brief no lo pedía.
 
 Task 7: complete (commits `8436835`..`572f08f`, review clean, 3 minor deferred).
+
+**Tarea 8 (Recompensas: galería, cosméticos, rastro y celebraciones):** la revisión de
+tarea encontró un defecto Critical y dos Important, corregidos en una ronda (1/5). El
+Critical: el tope de 24 partículas vivas del rastro (S10) no se sostenía en el DOM real —
+`AnimatePresence` mantenía montado cada nodo recortado por `MAX_PARTICLES` durante su
+`exit` de 600ms, así que 30 `pointermove` disparados por separado dejaban 30 nodos, no 24;
+el revisor lo reprodujo él mismo antes de abrir el hallazgo. El fix quitó `exit` del
+`motion.span` del rastro, y el test nuevo cuenta `<span>` reales del DOM tras eventos
+separados (no en un solo lote de estado), en vez de solo inspeccionar el estado interno.
+El primer Important: `visuals.ts` no era todavía el único traductor de id→visual (S21) — el
+emoji del rastro estaba duplicado en `TrailLayer.tsx` y en `RewardsScreen.tsx`; el fix lo
+centralizó en `CosmeticVisual` (slot `trail`) de `visuals.ts`. El segundo Important: los
+tests F4/F8 de `CosmeticBackground` montaban componentes aislados y no protegían la regla
+real (`CosmeticBackground` nunca envuelve `SessionScreen`) — el revisor lo demostró mutando
+`App.tsx` para envolver `SessionScreen` y viendo la suite completa seguir en verde; el fix
+añadió un test que monta `App` entero y navega mapa→galería→sesión con clics reales. La
+re-revisión acotada confirmó los tres ADDRESSED con evidencia de código, sin roturas nuevas.
+
+**Adjudicaciones del revisor de tarea (Tarea 8), aceptadas sin ronda de corrección:**
+sustituir el mapa `ICONO` local de `EndScreen` por `rewardIcon()` de `visuals.ts` es
+correcto, no exceso de alcance — el contrato de la tarea dice explícitamente que
+`visuals.ts` traduce el id «de cosmético o de logro»; mantener `ICONO` habría sido la
+violación. El fichero aparte `TrailLayer.reduced-motion.test.tsx` es necesario: el revisor
+confirmó en el código fuente instalado de `motion/react` que `useReducedMotion` cachea
+`matchMedia` como estado de módulo (todo el proceso), así que aislarlo en su propio fichero
+evita contaminación entre tests, no es ceremonia.
+
+**Minor (deferred) de la Tarea 8:** los valores de fallback en `Companion.tsx` (`"🐣"`) y
+`CosmeticBackground.tsx` (`"from-surface to-calm"`) repiten, de forma inocua, el mismo
+fallback que `cosmeticVisual` ya devuelve internamente. No hay test que verifique
+`{capture: true, passive: true}` en los listeners de `pointerdown`/`pointermove` de
+`TrailLayer` (S10) — confirmado por lectura de código, no por assertion automatizada. No
+hay test del botón 🎁 (`onOpenRewards` en `MapScreen`) ni de la navegación a la pantalla
+`rewards` en `App.tsx` más allá de los montajes existentes.
+
+Task 8: complete (commits `d0d8d34`..`fcf9801`, fix round 1/5, 3 minor deferred).
