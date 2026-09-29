@@ -14,7 +14,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | Rulings de planificación (V1-V16) | **fijados** (abajo) |
 | Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
 | Arte (D32) | **pendiente**: lo genera el autor en `C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Bloquea la T4 y las siguientes, no la T1 ni la T3 |
-| Ejecución | sin empezar |
+| Ejecución | en curso: T1 hecha (2026-09-29) |
 
 ## Decisiones tomadas con el autor (2026-09-29)
 
@@ -145,9 +145,33 @@ El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
 
 | Tarea | Estado | Rondas | Mutaciones supervivientes |
 |---|---|---|---|
-| 1 | pendiente | | |
+| 1 | **completa** (`6a73cc3`) | 0 | 0 (las 2 mutaciones mueren) |
 | 2 | pendiente | | |
 | 3 | pendiente | | |
 | 4 | pendiente (precondición D32) | | |
 | 5 | pendiente | | |
 | 6 | pendiente | | |
+
+## Escaneo previo (2026-09-29, sesión de ejecución 1)
+
+| Par / tarea | Qué produce ↔ qué consume | Resultado |
+|---|---|---|
+| T1 ↔ T2 | tabla de piezas: rutas `images/arte/*.webp`, `icons/*.png` ↔ `visuals.ts` apunta a ellas | coherente; recuento comprobado: 31 salidas = 22 WebP + 9 PNG (4+4+6+2+6 y 2+4+3) |
+| T1 ↔ T4 | script y su tabla `PIEZAS` ↔ T4 lo lanza y `art-files.test.ts` fija presupuestos | coherente; ambos citan la misma tabla |
+| T1 ↔ T6 | borrar `iconos-pwa.py` y menciones en README ↔ T6 vuelve a tocar README | sin conflicto (T6 poda, no reintroduce) |
+| T2 ↔ T3 | `cursor` en `CosmeticVisual` ↔ T3 lo consume en `TrailLayer` | orden T2 → T3 ya fijado en el plan |
+| T3 ↔ T5 | `globals.css` (regla del cursor) ↔ T5 (tokens) | ficheros compartidos, zonas distintas |
+| T4 ↔ T5 | `MapScreen.tsx` (galería y candado) ↔ T5 (superficies) | mismo fichero, orden T4 → T5 |
+| T1 internamente | OP1-OP8 ↔ contrato: OP8 (1024×1100 → recorte 1:1 → 512) y OP6 (200 < 384) cuadran con el recorte sin ampliar | coherente |
+| T2-T6 internamente | no releídas en detalle (T2 y T3 se releen al despacharlas; T4-T6 esperan al arte) | pendiente de relectura por tarea |
+
+Sin conflictos que exijan `Ruling:` antes de la T1.
+
+## Ejecución
+
+- Task 1: complete (commits 4a79b9b..6a73cc3, review clean; effort medium, 0 rondas de corrección, mutaciones 1 y 2 muertas)
+- Task 1: minor (deferred): OP1 no comprueba `img.format` (WEBP/PNG) de cada salida
+- Task 1: minor (deferred): ningún test comprueba que OP1 no emite `aviso:` con orígenes cuadrados
+- Task 1: minor (deferred): docstring de `optimizar-arte.py:118` dice «cuenta» donde quiere decir «lista»; comentario de `manifest.ts` (~l. 9) redundante tras quitar la «S»
+- Task 1: minor (deferred): la escritura no es atómica (disco lleno a mitad deja un lote parcial); V4 solo cubre la validación
+- Nota: los tests del script tardan ~30 s (method=6); la T4 lanza el script en segundo plano.
