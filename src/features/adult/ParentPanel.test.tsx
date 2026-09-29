@@ -114,4 +114,16 @@ describe("ParentPanel", () => {
 		await userEvent.keyboard("{Escape}");
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
+
+	it("D7: con el diálogo de reiniciar abierto, Escape lo cancela y no cierra el panel", async () => {
+		const { onClose } = await montar();
+		await userEvent.click(
+			screen.getByRole("button", { name: "Reiniciar todo" }),
+		);
+		expect(screen.getByRole("alertdialog")).toBeDefined();
+
+		await userEvent.keyboard("{Escape}");
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+		expect(onClose).not.toHaveBeenCalled();
+	});
 });

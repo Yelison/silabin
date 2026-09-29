@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { DataSection } from "@/features/adult/DataSection";
 import type { Download } from "@/features/adult/download";
-import { exportFilename } from "@/features/adult/download";
+import { ProgressSection } from "@/features/adult/ProgressSection";
 import { useApp, useSpeech } from "@/features/app-context";
 import { pickEvaluator } from "@/speech";
 import type { Settings } from "@/store";
@@ -23,9 +24,9 @@ const NOMBRE_EVALUADOR: Record<string, string> = {
 };
 
 /**
- * El panel de padres: ajustes que se aplican al momento y, por ahora, exportar el progreso
- * (T6 añade el progreso, importar y reiniciar). `onChangePin` devuelve a `ParentGate` al paso
- * de crear un PIN nuevo; `onClose` vuelve al mapa.
+ * El panel de padres: ajustes que se aplican al momento, el progreso del niño y los datos
+ * (exportar, importar y reiniciar). `onChangePin` devuelve a `ParentGate` al paso de crear un
+ * PIN nuevo; `onClose` vuelve al mapa.
  */
 export function ParentPanel(props: {
 	onClose: () => void;
@@ -36,7 +37,6 @@ export function ParentPanel(props: {
 	const { onClose, onChangePin, download, now = () => new Date() } = props;
 	const settings = useApp((s) => s.doc.settings);
 	const updateSettings = useApp((s) => s.updateSettings);
-	const exportJson = useApp((s) => s.exportJson);
 	const { evaluators } = useSpeech();
 
 	// Solo de visualización: no vuelve a leer `settings.childName` tras el primer pintado, para
@@ -79,7 +79,6 @@ export function ParentPanel(props: {
 	const idCelebraciones = useId();
 	const idNombre = useId();
 	const idAjustes = useId();
-	const idDatos = useId();
 
 	const alCambiarNombre = (texto: string) => {
 		const recortado = texto.slice(0, MAX_NOMBRE);
@@ -228,20 +227,9 @@ export function ParentPanel(props: {
 					</div>
 				</section>
 
-				<section aria-labelledby={idDatos}>
-					<h2 id={idDatos} className="text-lg font-semibold">
-						Datos
-					</h2>
-					<div className="mt-3">
-						<button
-							type="button"
-							className="rounded-lg bg-calm px-4 py-2 text-ink"
-							onClick={() => download(exportFilename(now()), exportJson())}
-						>
-							Exportar
-						</button>
-					</div>
-				</section>
+				<ProgressSection />
+
+				<DataSection download={download} now={now} />
 
 				<button
 					type="button"

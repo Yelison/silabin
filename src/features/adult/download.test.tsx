@@ -3,9 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import { downloadInBrowser, exportFilename } from "@/features/adult/download";
 
 describe("exportFilename", () => {
-	it("el nombre lleva la fecha local con ceros", () => {
-		expect(exportFilename(new Date(2026, 0, 5, 23, 59))).toBe(
+	it("el nombre lleva la fecha local con ceros, sin childName", () => {
+		expect(exportFilename(new Date(2026, 0, 5, 23, 59), null)).toBe(
 			"silabin-progreso-2026-01-05.json",
+		);
+	});
+
+	it("D3: con childName, el nombre lleva el nombre en minúsculas, sin tildes ni espacios", () => {
+		expect(exportFilename(new Date(2026, 8, 28), "Ana María")).toBe(
+			"silabin-ana-maria-2026-09-28.json",
 		);
 	});
 });
