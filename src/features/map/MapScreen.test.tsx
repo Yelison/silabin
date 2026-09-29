@@ -1,8 +1,20 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { curriculum, emptyItemProgress, type TemplateId } from "@/engine";
+import {
+	curriculum,
+	emptyItemProgress,
+	type ProgressState,
+	type TemplateId,
+} from "@/engine";
 import { MapScreen } from "@/features/map/MapScreen";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 import { createMemoryAdapter } from "@/store";
@@ -41,7 +53,8 @@ function montar(
 			fakeAudio(),
 			<MapScreen
 				onStart={onStart}
-				download={vi.fn()}
+				onOpenPanel={vi.fn()}
+				onOpenRewards={vi.fn()}
 				{...(opciones.implemented === undefined
 					? {}
 					: { implemented: opciones.implemented })}
@@ -61,6 +74,24 @@ function todoHechoSalvoFase3(doc: { units: Record<string, unknown> }) {
 		if (unit.introduces.length > 0)
 			doc.units[id] = { status: "done", bestStars: 3 };
 	}
+}
+
+/**
+ * Un `ProgressState` con `total` estrellas repartidas en unidades sintéticas (fuera del
+ * currículo real, que no llega a sumar tanto): a `totalStars` le basta con `bestStars` por
+ * unidad, no le importa si el id existe en `curriculum`.
+ */
+function conEstrellas(base: ProgressState, total: number): ProgressState {
+	const units: ProgressState["units"] = { ...base.units };
+	let restante = total;
+	let i = 0;
+	while (restante > 0) {
+		const stars = Math.min(3, restante) as 0 | 1 | 2 | 3;
+		units[`prueba:estrellas-${i}`] = { status: "done", bestStars: stars };
+		restante -= stars;
+		i += 1;
+	}
+	return { ...base, units };
 }
 
 describe("MapScreen", () => {
@@ -131,7 +162,7 @@ describe("MapScreen", () => {
 		expect(onStart).not.toHaveBeenCalled();
 	});
 
-	it("trampa 4: no pinta ninguna barra de dominio", async () => {
+	it("trampa 4: no pinta ninguna barra de dominio dentro de las unidades", async () => {
 		const store = await storeConDisco((doc) => {
 			// Algo de dominio a medias en la unidad activa: no debe traducirse en barra.
 			const id = curriculum.units.get("phase0:clap")?.introduces[0] ?? "";
@@ -142,12 +173,124 @@ describe("MapScreen", () => {
 			};
 		});
 		const { container } = montar(store);
-		expect(screen.queryAllByRole("progressbar")).toHaveLength(0);
-		expect(screen.queryAllByRole("meter")).toHaveLength(0);
-		expect(
-			container.querySelector("progress, meter, [style*='width']"),
-		).toBeNull();
-		expect(container.innerHTML).not.toMatch(/%/);
+		// La barra de la Tarea 7 es del hito de estrellas, fuera de los botones de unidad: aquí
+		// solo importa que ninguna unidad, por sí misma, pinte una barra de dominio.
+		for (const unidad of container.querySelectorAll("[data-unit]")) {
+			expect(
+				within(unidad as HTMLElement).queryAllByRole("progressbar"),
+			).toHaveLength(0);
+			expect(
+				within(unidad as HTMLElement).queryAllByRole("meter"),
+			).toHaveLength(0);
+			expect(
+				(unidad as HTMLElement).querySelector(
+					"progress, meter, [style*='width']",
+				),
+			).toBeNull();
+			expect((unidad as HTMLElement).innerHTML).not.toMatch(/%/);
+		}
+	});
+
+	it("E1: el contador de estrellas se ve como número, con barra hasta el próximo hito", async () => {
+		montar(await storeConDisco(() => {}));
+		expect(screen.getByText("0")).toBeDefined();
+		const barra = screen.getByRole("progressbar");
+		expect(barra.getAttribute("aria-valuemin")).toBe("0");
+		expect(barra.getAttribute("aria-valuemax")).toBe("10");
+		expect(barra.getAttribute("aria-valuenow")).toBe("0");
+	});
+
+	it("E1: con 27 estrellas la barra va de 25 a 50 con valuenow 27", async () => {
+		const store = await storeConDisco(() => {});
+		act(() => {
+			store.setState((s) => ({ progress: conEstrellas(s.progress, 27) }));
+		});
+		montar(store);
+		expect(screen.getByText("27")).toBeDefined();
+		const barra = screen.getByRole("progressbar");
+		expect(barra.getAttribute("aria-valuemin")).toBe("25");
+		expect(barra.getAttribute("aria-valuemax")).toBe("50");
+		expect(barra.getAttribute("aria-valuenow")).toBe("27");
+	});
+
+	it("E1: pasado el hito de 100 solo se ve el total, sin barra", async () => {
+		const store = await storeConDisco(() => {});
+		act(() => {
+			store.setState((s) => ({ progress: conEstrellas(s.progress, 120) }));
+		});
+		montar(store);
+		expect(screen.getByText("120")).toBeDefined();
+		expect(screen.queryByRole("progressbar")).toBeNull();
+	});
+
+	it("E2: la unidad activa muestra un punto por ítem dominado, con aria-label para el adulto", async () => {
+		const store = await storeConDisco((doc) => {
+			const items = curriculum.units.get("phase0:clap")?.introduces ?? [];
+			for (const id of items.slice(0, 2))
+				doc.items[id] = {
+					...emptyItemProgress(),
+					presented: true,
+					firstTryCorrect: 3,
+				};
+		});
+		montar(store);
+		const puntos = screen.getByLabelText("2 letras aprendidas");
+		expect(puntos.children).toHaveLength(2);
+	});
+
+	it("E2: sin ítems dominados no se pinta ningún punto", async () => {
+		montar(await storeConDisco(() => {}));
+		expect(screen.queryByLabelText(/letras aprendidas/)).toBeNull();
+	});
+
+	it("E3: la marca de guardado muestra la hora local de lastSavedAt", async () => {
+		const store = await storeConDisco(() => {});
+		const iso = "2026-09-28T14:05:00.000Z";
+		act(() => {
+			store.setState({ lastSavedAt: iso, saveFailed: false });
+		});
+		montar(store);
+		const fecha = new Date(iso);
+		const hh = String(fecha.getHours()).padStart(2, "0");
+		const mm = String(fecha.getMinutes()).padStart(2, "0");
+		const marca = screen.getByLabelText(`Guardado a las ${hh}:${mm}`);
+		expect(marca.getAttribute("title")).toBe(`Guardado a las ${hh}:${mm}`);
+	});
+
+	it("E3: con lastSavedAt null o saveFailed no sale la marca de guardado", async () => {
+		const sinGuardar = await storeConDisco(() => {});
+		montar(sinGuardar);
+		expect(screen.queryByLabelText(/Guardado a las/)).toBeNull();
+		cleanup();
+
+		const conFallo = await storeConDisco(() => {});
+		act(() => {
+			conFallo.setState({
+				lastSavedAt: "2026-09-28T14:05:00.000Z",
+				saveFailed: true,
+			});
+		});
+		montar(conFallo);
+		expect(screen.queryByLabelText(/Guardado a las/)).toBeNull();
+	});
+
+	it("E4: el mapa sigue sin scroll horizontal (sin anchos fijos en píxeles)", async () => {
+		const store = await storeConDisco((doc) => {
+			// Menos del 80% de la unidad (UNIT_COMPLETION_THRESHOLD), para que siga activa y
+			// muestre puntos en vez de pasar a "done".
+			const items = curriculum.units.get("phase0:clap")?.introduces ?? [];
+			for (const id of items.slice(0, 3))
+				doc.items[id] = {
+					...emptyItemProgress(),
+					presented: true,
+					firstTryCorrect: 3,
+				};
+		});
+		const { container } = montar(store);
+		expect(container.querySelector("main")?.className).toContain("max-w-xl");
+		const puntos = screen.getByLabelText(/letras aprendidas/);
+		expect(puntos.className).toContain("flex-wrap");
+		expect(container.querySelector("[style*='px']")).toBeNull();
 	});
 
 	it("tocar la unidad activa jugable inicia la sesión", async () => {
@@ -205,5 +348,32 @@ describe("MapScreen", () => {
 		expect(container.innerHTML.toLowerCase()).not.toMatch(
 			/error|fallo|incorrect|mal\b|perdiste|otra vez/,
 		);
+	});
+
+	it("N9: mantener el logo 3 s llama a onOpenPanel", async () => {
+		const store = await storeConDisco(() => {});
+		vi.useFakeTimers();
+		try {
+			const onOpenPanel = vi.fn();
+			render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<MapScreen
+						onStart={vi.fn()}
+						onOpenPanel={onOpenPanel}
+						onOpenRewards={vi.fn()}
+					/>,
+				),
+			);
+			const logo = screen.getByText("Silabín");
+			fireEvent.pointerDown(logo);
+			act(() => {
+				vi.advanceTimersByTime(3000);
+			});
+			expect(onOpenPanel).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

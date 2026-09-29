@@ -16,9 +16,11 @@ import {
 	glyphFor,
 	guideLevel,
 	type Item,
+	type LetterCase,
 	type PlannedExercise,
 	planSession,
 	recordAttempt,
+	type SessionRun,
 	type SpokenVerdict,
 	scoreTrace,
 	type TemplateId,
@@ -167,14 +169,43 @@ function listenerDe(microfono: Microfono): Listener {
 
 const BOTON = "rounded border-2 border-calm-border bg-card px-3 py-2";
 
+/**
+ * Una corrida mínima, sin ejercicios, solo para que `trace/Presentation` (que lee
+ * `run?.traceCase` del store, D28) pinte el caso elegido a mano. Nada más de `PlantillasDev`
+ * usa `store.run`: es seguro fijarlo aquí aunque la plantilla activa no sea `trace`.
+ */
+function corridaDeCaso(traceCase: LetterCase): SessionRun {
+	return {
+		sessionIndex: 0,
+		unitId: null,
+		exercises: [],
+		cursor: 0,
+		attempt: createAttemptState(),
+		resolutions: [],
+		progress: emptyProgressState(),
+		traceCase,
+	};
+}
+
 /** Las dos vistas de una plantilla con un ejercicio ya planificado. Se remonta al cambiar de ítem. */
 function Panel(props: {
 	templateId: TemplateId;
 	item: Item;
 	presentacion: PlannedExercise | undefined;
 	evaluacion: PlannedExercise | undefined;
+	/** Caso del trazo (D28): compartido con `store.run.traceCase` para que Presentation
+	 * y Evaluation pinten el mismo. */
+	letterCase: LetterCase;
+	onLetterCase: (c: LetterCase) => void;
 }) {
-	const { templateId, item, presentacion, evaluacion } = props;
+	const {
+		templateId,
+		item,
+		presentacion,
+		evaluacion,
+		letterCase,
+		onLetterCase,
+	} = props;
 	const vistas = templateViews[templateId];
 	const [feedback, setFeedback] = useState<AttemptFeedback | null>(null);
 	const [attemptKey, setAttemptKey] = useState(0);
@@ -205,7 +236,7 @@ function Panel(props: {
 		templateId === "trace"
 			? {
 					guide: {
-						glyph: glyphFor(item, "upper"),
+						glyph: glyphFor(item, letterCase),
 						level: guideLevel(caja, rung),
 					},
 					// Sin corrida no hay motor que ignore un trazo ni que decida el modelo: aquí
@@ -213,7 +244,7 @@ function Panel(props: {
 					clearKey: 0,
 					acceptsModel: (strokes: TraceStroke[]) => strokes.length > 0,
 					onTrace: (strokes: TraceStroke[]) => {
-						const score = scoreTrace(glyphFor(item, "upper"), strokes);
+						const score = scoreTrace(glyphFor(item, letterCase), strokes);
 						const cobertura = score.coverage
 							.map((c) => `${Math.round(c * 100)}%`)
 							.join(", ");
@@ -262,6 +293,21 @@ function Panel(props: {
 							onClick={() => setCaja(c)}
 						>
 							{`Nivel ${c + 1}`}
+						</button>
+					))}
+				</div>
+			)}
+			{templateId === "trace" && (
+				<div className="flex flex-wrap items-center gap-3">
+					{(["upper", "lower"] as const).map((c) => (
+						<button
+							key={c}
+							type="button"
+							aria-pressed={letterCase === c}
+							className={BOTON}
+							onClick={() => onLetterCase(c)}
+						>
+							{c === "upper" ? "Mayúscula" : "Minúscula"}
 						</button>
 					))}
 				</div>
@@ -346,6 +392,14 @@ export function PlantillasDev(props: { audio?: AudioPlayer }) {
 	const [itemId, setItemId] = useState<string | null>(null);
 	const [seed, setSeed] = useState(SEED_INICIAL);
 	const [microfono, setMicrofono] = useState<Microfono>("oido");
+	// Caso del trazo (D28): para comprobar a mano los glifos de LOWER_GLYPHS en el lienzo
+	// real. Se refleja también en `store.run.traceCase`, que es de ahí de donde
+	// `trace/Presentation` lo lee (S8, igual que en la sesión real).
+	const [letterCase, setLetterCase] = useState<LetterCase>("upper");
+	function elegirCase(c: LetterCase) {
+		setLetterCase(c);
+		store.setState({ run: corridaDeCaso(c) });
+	}
 	// Un `SpeechDeps` estable por elección: cambiarla remonta el turno con el listener nuevo.
 	const speech = useMemo<SpeechDeps>(
 		() => ({
@@ -437,6 +491,8 @@ export function PlantillasDev(props: { audio?: AudioPlayer }) {
 						item={item}
 						presentacion={plan.presentacion}
 						evaluacion={plan.evaluacion}
+						letterCase={letterCase}
+						onLetterCase={elegirCase}
 					/>
 				)}
 			</main>

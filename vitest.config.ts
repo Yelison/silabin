@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 export default defineConfig({
   test: {
+    exclude: ['e2e/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       include: ['src/content/**', 'src/engine/**', 'src/store/**', 'src/speech/**'],

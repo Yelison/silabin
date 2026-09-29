@@ -95,10 +95,16 @@ no hay forma ni movimiento que lo respalde. Además, ningún estado depende solo
 - **Tema claro fijo:** no hay modo oscuro. Una pantalla infantil que cambia de colores según
   el sistema del adulto confunde, y la paleta está pensada para fondo claro.
 
-## Pendiente (fuera de esta tarea)
+## Pendiente (Plan 7, identidad visual)
 
 - Paleta definitiva: la de esta tabla es una propuesta inicial (color e identidad visual
   finales, más allá del contraste ya verificado).
-- Ilustraciones en lugar de emoji para las 35 palabras de `pictures.ts` (y las de fase 2):
-  sigue sin haber arte propio.
-- Compañero (mascota): el spec lo prevé; no existe todavía ni como concepto visual.
+- Las 65 ilustraciones de palabras ya están integradas (Plan 3). Lo que sigue siendo marcador
+  provisional (emoji o degradado, todo en `src/features/rewards/visuals.ts` más los botones
+  «Borrar», «Listo» y «Mis premios» y la boca) tiene sus prompts en
+  [`docs/arte-plan-7-prompts.md`](arte-plan-7-prompts.md): compañeros con y sin gorra, fondos,
+  pegatinas, trofeo, partículas del rastro, seis bocas y los iconos de la app.
+- Compañero (mascota): existen dos marcadores (`companion:first`, `companion:second`); el
+  personaje real y su identidad se deciden en el Plan 7.
+- La lista de verificación en iPad/iPhone (`docs/checklist-ipad.md`) se escribe en el Plan 7,
+  sobre la versión con el arte final.

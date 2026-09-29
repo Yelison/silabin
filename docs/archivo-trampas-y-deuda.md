@@ -204,3 +204,37 @@ Del registro del Plan 5 (`docs/superpowers/2026-09-27-plan-5-registro.md`, busca
   9 pasaron a este archivo como resueltas.
 - **M4 (revisión final):** un permiso de micrófono denegado se vuelve a pedir en cada ejercicio
   (`VoiceTurn.tsx`, `sinMicrofono` es estado por montaje). Con niños puede ser un aviso repetido.
+
+**Plan 6 (2026-09-29): lo que salió del README al podarlo**
+
+- **Deuda 1 anterior (prueba en dispositivos reales, texto completo):** iPhone/iPad y Firefox
+  (sobre todo el arrastre de `build`), pantallas de 360 × 640, los adaptadores reales
+  (`createIdbAdapter`, `createSpeechPlayer`, `downloadInBrowser`) y la prueba con niños de la boca
+  (D21, y que desaparezca en la pista 2). Todo visto solo en Chromium. Micrófono, VAD y
+  `AudioContext` en Safari iOS ya probados en dispositivo real (Plan 5). Pasa a
+  `docs/checklist-ipad.md` del Plan 7; lo funcional del Plan 6 lo cubre la prueba manual del
+  ledger.
+- **Deuda 10 anterior, cerrada (D31):** el mapa no enseñaba avance hasta completar una unidad y
+  nadie veía que se guarda; y del `trace` (D19), un botón de borrar y otro de confirmar. Resuelto
+  en las Tareas 4 y 7 del Plan 6.
+- **`importState` movido al Plan 6 (D9), resuelto:** cableado con `previewImport`/`importDoc` y
+  la interfaz de `DataSection` (D27).
+- **Deuda 3 anterior (fallo de lectura de IndexedDB), texto completo:** `guardar` no escribe
+  mientras `readFailed`; «Reintentar» solo desbloquea con el disco vacío. Con un documento real
+  hay que recargar, o **importar** una exportación (D27), que quita `readFailed`.
+- **Minors por tarea del Plan 6** (todos en el ledger, `minor (deferred)`): T1 sombra de nombre de
+  `totalStars`, fallback silencioso de `text` en `progress-report.ts`, asimetría `progressReport`/
+  `unitProgress`; T2 comprobación muerta en `equip`, `verifyPin` con `===`; T3 `D1b` de
+  `PlantillasDev` con aserciones débiles; T4 `handleStrokeStart` repite el patrón de
+  `cancelarTemporizador`, `!disabled` incluye `locked`; T5 `ParentGate` sin `.catch` y el nombre
+  del niño sin resincronizar; T6 input de fichero sin área táctil garantizada, sin mensaje tras
+  «Reiniciar todo», `DataSection` en 220 líneas; T7 `role="img"` atípico y tests de la hora con
+  la misma lógica que la implementación; T8 fallbacks repetidos en `Companion`/
+  `CosmeticBackground`, sin test de `{capture, passive}` en `TrailLayer` ni del botón 🎁; T9
+  `spawnSync("git")` en el route handler de precaché, `description` del manifest sin test, un
+  flake puntual de N8; T10 solver limitado, errores de `dibujarGlifo` tragados, espera fija de
+  3300 ms, J3 con `mouse`, selectores por `data-state`, `reuseExistingServer` con build viejo,
+  J1/J2 solo miran `glifos[0]`, WebKit sin probar.
+- **Pendiente heredado de la Tarea 4:** el layout apaisado 640 × 360 de la franja de 3 botones
+  de `trace` se razonó por aritmética y no se ha verificado en pantalla; va a la prueba manual y
+  a `checklist-ipad.md`.

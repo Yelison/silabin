@@ -1,32 +1,36 @@
 "use client";
 
+import { MotionConfig, motion } from "motion/react";
 import { useEffect, useRef } from "react";
-import { REWARDS, type Reward, type RewardKind } from "@/engine";
+import { REWARDS, type Reward } from "@/engine";
 import { useApp, useAudio } from "@/features/app-context";
-
-const ICONO: Record<RewardKind, string> = {
-	badge: "🏅",
-	background: "🌄",
-	companion: "🐣",
-	trail: "✨",
-	sticker: "🌟",
-	trophy: "🏆",
-};
+import { Companion } from "@/features/rewards/Companion";
+import { rewardIcon } from "@/features/rewards/visuals";
 
 function etiquetaEstrellas(n: number): string {
 	return n === 1 ? "1 estrella" : `${n} estrellas`;
 }
 
+/** El salto de celebración: 3 rebotes de 1 s. Solo se usa cuando no hay que reducir nada. */
+const REBOTE = {
+	animate: { y: [0, -18, 0, -18, 0, -18, 0] },
+	transition: { duration: 3, ease: "easeInOut" as const },
+};
+
 /**
- * La celebración del final: las estrellas ganadas y, si hay, un icono por logro nuevo. El
- * nombre del logro es para el adulto y solo va en `aria-label`. Dura menos de 4 s (3 saltos de
- * 1 s, y solo si el sistema no pide reducir el movimiento) y un toque en cualquier sitio
- * la cierra.
+ * La celebración del final: las estrellas ganadas y, si hay, un icono por logro nuevo, más el
+ * compañero equipado. El nombre del logro es para el adulto y solo va en `aria-label`. Dura
+ * menos de 4 s y un toque en cualquier sitio la cierra.
+ *
+ * Con `reducedCelebrations` (S4): estrellas y logros quietos —ni siquiera son `motion.span`, no
+ * hay ninguna clase ni prop de animación que quitar—, sin partículas (la capa del rastro ya se
+ * calla sola con este mismo ajuste) y solo suena `celebrate:session`, nunca `reward:new`.
  */
 export function EndScreen(props: { onDone: () => void }) {
 	const { onDone } = props;
 	const summary = useApp((s) => s.summary);
 	const clearSummary = useApp((s) => s.clearSummary);
+	const reducedCelebrations = useApp((s) => s.doc.settings.reducedCelebrations);
 	const audio = useAudio();
 	const sonado = useRef(false);
 	// Un resumen que se limpia con el toque no es un resumen que faltara: solo se sale sola
@@ -45,7 +49,7 @@ export function EndScreen(props: { onDone: () => void }) {
 		if (sonado.current) return;
 		sonado.current = true;
 		void audio.play({ key: "celebrate:session" }).catch(() => {});
-		if ((summary?.newRewardIds.length ?? 0) > 0)
+		if (!reducedCelebrations && (summary?.newRewardIds.length ?? 0) > 0)
 			void audio.play({ key: "reward:new" }).catch(() => {});
 	}, [hayResumen]);
 
@@ -56,39 +60,68 @@ export function EndScreen(props: { onDone: () => void }) {
 		.filter((r): r is Reward => r !== undefined);
 
 	return (
-		<button
-			type="button"
-			data-screen="end"
-			aria-label="Continuar"
-			onClick={() => {
-				audio.stop();
-				clearSummary();
-				onDone();
-			}}
-			className="flex min-h-screen w-full flex-col items-center justify-center gap-10 p-6"
-		>
-			<span
-				role="img"
-				aria-label={etiquetaEstrellas(summary.stars)}
-				className="text-8xl text-celebrate motion-safe:animate-[bounce_1s_ease-in-out_3]"
+		<MotionConfig reducedMotion="user">
+			<button
+				type="button"
+				data-screen="end"
+				aria-label="Continuar"
+				onClick={() => {
+					audio.stop();
+					clearSummary();
+					onDone();
+				}}
+				className="flex min-h-screen w-full flex-col items-center justify-center gap-10 p-6"
 			>
-				{"★".repeat(summary.stars)}
-			</span>
-			{logros.length > 0 && (
-				<span className="flex gap-6">
-					{logros.map((r) => (
-						<span
-							key={r.id}
-							role="img"
-							data-reward={r.id}
-							aria-label={r.name}
-							className="text-7xl motion-safe:animate-[bounce_1s_ease-in-out_3]"
-						>
-							{ICONO[r.kind]}
-						</span>
-					))}
-				</span>
-			)}
-		</button>
+				<Companion />
+				{reducedCelebrations ? (
+					<span
+						role="img"
+						aria-label={etiquetaEstrellas(summary.stars)}
+						className="text-8xl text-celebrate"
+					>
+						{"★".repeat(summary.stars)}
+					</span>
+				) : (
+					<motion.span
+						role="img"
+						aria-label={etiquetaEstrellas(summary.stars)}
+						className="text-8xl text-celebrate"
+						animate={REBOTE.animate}
+						transition={REBOTE.transition}
+					>
+						{"★".repeat(summary.stars)}
+					</motion.span>
+				)}
+				{logros.length > 0 && (
+					<span className="flex gap-6">
+						{logros.map((r) =>
+							reducedCelebrations ? (
+								<span
+									key={r.id}
+									role="img"
+									data-reward={r.id}
+									aria-label={r.name}
+									className="text-7xl"
+								>
+									{rewardIcon(r.id)}
+								</span>
+							) : (
+								<motion.span
+									key={r.id}
+									role="img"
+									data-reward={r.id}
+									aria-label={r.name}
+									className="text-7xl"
+									animate={REBOTE.animate}
+									transition={REBOTE.transition}
+								>
+									{rewardIcon(r.id)}
+								</motion.span>
+							),
+						)}
+					</span>
+				)}
+			</button>
+		</MotionConfig>
 	);
 }

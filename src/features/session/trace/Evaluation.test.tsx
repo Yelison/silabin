@@ -9,6 +9,7 @@ import {
 	glyphFor,
 	type Item,
 	type PlannedExercise,
+	type TraceGuide,
 	type TraceStroke,
 	templates,
 } from "@/engine";
@@ -99,6 +100,7 @@ function montar(
 		itemId?: string;
 		audio?: ReturnType<typeof fakeAudio>;
 		acceptsModel?: (strokes: TraceStroke[]) => boolean;
+		guide?: TraceGuide;
 	} = {},
 ) {
 	const itemId = over.itemId ?? "letter:a";
@@ -116,7 +118,7 @@ function montar(
 		onAnswer,
 		onModelDone,
 		trace: {
-			guide: guiaDe(itemId, over.nivel ?? 1),
+			guide: over.guide ?? guiaDe(itemId, over.nivel ?? 1),
 			onTrace,
 			clearKey: 0,
 			acceptsModel,
@@ -336,6 +338,20 @@ describe("trace Evaluation", () => {
 		expect(svg.getAttribute("data-level")).toBe("1");
 	});
 
+	it("E9b (D28): con guide.glyph de LOWER_GLYPHS pinta los carriles de la minúscula, no los de la mayúscula", () => {
+		const lowerA = glyphFor(item("letter:a"), "lower");
+		const guide: TraceGuide = { glyph: lowerA, level: 1 };
+		const { svg } = montar({ guide });
+		const carriles = svg.querySelectorAll('[data-testid="guide-lane"]');
+		expect(carriles.length).toBe(lowerA.strokes.length);
+		for (const [i, carril] of carriles.entries()) {
+			const esperado = lowerA.strokes[i]
+				?.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`)
+				.join(" ");
+			expect(carril.getAttribute("d")).toBe(esperado);
+		}
+	});
+
 	it("E9: sin props.trace, lanza", () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const itemId = "letter:a";
@@ -504,6 +520,127 @@ describe("trace Evaluation", () => {
 			expect(t.acceptsModel).toHaveBeenCalledTimes(1);
 			const trazos = t.acceptsModel.mock.calls[0]?.[0];
 			expect(trazos).toHaveLength(1);
+		});
+	});
+
+	describe("Tarea 4: borrar y listo", () => {
+		it("B1: sin tinta no hay botones; tras un trazo, aparecen los dos", () => {
+			vi.useFakeTimers();
+			const { svg, queryByRole } = montar();
+			expect(queryByRole("button", { name: "Borrar" })).toBeNull();
+			expect(queryByRole("button", { name: "Listo" })).toBeNull();
+			trazoSimple(svg);
+			expect(queryByRole("button", { name: "Borrar" })).not.toBeNull();
+			expect(queryByRole("button", { name: "Listo" })).not.toBeNull();
+		});
+
+		it("B2 (mutación: «Borrar» sin cancelar el temporizador): vacía la tinta, y pasados 2 s no llega ningún envío; el intento sigue abierto para un trazo nuevo", () => {
+			vi.useFakeTimers();
+			const {
+				container,
+				svg,
+				onTrace,
+				audio,
+				getByRole,
+				queryByRole,
+				actualizar,
+			} = montar();
+			actualizar({
+				feedback: { hint: templates.trace.hints[0], resolution: null },
+			});
+			const pulso = () => container.querySelector('[data-pulse="true"]');
+			expect(pulso()).not.toBeNull();
+
+			trazoSimple(svg);
+			const borrar = getByRole("button", { name: "Borrar" });
+			fireEvent.click(borrar);
+
+			expect(container.querySelectorAll('[data-testid="ink"]')).toHaveLength(0);
+			expect(queryByRole("button", { name: "Borrar" })).toBeNull();
+			expect(queryByRole("button", { name: "Listo" })).toBeNull();
+
+			act(() => {
+				vi.advanceTimersByTime(2000);
+			});
+			expect(onTrace).not.toHaveBeenCalled();
+			expect(audio.play).not.toHaveBeenCalled();
+			expect(svg.getAttribute("data-disabled")).toBeNull();
+			expect(pulso()).not.toBeNull();
+
+			// El intento sigue abierto: un trazo nuevo todavía manda, y sin arrastrar el
+			// trazo borrado.
+			trazoSimple(svg, 2);
+			act(() => {
+				vi.advanceTimersByTime(TRACE_IDLE_MS);
+			});
+			expect(onTrace).toHaveBeenCalledTimes(1);
+			expect(onTrace.mock.calls[0]?.[0]).toHaveLength(1);
+		});
+
+		it("B3 (mutación: «Listo» sin cancelar el temporizador, doble envío): llama a onTrace una vez, en el acto; pasados 2 s no llama otra vez", () => {
+			vi.useFakeTimers();
+			const { svg, onTrace, getByRole } = montar();
+			trazoSimple(svg);
+			const listo = getByRole("button", { name: "Listo" });
+			fireEvent.click(listo);
+			expect(onTrace).toHaveBeenCalledTimes(1);
+			act(() => {
+				vi.advanceTimersByTime(2000);
+			});
+			expect(onTrace).toHaveBeenCalledTimes(1);
+		});
+
+		it("B4: «Listo» en el modelo del tercer rung, con tinta suficiente, avanza igual que el temporizador", () => {
+			vi.useFakeTimers();
+			const t = montar();
+			t.actualizar({
+				feedback: {
+					hint: templates.trace.hints[2],
+					resolution: { status: "assisted" },
+				},
+			});
+			act(() => {
+				vi.advanceTimersByTime(10_000);
+			});
+			trazoSimple(t.svg);
+			const listo = t.getByRole("button", { name: "Listo" });
+			fireEvent.click(listo);
+			expect(t.onModelDone).toHaveBeenCalledTimes(1);
+			expect(t.onTrace).not.toHaveBeenCalled();
+		});
+
+		it("B4: «Listo» en el modelo con un punto (acceptsModel dice que no) no avanza", () => {
+			vi.useFakeTimers();
+			const t = montar({ acceptsModel: () => false });
+			t.actualizar({
+				feedback: {
+					hint: templates.trace.hints[2],
+					resolution: { status: "assisted" },
+				},
+			});
+			act(() => {
+				vi.advanceTimersByTime(10_000);
+			});
+			trazoSimple(t.svg);
+			const listo = t.getByRole("button", { name: "Listo" });
+			fireEvent.click(listo);
+			expect(t.acceptsModel).toHaveBeenCalledTimes(1);
+			expect(t.onModelDone).not.toHaveBeenCalled();
+			expect(t.container.querySelectorAll('[data-testid="ink"]')).toHaveLength(
+				0,
+			);
+		});
+
+		it("B5: mientras se anima la pista 2 no hay botones, aunque la tinta del trazo anterior siga", () => {
+			vi.useFakeTimers();
+			const t = montar();
+			trazoSimple(t.svg);
+			expect(t.queryByRole("button", { name: "Borrar" })).not.toBeNull();
+			t.actualizar({
+				feedback: { hint: templates.trace.hints[1], resolution: null },
+			});
+			expect(t.queryByRole("button", { name: "Borrar" })).toBeNull();
+			expect(t.queryByRole("button", { name: "Listo" })).toBeNull();
 		});
 	});
 });

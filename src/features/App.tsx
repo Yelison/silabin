@@ -8,16 +8,25 @@ import {
 	createSpeechPlayer,
 } from "@/audio";
 import { curriculum } from "@/engine";
-import { downloadInBrowser } from "@/features/adult/ExportGesture";
+import { downloadInBrowser } from "@/features/adult/download";
+import { ParentGate } from "@/features/adult/ParentGate";
 import { SaveWarning } from "@/features/adult/SaveWarning";
 import { AppProviders, useApp } from "@/features/app-context";
 import { MapScreen } from "@/features/map/MapScreen";
+import { CosmeticBackground } from "@/features/rewards/CosmeticBackground";
+import { RewardsScreen } from "@/features/rewards/RewardsScreen";
+import { TrailLayer } from "@/features/rewards/TrailLayer";
 import { EndScreen } from "@/features/session/EndScreen";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import { StartScreen } from "@/features/start/StartScreen";
-import { type AppState, createAppStore, createIdbAdapter } from "@/store";
+import {
+	type AppState,
+	createAppStore,
+	createIdbAdapter,
+	type Settings,
+} from "@/store";
 
-type Screen = "start" | "map" | "session" | "end";
+type Screen = "start" | "map" | "session" | "end" | "panel" | "rewards";
 
 function createStore(): StoreApi<AppState> {
 	return createAppStore({
@@ -29,7 +38,7 @@ function createStore(): StoreApi<AppState> {
 }
 
 /** Voz del navegador mientras no haya locuciones reales; silencio si ni eso existe. */
-function createAudio(accent: "do" | "mx" | "neutro"): AudioPlayer {
+function createAudio(accent: Settings["accent"]): AudioPlayer {
 	if (typeof globalThis.speechSynthesis === "undefined")
 		return createSilentPlayer();
 	return createSpeechPlayer({ synth: globalThis.speechSynthesis, accent });
@@ -45,14 +54,30 @@ function Screens() {
 	return (
 		<>
 			<SaveWarning />
+			{/* Montada una sola vez, para toda la interfaz (S10): decide ella misma cuándo callarse. */}
+			<TrailLayer />
 			{screen === "start" && <StartScreen onStart={() => setScreen("map")} />}
 			{screen === "map" && (
-				<MapScreen
+				<CosmeticBackground>
+					<MapScreen
+						onOpenPanel={() => setScreen("panel")}
+						onOpenRewards={() => setScreen("rewards")}
+						onStart={() => {
+							beginSession();
+							setScreen("session");
+						}}
+					/>
+				</CosmeticBackground>
+			)}
+			{screen === "rewards" && (
+				<CosmeticBackground>
+					<RewardsScreen onClose={() => setScreen("map")} />
+				</CosmeticBackground>
+			)}
+			{screen === "panel" && (
+				<ParentGate
 					download={downloadInBrowser}
-					onStart={() => {
-						beginSession();
-						setScreen("session");
-					}}
+					onClose={() => setScreen("map")}
 				/>
 			)}
 			{screen === "session" && (
@@ -61,7 +86,11 @@ function Screens() {
 					onExit={() => setScreen("map")}
 				/>
 			)}
-			{screen === "end" && <EndScreen onDone={() => setScreen("map")} />}
+			{screen === "end" && (
+				<CosmeticBackground>
+					<EndScreen onDone={() => setScreen("map")} />
+				</CosmeticBackground>
+			)}
 		</>
 	);
 }
@@ -69,15 +98,20 @@ function Screens() {
 /**
  * Raíz de la interfaz. Crea el store una sola vez, lo carga en un efecto (IndexedDB solo
  * existe en el cliente) y, cuando ya se conoce el acento guardado, crea el reproductor.
- * `store` y `audio` se pueden inyectar para los tests.
+ * `store` y `audio` se pueden inyectar para los tests; con `audio` puesto, el acento no
+ * recrea el reproductor (S3): el test tiene el control del que le dieron.
+ * `audioFactory` reemplaza la fábrica real (voz del navegador) por una de test.
  */
 export function App(props: {
 	store?: StoreApi<AppState>;
 	audio?: AudioPlayer;
+	audioFactory?: (accent: Settings["accent"]) => AudioPlayer;
 }) {
 	const [store] = useState(() => props.store ?? createStore());
 	const [audio, setAudio] = useState<AudioPlayer | null>(props.audio ?? null);
 	const started = useRef(false);
+	const factory = props.audioFactory ?? createAudio;
+	const injectedAudio = props.audio !== undefined;
 
 	useEffect(() => {
 		// El modo estricto de React monta dos veces en desarrollo: se carga una sola.
@@ -88,11 +122,28 @@ export function App(props: {
 			.load()
 			.then(() => {
 				setAudio(
-					(actual) =>
-						actual ?? createAudio(store.getState().doc.settings.accent),
+					(actual) => actual ?? factory(store.getState().doc.settings.accent),
 				);
 			});
-	}, [store]);
+	}, [store, factory]);
+
+	// S3: el acento cambia en vivo desde el panel de padres. Solo se activa una vez que ya hay
+	// un reproductor (la carga terminó), para no competir con el efecto de arriba por quién
+	// crea el primero; y solo si nadie inyectó ya un reproductor fijo para el test.
+	const listo = audio !== null;
+	useEffect(() => {
+		if (injectedAudio || !listo) return;
+		let accentActual = store.getState().doc.settings.accent;
+		return store.subscribe((state) => {
+			const accent = state.doc.settings.accent;
+			if (accent === accentActual) return;
+			accentActual = accent;
+			setAudio((anterior) => {
+				anterior?.stop();
+				return factory(accent);
+			});
+		});
+	}, [store, factory, injectedAudio, listo]);
 
 	if (audio === null) return null;
 	return (

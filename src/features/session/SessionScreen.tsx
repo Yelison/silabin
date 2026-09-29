@@ -188,6 +188,8 @@ function ExerciseView(props: {
 
 	return (
 		<div
+			data-template={exercise.templateId}
+			data-exercise-kind={exercise.kind}
 			data-celebrating={celebrating ? "true" : undefined}
 			className={celebrating ? "motion-safe:animate-bounce" : undefined}
 		>

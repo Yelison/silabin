@@ -580,6 +580,53 @@ describe("SessionScreen", () => {
 			expect(run().resolutions).toEqual([]);
 		});
 
+		it("S2b (D28): con traceCase 'lower' en la corrida, la vista real de trace pinta el glifo de LOWER_GLYPHS (SessionScreen → traceGuide → Evaluation)", async () => {
+			const store = crearStore();
+			await store.getState().load();
+			store.getState().beginSession();
+			store.setState({
+				run: { ...trazoRun(store.getState().progress, 0), traceCase: "lower" },
+			});
+			const audio = fakeAudio();
+			const views: TemplateViews = {
+				Presentation: (p: PresentationProps) => (
+					<button type="button" data-view="presentation" onClick={p.onDone}>
+						listo
+					</button>
+				),
+				Evaluation: RealTraceEvaluation,
+			};
+			const { container } = render(
+				conProveedores(
+					store,
+					audio,
+					<SessionScreen
+						onEnd={vi.fn()}
+						onExit={vi.fn()}
+						views={{ trace: views }}
+						celebrationMs={0}
+					/>,
+				),
+			);
+			const item = curriculum.items.get(LETTER_A_ID);
+			if (item === undefined) throw new Error("falta letter:a");
+			const lowerA = glyphFor(item, "lower");
+			await waitFor(() => {
+				const svg = container.querySelector("svg");
+				expect(svg).not.toBeNull();
+			});
+			const svg = container.querySelector("svg");
+			if (svg === null) throw new Error("sin <svg>");
+			const carriles = svg.querySelectorAll('[data-testid="guide-lane"]');
+			expect(carriles.length).toBe(lowerA.strokes.length);
+			for (const [i, carril] of carriles.entries()) {
+				const esperado = lowerA.strokes[i]
+					?.map((p, j) => `${j === 0 ? "M" : "L"}${p.x} ${p.y}`)
+					.join(" ");
+				expect(carril.getAttribute("d")).toBe(esperado);
+			}
+		});
+
 		it("integración: la vista real de trace no salta a un nivel más tenue a media celebración, aunque el motor ya haya subido la caja", async () => {
 			// A diferencia de las demás plantillas (que responden a un toque, en el mismo
 			// evento), `onTrace` llega desde un `setTimeout` propio de la evaluación de

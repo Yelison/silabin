@@ -5,17 +5,18 @@ español desde cero: conciencia fonológica, vocales y sílabas CV, con pistas e
 repaso espaciado, validación por voz y recompensas. Uso principal en iPad/iPhone con Safari,
 como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acompaña.
 
-> **Estado a 2026-09-28:** el núcleo sin interfaz (Plan 1, PR #1), la primera sesión jugable
-> (Plan 2, PR #3), la Fase 0 entera (Plan 3, PR #4) y `trace` (Plan 4, PR #5) están fusionados
-> en `main`. El **Plan 5** (rama `feat/plan-5-voz`, 7 tareas hechas y revisión final aplicada) construye **la voz**:
-> `say-it` y `read-word` con el turno de voz (micrófono con VAD por energía, y los botones del
-> adulto como respaldo siempre disponible) y desbloquea **la Fase 1 y la Fase 2**, así que hoy
-> **son jugables las tres fases**. Además cierra la decisión abierta del toque accidental en
-> `trace` (D19). 1134 tests (1 omitido), y `typecheck`, `lint` y `pnpm build` en verde.
-> La revisión final de la rama (Opus, 0 críticos) y la **prueba manual del autor** (lista en
-> `docs/superpowers/2026-09-27-plan-5-registro.md`, sección «Prueba manual del autor (antes
-> del PR)») ya están completas, los 8 puntos confirmados en dispositivo real. **Falta** solo
-> abrir el PR (ver [siguientes pasos](#siguientes-pasos-concretos)).
+> **Estado a 2026-09-29:** el núcleo (Plan 1, PR #1), la primera sesión jugable (Plan 2, PR #3),
+> la Fase 0 (Plan 3, PR #4), `trace` (Plan 4, PR #5) y la voz (Plan 5) están fusionados en
+> `main`. El **Plan 6** (rama `feat/plan-6-padres-recompensas`, 11 tareas hechas) construye lo
+> **funcional** que faltaba: panel de padres con PIN, ajustes, importar el progreso, trazo en
+> minúsculas, recompensas y cosméticos (con marcadores provisionales), avance en el mapa,
+> «borrar» y «listo» en `trace`, PWA con service worker y pruebas e2e con Playwright. Hoy son
+> jugables las tres fases. 1322 tests (1 omitido), y `typecheck`, `lint`, `pnpm build` y
+> `pnpm e2e` en verde. **Falta**, en este orden: la revisión final de la rama con Opus, que el
+> autor **despliegue en Vercel** (D29) y haga la **prueba manual** (lista en
+> `docs/superpowers/2026-09-28-plan-6-registro.md`, sección «Prueba manual del autor») y abrir
+> el PR. Después, el **Plan 7**: identidad visual (arte, compañero, boca) y la lista de
+> verificación en iPad.
 
 ---
 
@@ -29,12 +30,13 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 6. [Lo que ya está hecho: Plan 3](#lo-que-ya-está-hecho-plan-3)
 7. [Lo que ya está hecho: Plan 4](#lo-que-ya-está-hecho-plan-4)
 8. [Lo que ya está hecho: Plan 5](#lo-que-ya-está-hecho-plan-5)
-9. [Lo que falta: Plan 6 y después](#lo-que-falta-plan-6-y-después)
-10. [Siguientes pasos concretos](#siguientes-pasos-concretos)
-11. [Decisiones tomadas](#decisiones-tomadas)
-12. [Trampas conocidas](#trampas-conocidas)
-13. [Deuda menor aceptada](#deuda-menor-aceptada)
-14. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
+9. [Lo que ya está hecho: Plan 6](#lo-que-ya-está-hecho-plan-6)
+10. [Lo que falta: Plan 7 y después](#lo-que-falta-plan-7-y-después)
+11. [Siguientes pasos concretos](#siguientes-pasos-concretos)
+12. [Decisiones tomadas](#decisiones-tomadas)
+13. [Trampas conocidas](#trampas-conocidas)
+14. [Deuda menor aceptada](#deuda-menor-aceptada)
+15. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
 
 ---
 
@@ -44,14 +46,23 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1132 tests + 1 omitido (el de ficheros de audio)
+pnpm test        # Vitest: 1322 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
-pnpm lint        # biome check src
+pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
+pnpm e2e         # Playwright (Chromium, viewport de iPhone): construye y arranca en el 3100
 ```
 
-Las tres puertas (`test`, `typecheck` y `lint`) y `pnpm build` están en verde en la rama del
-Plan 5.
+Las tres puertas (`test`, `typecheck` y `lint`), `pnpm build` y `pnpm e2e` están en verde en la
+rama del Plan 6.
+
+**`pnpm e2e`** ejecuta `pnpm build && pnpm start -p 3100` por su cuenta (o reutiliza un servidor
+ya levantado en ese puerto si no hay `CI`: si cambias código, páralo o el e2e probará el build
+viejo) y corre J1-J4 (`e2e/`): una sesión de la Fase 1 con trazos por toques (J1), el trazo en
+minúscula (J2), el panel de padres (J3) y el arranque sin red con service worker (J4). La primera
+vez hace falta `pnpm exec playwright install chromium`. `J1`/`J2` fijan la semilla 7 del
+planificador (S22): si `trazosDibujados` sale a 0, algo nuevo consume `Math.random` y hay que
+buscar otra semilla. WebKit está previsto (`PW_WEBKIT=1`) pero sin probar.
 
 **Probar desde otro dispositivo en la red local** (móvil o tableta, para la prueba manual de
 `trace`): `DEV_ORIGINS=<ip-lan> pnpm dev -H 0.0.0.0`, con la IP sola, sin esquema ni puerto.
@@ -97,15 +108,40 @@ El test omitido comprueba que los ficheros de audio existen en disco en los 3 ac
 corre con `SILABIN_CHECK_AUDIO_FILES=1`, que se enciende cuando lleguen los audios reales.
 
 Stack real instalado: Next.js 16.3.5 (App Router), React 19.2.8, TypeScript 5 estricto,
-Tailwind CSS 4, Zod 4, Zustand 5, idb-keyval, Vitest 5 con jsdom y Testing Library, y
-Biome 2.
+Tailwind CSS 4, Zod 4, Zustand 5, idb-keyval, Vitest 5 con jsdom y Testing Library, Biome 2,
+Serwist con Turbopack (PWA, ver más abajo), Framer Motion y Playwright.
 
 > **Next.js 16 tiene cambios rompedores respecto a versiones anteriores.** Antes de escribir
 > código de Next, lee la guía correspondiente en `node_modules/next/dist/docs/` (ver
 > `AGENTS.md`).
 
-El spec también prevé Framer Motion, Serwist (PWA) y Playwright. **Aún no están
-instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
+Framer Motion (`motion`, celebraciones y rastro del dedo) y Playwright (e2e) entraron con el
+Plan 6 (D30).
+
+### La PWA: instalación y actualización
+
+`pnpm dev` sirve la app sin service worker (`SerwistProvider` lleva `disable` en desarrollo:
+un SW cacheando confundiría los cambios en caliente con una app que no se actualiza). El
+service worker solo existe con `pnpm build && pnpm start` (abre `http://localhost:3000`; en
+DevTools → Application → Service Workers debe verse activado, y con «Offline» marcado la app
+sigue arrancando), o en un despliegue real (ver
+`docs/despliegue-vercel.md`, que además es lo único que tiene que hacer el autor a mano —
+ningún agente despliega).
+
+- **Se instala** desde el navegador (en iPad/iPhone, Safari → Compartir → «Añadir a pantalla
+  de inicio»). El icono y el nombre salen de `src/app/manifest.ts`.
+- **Funciona sin red:** la primera carga con red precachea la app, las ilustraciones de las
+  palabras y los iconos (`src/app/sw.ts` y el route handler en
+  `src/app/serwist/[path]/route.ts`). Una navegación sin red después sirve `/` precacheado en
+  vez de fallar. Los audios (`speechSynthesis`) no se precachean: no son ficheros propios.
+- **Cómo se actualiza:** sin `skipWaiting` automático (S11 del Plan 6) — un service worker
+  nuevo que tomara el control a mitad de una sesión rompería la carga de fragmentos ya en
+  curso. Cuando hay una versión nueva esperando, tocar «Toca para empezar» en la pantalla de
+  inicio (`src/features/pwa/update.ts` + `StartScreen`) le pide que tome el control y recarga
+  la página una vez, antes de empezar nada. Nunca pasa a mitad de una sesión.
+- Los iconos (`public/icons/app-192.png`, `app-512.png`, `apple-touch-icon.png`) son
+  provisionales: una «S» generada por `scripts/iconos-pwa.py` (S13). El Plan 7 los sustituye
+(prompt en `docs/arte-plan-7-prompts.md`).
 
 ---
 
@@ -114,6 +150,9 @@ instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
 | Orden | Documento | Qué contiene |
 |---|---|---|
 | 1 | Este README | Estado, pendientes y siguientes pasos |
+| 1b | `docs/superpowers/2026-09-28-plan-6-registro.md` | Registro del Plan 6 (padres, recompensas, PWA, e2e). Busca `Ruling` y `minor (deferred)`, y la **lista de la prueba manual del autor** |
+| 1c | `docs/arte-plan-7-prompts.md` | Los prompts del arte que el autor genera para el Plan 7 (compañeros, fondos, pegatinas, bocas, iconos), con fichero, tamaño e id de `visuals.ts` que sustituyen |
+| 1d | `docs/despliegue-vercel.md` | Pasos del despliegue (D29), que hace el autor a mano |
 | 2 | `docs/superpowers/specs/2026-09-18-silabin-design.md` | **El spec aprobado. Es la autoridad.** Pedagogía, arquitectura, contenido, motor, voz, recompensas, UX y pruebas |
 | 3 | `docs/superpowers/2026-09-27-plan-5-registro.md` | Registro de ejecución del Plan 5 (la voz). Busca `Ruling` y `minor (deferred)`, y la lista de la prueba manual del autor. Es la memoria de la rama `feat/plan-5-voz` |
 | 4 | `docs/superpowers/plans/2026-09-28-silabin-voz.md` | El Plan 5 (7 tareas): `say-it`, `read-word` y el turno de voz, con los rulings P1-P15 y las decisiones D19-D23 |
@@ -122,7 +161,7 @@ instalados**; llegan con los planes de interfaz (Plan 6, o antes si hace falta).
 | 7 | `docs/superpowers/2026-09-26-plan-3-registro.md` | Registro de ejecución del Plan 3. Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito. Es la memoria de la rama `feat/plan-3-plantillas-toque` |
 | 8 | `docs/superpowers/plans/2026-09-26-silabin-plantillas-toque.md` | El Plan 3 (tareas 1-6, con la 5b): base visual, plantillas de toque y Fase 0 de punta a punta, con las decisiones D8-D11 al principio |
 | 9 | `docs/diseno-visual.md` | Investigación de diseño para niños de 3 a 6 años, tabla de tokens y reglas visuales (D8). La identidad final sigue pendiente |
-| 10 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete) |
+| 10 | `docs/ilustraciones-prompts.md` | Los prompts de las 65 ilustraciones y los 6 iconos (estilo 3D suave tipo juguete); es la plantilla de `arte-plan-7-prompts.md` |
 | 11 | `docs/superpowers/2026-09-26-plan-2-registro.md` | Registro de ejecución del Plan 2 (12 rulings, R1-R12). Busca `Ruling` para las decisiones y `minor (deferred)` para lo que se dejó a propósito |
 | 12 | `docs/superpowers/plans/2026-09-26-silabin-sesion.md` | El Plan 2 (9 tareas): sesión jugable de `count-syllables`, con las decisiones D1-D7 al principio |
 | 13 | `docs/superpowers/2026-09-19-plan-1-registro.md` | Registro de ejecución del Plan 1. Busca `Ruling` y `minor (deferred)` |
@@ -390,19 +429,71 @@ puntos confirmados. **Falta** solo el PR. D19-D23 están [en la tabla](#decision
 
 ---
 
-## Lo que falta: Plan 6 y después
+## Lo que ya está hecho: Plan 6
+
+Plan 6 = **lo funcional de padres, recompensas y PWA**, en la rama
+`feat/plan-6-padres-recompensas` (11 tareas; ledger en
+`docs/superpowers/2026-09-28-plan-6-registro.md`, con los rulings S1-S24 y las decisiones
+D24-D31 [en la tabla](#decisiones-tomadas)). El arte definitivo queda para el Plan 7 (D24): nada
+de este plan lo espera, y todo lo provisional pasa por `src/features/rewards/visuals.ts` (S21).
+
+- **Motor y store:** `engine/rewards.ts` (logros, cosméticos, hitos de 10/25/50/100 estrellas,
+  `totalStars`, `nextMilestone`), `unitProgress`, `pin.ts` (el PIN se guarda con hash; no es
+  seguridad, solo una puerta para el niño), `previewImport`/`importDoc`/`resetAll`/`equip`/
+  `setPin`/`checkPin`/`updateSettings` en el store. `importState` sigue el contrato de D27:
+  solo un documento que **valida entero** se importa, con vista previa y confirmación; `{}`, una
+  versión distinta o una clave corrupta se rechazan sin tocar nada.
+- **Panel de padres** (`features/adult/`): mantener el logo 3 s abre la puerta (`AdultDoor`,
+  D26); el PIN se crea la primera vez (`ParentGate`); si se olvida, una pregunta de adulto (una
+  multiplicación) deja poner otro **sin tocar el progreso**. Dentro (`ParentPanel`): acento,
+  trazo de minúsculas, longitud de la sesión (5 o 6), evaluador de voz, micrófono, nombre del
+  niño, cambiar el PIN, progreso, y `DataSection`: exportar, importar con resumen y reiniciar con
+  doble confirmación. Sin `crypto.subtle` (http en la red local) el panel lo dice en vez de
+  fallar. `SaveWarning` sigue avisando de los fallos de guardado.
+- **Trazo en minúsculas (D28):** los 9 glifos (a e i o u m l s p, la `a` de un solo piso), pares
+  confundibles medidos como en G15 (`LOWER_CONFUSABLE_PAIRS`) e interruptor `lowercaseTracing`;
+  el caso queda fijado al empezar la sesión (`SessionRun.traceCase`). En `trace` hay además
+  botones de **borrar** y **listo** (D31b), además de la detección del toque accidental (D19).
+- **Mapa (D31a):** contador de estrellas con barra al próximo hito, puntos de avance de la
+  unidad activa (solo lo dominado, nunca huecos vacíos: trampa 4) y una marca discreta de
+  «guardado».
+- **Recompensas** (`features/rewards/`): galería «Mis premios», `Companion`, `CosmeticBackground`
+  (detrás del mapa, la galería y el fin de sesión, **nunca** de la sesión) y `TrailLayer`, un
+  único rastro del dedo con tope de 24 partículas y respeto de `prefers-reduced-motion` (S10).
+  Los cosméticos y logros salen de `REWARDS`/`COSMETICS`; `visuals.ts` los traduce a marcadores
+  (degradados, emoji).
+- **PWA (D29, D30):** `src/app/sw.ts` con Serwist (sin `skipWaiting` automático: una versión
+  nueva solo toma el control al tocar el inicio, S11), `manifest.ts`, iconos provisionales y
+  `docs/despliegue-vercel.md`. **Desplegar es cosa del autor.**
+- **e2e (Tarea 10):** Playwright con J1-J4 (ver [cómo ejecutarlo](#cómo-ejecutarlo)). J4 destapó
+  un defecto de la Tarea 9 (la ruta de precaché volvía a listar `public/**` y el service worker
+  no llegaba a registrarse en producción); corregido en `72c04b7`. Solo lo cubre J4.
+- **Cierre (Tarea 11):** `features/Panel.integration.test.tsx` (Z1-Z3, store y vistas reales,
+  adaptador en memoria): mapa → puerta → crear PIN → sesión de 6 → empezar con 6 pasos;
+  exportar e importar ese JSON sobre un documento vacío devuelve el progreso; importar `{}` no
+  cambia nada. Los prompts del arte están en `docs/arte-plan-7-prompts.md`. Poda de trampas y
+  deuda al archivo.
+
+---
+
+## Lo que falta: Plan 7 y después
 
 La hoja de ruta original está al final del Plan 1. Esta es la **versión revisada y
-confirmada con el autor** (D7), ya con los planes 2 a 5 construidos.
+confirmada con el autor** (D7 y D24), ya con los planes 2 a 6 construidos.
 
 | Plan | Contenido | Resultado visible |
 |---|---|---|
 | ~~2~~ | ~~Capa `audio/`, Zustand sobre `store/`, inicio, mapa, sesión, fin y `count-syllables` de punta a punta~~ **hecho** | Un niño juega una sesión real de `phase0:clap` |
-| ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (PR #4 fusionado a `main`) | La Fase 0 entera es jugable; `listen-tap` y `build` se ven en `/dev/plantillas` |
-| ~~4~~ | ~~`trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía~~ **hecho** | Escribir letras con el dedo; se veía en `/dev/plantillas` hasta que el Plan 5 desbloqueó las unidades que la ofrecen (D14) |
-| ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** (rama `feat/plan-5-voz`; falta el PR) | Las Fases 1 y 2 son jugables: leer en voz alta con validación del adulto |
-| 6 | Recompensas y cosméticos, panel de padres con PIN (incluye la interfaz de `hideMic` y `speechMode`, D23), importar el progreso (`importState`, con el contrato de D9), PWA y service worker, la identidad visual (sustituye la boca y demás placeholders), lista de verificación en iPad | Primera versión completa |
+| ~~3~~ | ~~`rhyme`, `initial-sound`, `hear-it`, `listen-tap` y `build`, con la base visual y las ilustraciones~~ **hecho** (PR #4) | La Fase 0 entera es jugable |
+| ~~4~~ | ~~`trace`: lienzo, eventos táctiles, puntuación con tolerancia y 3 niveles de guía~~ **hecho** (PR #5) | Escribir letras con el dedo |
+| ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** | Las Fases 1 y 2 son jugables |
+| ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (rama `feat/plan-6-padres-recompensas`; falta la prueba manual y el PR) | Una app completa y desplegable, aún con marcadores en vez de arte |
+| 7 | **Identidad visual (D24):** integrar el arte que el autor genera con `docs/arte-plan-7-prompts.md` (compañero, fondos, pegatinas, trofeo, rastros, **la boca**, iconos), paleta final, y la **lista de verificación en iPad** (`docs/checklist-ipad.md`) sobre la versión final | La versión con cara propia, probada en dispositivo real |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
+
+> **Recordatorio para el Plan 7:** al empezarlo, instala el plugin
+> `frontend-design@claude-plugins-official` (`/plugin install
+> frontend-design@claude-plugins-official`), no antes.
 
 **Voz, en «Después».** Antes de generar el lote entero, una **prueba de Azure con unos 10
 audios en `do` y `mx`**. Y **los fonemas sueltos («mmm», «sss», «p») hay que grabarlos con voz
@@ -424,22 +515,21 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 5 cerrado (2026-09-28):** ledger en
-`docs/superpowers/2026-09-27-plan-5-registro.md`. Las 7 tareas pasaron revisión de tarea; la
-revisión final de la rama la hizo Opus y se aplicaron sus correcciones; la **prueba manual del
-autor** en dispositivo real también está completa, los 8 puntos de la lista confirmados.
-Queda:
+**Plan 6 con las 11 tareas hechas (2026-09-29):** ledger en
+`docs/superpowers/2026-09-28-plan-6-registro.md`. Queda, en este orden:
 
-1. **Abrir el PR** de `feat/plan-5-voz` contra `main`.
-2. **Escribir el Plan 6** (recompensas, panel de padres con PIN, `importState`, PWA, identidad
-   visual, lista de verificación en iPad) con `superpowers:writing-plans`, en
-   `docs/superpowers/plans/`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo con
-   `superpowers:subagent-driven-development` y `/model sonnet`. Consulta
-   [cómo se trabaja](#cómo-se-trabaja-en-este-repo) y revisa la [deuda viva](#deuda-menor-aceptada).
-   Pregunta al autor las decisiones abiertas que queden.
-3. Llevar el ledger del plan **versionado desde el primer día** en
-   `docs/superpowers/<fecha>-plan-N-registro.md` y hacer commit de él al final de cada
-   sesión. `.superpowers/` no se versiona y se pierde al cambiar de máquina.
+1. **Revisión final de la rama** con `model: "opus"`, effort `high`.
+2. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; la URL es pública, D29) y hace
+   la **prueba manual** en dispositivo real (lista de 9 puntos en el ledger, sección «Prueba
+   manual del autor»). Nadie despliega por él.
+3. **Abrir el PR** de `feat/plan-6-padres-recompensas` contra `main`.
+4. Mientras tanto, el autor puede **generar el arte** con `docs/arte-plan-7-prompts.md`.
+5. **Escribir el Plan 7** (identidad visual y `docs/checklist-ipad.md`) con
+   `superpowers:writing-plans`, en una rama nueva desde `main`, con `/model opus`; ejecutarlo
+   con `superpowers:subagent-driven-development` y `/model sonnet`. Instala entonces
+   `frontend-design@claude-plugins-official`. Pregunta al autor las decisiones abiertas.
+6. Llevar el ledger del plan **versionado desde el primer día** en
+   `docs/superpowers/<fecha>-plan-N-registro.md`.
 
 ---
 
@@ -452,7 +542,9 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 [Plan 4](docs/superpowers/plans/2026-09-27-silabin-trazo.md). D19-D23 son del
 [Plan 5](docs/superpowers/plans/2026-09-28-silabin-voz.md) (texto completo en la sección
 «Decisiones tomadas con el autor» de su
-[registro](docs/superpowers/2026-09-27-plan-5-registro.md)).
+[registro](docs/superpowers/2026-09-27-plan-5-registro.md)). D24-D31 son del
+[Plan 6](docs/superpowers/plans/2026-09-28-silabin-padres-recompensas.md) (texto completo en su
+[registro](docs/superpowers/2026-09-28-plan-6-registro.md)).
 
 | # | Decisión |
 |---|---|
@@ -465,21 +557,29 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D6 | **Exportación mínima** con gesto oculto de adulto (mantener pulsado el logo 3 s) |
 | D7 | Hoja de ruta de los planes 3 a 6 **confirmada** (la de 4 a 6 sigue en pie; ver [arriba](#lo-que-falta-plan-6-y-después)) |
 | D8 | Estilo visual: **base mínima dentro del Plan 3**. Tokens de color, tipografía, radios y tamaño de objetivo en `globals.css` y componentes base. La identidad final (paleta definitiva, ilustraciones, compañero) llegará después y cambiará los tokens sin tocar las vistas. Detalle en [`docs/diseno-visual.md`](docs/diseno-visual.md) |
-| D9 | `importState` **va al Plan 6** con el contrato fijado: un import deliberado del adulto **sustituye `doc` entero y quita `readFailed`** (y `recovered`), porque el adulto ha elegido qué documento vale. Hasta entonces no se cablea |
+| D9 | `importState` **va al Plan 6** con el contrato fijado: un import deliberado del adulto **sustituye `doc` entero y quita `readFailed`** (y `recovered`). **Hecho en el Plan 6**, precisado por D27 |
 | D10 | Las 5 plantillas de toque (`rhyme`, `initial-sound`, `hear-it`, `listen-tap`, `build`). Tras el Plan 3 **solo la Fase 0 es jugable**: las unidades de Fase 1 y 2 declaran `trace` y `say-it`, y el mapa las atenúa hasta los Planes 4 y 5. `listen-tap` y `build` se prueban con tests y con `/dev/plantillas` |
 | D11 | La prueba manual del Plan 2 la hizo el autor **antes** de ejecutar el Plan 3 (Edge y Chrome, sin fallos salvo la pausa larga entre sílabas en Edge, atendida en la Tarea 1) |
 | D12 | `trace` se evalúa **solo por la forma del trazo**: cobertura por trazo más precisión sobre el total, con tolerancia generosa. No exige orden ni dirección |
 | D13 | El nivel de guía de `trace` sigue la **caja Leitner del ítem**: caja 0 → guía 1, caja 1 → guía 2, cajas 2 y 3 → guía 3. El nivel 3 conserva un carril muy tenue, nunca desaparece del todo |
 | D14 | La **Fase 1 se desbloquea en el Plan 5**, con `say-it` (hecho, D22). Nada provisional en el planificador mientras tanto |
 | D15 | Resuelve R29 del registro del Plan 3: con solo 2 opciones, la pista 1 se limita a **repetir el audio** (no puede quitar un distractor sin dejar solo la respuesta correcta). El nivel fácil sigue ofreciendo 2 opciones |
-| D16 | `trace` **solo mayúsculas**; las minúsculas y el interruptor `lowercaseTracing` quedan para el Plan 6 |
+| D16 | `trace` **solo mayúsculas**; las minúsculas y el interruptor `lowercaseTracing` quedan para el Plan 6. **Hecho en el Plan 6** (D28) |
 | D17 | El trazo entra al motor por `submitTrace`, y lo puntúa el motor (`scoreTrace`), nunca la interfaz; la interfaz pinta con SVG y eventos `pointer` |
 | D18 | Los marcadores de inicio superpuestos (A, E, M, P) se separan desplazándolos a lo largo de la dirección de su propio trazo; la pista 2 pasa de un punto simple a una **flecha de dirección animada** (mismo mecanismo `offsetPath`/`offset-rotate:auto`), que también se reproduce una vez tras la presentación completa de la letra (encadenada, no simultánea) |
 | D19 | **Toque accidental en `trace`:** se ignora. Con la tinta total mínima, se borra sola y no cuenta intento ni gasta pista (coherente con «sin habla detectada → no cuenta intento»). Cierra la decisión abierta del Plan 4 |
 | D20 | **VAD por umbral de energía**, no Silero: `getUserMedia` + `AnalyserNode`, corta a 3 s o a 600 ms de silencio tras habla, sin dependencias nuevas. Silero llega con `browser`/`azure` |
-| D21 | **Boca de la pista 1 de `say-it`:** SVG esquemático con pocas posiciones por fonema, más la instrucción repetida. Placeholder como D8; el Plan 6 lo sustituye |
+| D21 | **Boca de la pista 1 de `say-it`:** SVG esquemático con pocas posiciones por fonema, más la instrucción repetida. Placeholder como D8; el Plan 7 lo sustituye (seis bocas, prompts en `docs/arte-plan-7-prompts.md`) |
 | D22 | **Desbloqueo:** el Plan 5 deja jugables la Fase 1 **y** la Fase 2 (incluye sustituir la inyección de `build/SessionFlow.test.tsx`) |
-| D23 | **«Ocultar micrófono» y `speechMode`:** entran en el store con su valor por defecto y se respetan con tests, sin interfaz (`hideMic` lo leen las vistas, `speechMode` lo lee `speech/`; ninguno entra en `engine/`). La interfaz llega con el panel de padres (Plan 6) |
+| D23 | **«Ocultar micrófono» y `speechMode`:** entran en el store con su valor por defecto y se respetan con tests (`hideMic` lo leen las vistas, `speechMode` lo lee `speech/`; ninguno entra en `engine/`). La interfaz llegó con el panel de padres (Plan 6) |
+| D24 | **El trabajo se reparte en dos planes.** Plan 6, funcional (panel de padres, ajustes, importar, minúsculas, recompensas con marcadores, avance en el mapa, borrar y confirmar en `trace`, PWA y e2e). Plan 7, identidad visual (arte, compañero, boca, paleta) y la lista de verificación en iPad. Ninguna tarea del Plan 6 espera al arte |
+| D25 | **El arte lo genera el autor a partir de prompts** en el estilo de `docs/ilustraciones-prompts.md`; el Plan 6 los deja escritos en `docs/arte-plan-7-prompts.md` y el Plan 7 los integra con `scripts/optimizar-ilustraciones.py` |
+| D26 | **Panel de padres:** se entra manteniendo el logo 3 s, que abre el PIN; exportar pasa dentro del panel. PIN olvidado: pregunta de adulto y PIN nuevo **sin tocar el progreso**. El PIN se define la primera vez (`pinHash: null`) |
+| D27 | **Contrato de importar** (precisa D9): solo se importa un documento que **valide entero** con `persistedStateSchema`, versión incluida; si no, se rechaza con mensaje y no se toca nada (nunca se rescata ni se importa un documento vacío). Si valida: vista previa, confirmación y sustitución de `doc` entero |
+| D28 | **Trazo en minúsculas** dentro del Plan 6: 9 glifos (la `a` de un solo piso), pares confundibles medidos, interruptor `lowercaseTracing`. Cierra D16 |
+| D29 | **HTTPS para la PWA: Vercel.** Desplegar es una acción del autor; ningún agente despliega. La URL es pública aunque nadie la conozca |
+| D30 | **Dependencias nuevas:** Playwright (e2e), Framer Motion (celebraciones y rastro) y Serwist (service worker con precaché, para Turbopack) |
+| D31 | **Entran las dos ideas de la antigua deuda 10:** avance dentro de la unidad activa en el mapa, contador de estrellas con barra al hito y señal de «guardado»; y botones de **borrar** y **confirmar** en `trace` |
 
 **Pares confundibles de `trace` (dato conocido, del prototipo de la Tarea 1 del Plan 4):** con
 las constantes de partida (`TOLERANCE`, `MIN_COVERAGE`, `MIN_PRECISION`) que trae hoy el
@@ -495,7 +595,8 @@ Los rulings tomados durante la ejecución están en los registros:
 [Plan 3](docs/superpowers/2026-09-26-plan-3-registro.md),
 [Plan 4](docs/superpowers/2026-09-27-plan-4-registro.md) y
 [Plan 5](docs/superpowers/2026-09-27-plan-5-registro.md) (rulings de la voz, `VoiceTurn`,
-`say-it` y `read-word`).
+`say-it` y `read-word`) y
+[Plan 6](docs/superpowers/2026-09-28-plan-6-registro.md) (rulings S y de tarea, la prueba manual).
 
 ---
 
@@ -509,7 +610,9 @@ Resueltas: 1 (el mapa recalcula al cargar), 2 (`activeUnitId` nulo → solo repa
 en jsdom por configuración, e91db39) y 9 (`say-it`/`read-word` con `submitSpeech` e invariante,
 fefe69f y 1229fbe).
 
-**Ninguna viva al cerrar el Plan 5.**
+**Ninguna viva al cerrar el Plan 6.** Las que salieron del Plan 6 son test o regla: la semilla de
+J1/J2 se comprueba en el propio e2e (`trazosDibujados` > 0), y «el fondo cosmético nunca envuelve
+la sesión» tiene un test en `App` (Tarea 8).
 
 ---
 
@@ -519,31 +622,32 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 [`docs/archivo-trampas-y-deuda.md`](docs/archivo-trampas-y-deuda.md) y en los registros
 (busca `minor (deferred)`). Notas visuales en [`docs/diseno-visual.md`](docs/diseno-visual.md).
 
-1. **Prueba en dispositivos reales (lista del Plan 6):** iPhone/iPad y Firefox (sobre todo el
-   arrastre de `build`), pantallas de 360 × 640, los adaptadores reales (`createIdbAdapter`,
-   `createSpeechPlayer`, `downloadInBrowser`), y **la prueba con niños de la boca** (D21, y que
-   desaparezca en la pista 2). Todo visto solo en Chromium. El micrófono, el VAD y
-   `AudioContext` en Safari iOS ya se probaron en dispositivo real (autor, Plan 5): resuelto.
+1. **Prueba en dispositivos reales → `docs/checklist-ipad.md` (Plan 7).** iPhone/iPad, Firefox
+   (sobre todo el arrastre de `build`), 360 × 640 y apaisado 640 × 360 (franja de botones de
+   `trace`), los adaptadores reales y la prueba con niños de la boca (D21). Se escribe sobre la
+   versión con el arte final; la prueba manual del Plan 6 (ledger) cubre lo funcional.
 2. **`AudioPlayer` debe resolver o rechazar siempre:** si `play` se queda colgado, las
-   presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan (`say-it`,
-   `read-word` y `SessionScreen.resolver` ya usan `playCapped`).
+   presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan. No se puede
+   automatizar con un invariante: depende de cada reproductor real.
 3. **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): «Reintentar» solo
-   desbloquea con el disco vacío; con un documento real hay que recargar.
+   desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
 4. **Accesibilidad y objetivos táctiles < 72 px:** círculos del modelo (56 px), icono de
-   `SaveWarning` (~36 px, panel sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos.
+   `SaveWarning` (~36 px, sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos, y el
+   `<input type="file">` de importar (lo controla el navegador).
 5. **Ilustraciones a criterio del autor:** `una`, `asa`, `sumo`, contraste de iglú y velo,
    imágenes al borde del cuadro, estilo mixto; emoji de respaldo dudosos.
-6. **Duplicaciones del motor:** `planReviewOnly` repite `makeExercise`; `letter:${phoneme}`
-   en `answers.ts` y `planner.ts`; `picture:${item.text}` y `onsetRequest` en línea.
-7. **Mutaciones supervivientes y huecos de test** de los Planes 2 y 3 (lista en el archivo).
-8. **Interfaz del Plan 2 sin reverificar:** parpadeo al cerrar sesión, `void ...` sin
-   `.catch`, instrucción doble en StrictMode, `Presentation` sin botón de repetir.
-9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16: falta
-   el caso `do` → `es-US`, P14). Solo importa con evaluadores `browser`/`azure`, que aún no
-   existen.
-10. **Para el Plan 6:** el mapa no enseña avance hasta completar una unidad y nadie ve que se
-    guarda; y, del `trace` (D19, prueba manual del Plan 5), evaluar un botón de borrar y otro
-    de confirmar el trazo, en vez de (o además de) la detección automática de toque accidental.
+6. **Duplicaciones del motor y mutaciones supervivientes** de los Planes 2 y 3 (`planReviewOnly`
+   repite `makeExercise`, claves `letter:`/`picture:` en línea); lista en el archivo.
+7. **Interfaz del Plan 2 sin reverificar:** parpadeo al cerrar sesión, `void ...` sin `.catch`,
+   instrucción doble en StrictMode, `Presentation` sin botón de repetir.
+8. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
+   Solo importa con evaluadores `browser`/`azure`, que aún no existen.
+9. **Minors del Plan 6 sin arreglar** (ledger, `minor (deferred)`): `ParentGate` sin `.catch` en
+   `setPin`/`checkPin`, el nombre del niño no se resincroniza dentro del panel, `DataSection`
+   con 220 líneas, sin test de `{capture, passive}` en `TrailLayer` ni de la navegación del 🎁.
+10. **El e2e es frágil por diseño:** semilla 7 (S22), el solver solo prueba `initial-sound`,
+    `say-it`, `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit
+    (`PW_WEBKIT=1`) sin probar. No se automatiza más sin forzar el planificador.
 
 ---
 

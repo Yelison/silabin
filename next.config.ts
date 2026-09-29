@@ -1,3 +1,4 @@
+import { withSerwist } from "@serwist/turbopack";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -8,4 +9,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",").filter(Boolean) ?? [],
 };
 
-export default nextConfig;
+// Habilita el service worker de Serwist con Turbopack (ver src/app/sw.ts y
+// src/app/serwist/[path]/route.ts). El registro se desactiva en desarrollo desde
+// `SerwistProvider`, en `layout.tsx`.
+export default withSerwist(nextConfig);

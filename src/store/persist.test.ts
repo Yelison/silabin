@@ -274,54 +274,56 @@ function estadoConTodoElProgreso(): PersistedState {
 	};
 }
 
+/** Extrae el estado de un ImportResult, o falla el test si no fue `ok`. */
+function estadoImportado(json: string): PersistedState {
+	const result = importState(json);
+	if (!result.ok)
+		throw new Error(`se esperaba ok, llegó reason: ${result.reason}`);
+	return result.state;
+}
+
 describe("exportar e importar", () => {
 	it("un ciclo completo conserva el progreso, con todo el documento en valores no default", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta).toEqual(estado);
+		expect(estadoImportado(exportState(estado))).toEqual(estado);
 	});
 
 	it("el ciclo conserva items con su caja, aciertos y fecha de dominio reales", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.items).toEqual(estado.items);
+		expect(estadoImportado(exportState(estado)).items).toEqual(estado.items);
 	});
 
 	it("el ciclo conserva el historial de sesiones", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.sessions).toEqual(estado.sessions);
+		expect(estadoImportado(exportState(estado)).sessions).toEqual(
+			estado.sessions,
+		);
 	});
 
 	it("el ciclo conserva los contadores", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.counters).toEqual(estado.counters);
+		expect(estadoImportado(exportState(estado)).counters).toEqual(
+			estado.counters,
+		);
 	});
 
 	it("el ciclo conserva las unidades desbloqueadas y sus estrellas", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.units).toEqual(estado.units);
+		expect(estadoImportado(exportState(estado)).units).toEqual(estado.units);
 	});
 
 	it("el ciclo conserva los ajustes cuando no están en su valor por defecto", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.settings).toEqual(estado.settings);
+		expect(estadoImportado(exportState(estado)).settings).toEqual(
+			estado.settings,
+		);
 	});
 
 	it("el ciclo conserva las recompensas desbloqueadas y los cosméticos equipados", () => {
 		const estado = estadoConTodoElProgreso();
-		const { state: vuelta, recovered } = importState(exportState(estado));
-		expect(recovered).toBe(false);
-		expect(vuelta.rewards).toEqual(estado.rewards);
+		expect(estadoImportado(exportState(estado)).rewards).toEqual(
+			estado.rewards,
+		);
 	});
 
 	it("exportState serializa el documento completo, sin recortar ninguna sección", () => {
@@ -332,9 +334,70 @@ describe("exportar e importar", () => {
 	it("exporta JSON legible por una persona", () => {
 		expect(exportState(emptyPersistedState())).toContain("\n");
 	});
+});
 
-	it("importar basura recupera con estado vacío en vez de lanzar", () => {
-		expect(importState("esto no es json").recovered).toBe(true);
-		expect(importState('{"version":1}').recovered).toBe(true);
+describe("A3: importState rechaza sin rescatar", () => {
+	it('"no es json" da reason "json"', () => {
+		expect(importState("no es json")).toEqual({ ok: false, reason: "json" });
+	});
+
+	it.each(["[]", "42"])('"%s" da reason "schema": no es un objeto', (json) => {
+		expect(importState(json)).toEqual({ ok: false, reason: "schema" });
+	});
+
+	it('"{}" da reason "version": no trae versión', () => {
+		expect(importState("{}")).toEqual({ ok: false, reason: "version" });
+	});
+
+	it('una versión distinta de CURRENT_VERSION da reason "version"', () => {
+		const documento = { ...emptyPersistedState(), version: 2 };
+		expect(importState(JSON.stringify(documento))).toEqual({
+			ok: false,
+			reason: "version",
+		});
+	});
+
+	it('una exportación válida con "units" corrupto da reason "schema"', () => {
+		const documento = {
+			...emptyPersistedState(),
+			units: { "phase1:vowel-a": { status: "en-llamas" } },
+		};
+		expect(importState(JSON.stringify(documento))).toEqual({
+			ok: false,
+			reason: "schema",
+		});
+	});
+
+	it("nunca llama a migrate: un documento corrupto no vuelve como estado vacío rescatado", () => {
+		const result = importState('{"version":1,"basura":true}');
+		expect(result).toEqual({ ok: false, reason: "schema" });
+	});
+});
+
+describe("A4: importState con una exportación válida", () => {
+	it("un documento con progreso vuelve ok con el mismo documento", () => {
+		const estado = estadoConTodoElProgreso();
+		expect(importState(exportState(estado))).toEqual({
+			ok: true,
+			state: estado,
+		});
+	});
+
+	it("una exportación v1 sin hideMic ni syllablesVoiced es ok, con los valores por defecto", () => {
+		const completo = estadoConTodoElProgreso();
+		// Simula una exportación de antes de que existieran estos dos campos con default.
+		const { hideMic: _hideMic, ...settingsSinHideMic } = completo.settings;
+		const { syllablesVoiced: _syllablesVoiced, ...countersSinVoiced } =
+			completo.counters;
+		const v1 = {
+			...completo,
+			settings: settingsSinHideMic,
+			counters: countersSinVoiced,
+		};
+		const result = importState(JSON.stringify(v1));
+		expect(result.ok).toBe(true);
+		if (!result.ok) throw new Error("se esperaba ok");
+		expect(result.state.settings.hideMic).toBe(false);
+		expect(result.state.counters.syllablesVoiced).toBe(0);
 	});
 });

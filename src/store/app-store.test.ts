@@ -12,6 +12,7 @@ import {
 import { createAppStore } from "@/store/app-store";
 import {
 	createMemoryAdapter,
+	exportState,
 	importState,
 	type StorageAdapter,
 } from "@/store/persist";
@@ -688,6 +689,33 @@ describe("beginSession", () => {
 		store.getState().beginSession();
 		expect(semillas).toHaveLength(1);
 	});
+
+	it("L6: con lowercaseTracing en false (por defecto), run.traceCase es upper", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("upper");
+	});
+
+	it("L6: con lowercaseTracing en true, run.traceCase es lower", async () => {
+		const doc = emptyPersistedState();
+		doc.settings.lowercaseTracing = true;
+		const { store } = crear(createMemoryAdapter(doc));
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("lower");
+	});
+
+	it("L6: cambiar el ajuste a media sesión no cambia el traceCase de la corrida en curso", async () => {
+		const doc = emptyPersistedState();
+		doc.settings.lowercaseTracing = true;
+		const { store } = crear(createMemoryAdapter(doc));
+		await store.getState().load();
+		store.getState().beginSession();
+		expect(store.getState().run?.traceCase).toBe("lower");
+		await store.getState().updateSettings({ lowercaseTracing: false });
+		expect(store.getState().run?.traceCase).toBe("lower");
+	});
 });
 
 describe("S9: abandonar no cuenta la sesión ni duplica el crédito", () => {
@@ -818,20 +846,22 @@ describe("progress durante y después de una sesión", () => {
 		store.getState().beginSession();
 		await hastaPrimeraEvaluacion(store);
 		await store.getState().answer(respuestaCorrecta(store));
-		expect(importState(store.getState().exportJson()).state).toEqual(
-			store.getState().doc,
-		);
+		const resultado = importState(store.getState().exportJson());
+		expect(resultado.ok).toBe(true);
+		if (!resultado.ok) throw new Error("se esperaba ok");
+		expect(resultado.state).toEqual(store.getState().doc);
 	});
 });
 
 describe("S10: exportJson", () => {
-	it("importState de lo exportado devuelve el mismo documento sin rescate", async () => {
+	it("importState de lo exportado devuelve el mismo documento, con ok", async () => {
 		const { store } = crear();
 		await store.getState().load();
 		await jugarSesionCompleta(store);
-		const { state, recovered } = importState(store.getState().exportJson());
-		expect(recovered).toBe(false);
-		expect(state).toEqual(store.getState().doc);
+		const resultado = importState(store.getState().exportJson());
+		expect(resultado.ok).toBe(true);
+		if (!resultado.ok) throw new Error("se esperaba ok");
+		expect(resultado.state).toEqual(store.getState().doc);
 	});
 });
 
@@ -855,5 +885,322 @@ describe("una sesión tras recargar", () => {
 		await otro.getState().load();
 		expect(otro.getState().doc).toEqual(store.getState().doc);
 		expect(otro.getState().progress.sessionCounter).toBe(1);
+	});
+});
+
+/** Envuelve un adaptador y cuenta cuántas veces se llamó a clear(). */
+function conContadorDeClear(adapter: StorageAdapter): {
+	adapter: StorageAdapter;
+	clears: () => number;
+} {
+	let clears = 0;
+	return {
+		adapter: {
+			read: () => adapter.read(),
+			write: (value) => adapter.write(value),
+			clear: () => {
+				clears += 1;
+				return adapter.clear();
+			},
+		},
+		clears: () => clears,
+	};
+}
+
+describe("A5: previewImport", () => {
+	it("de un fichero malo no cambia nada: ni doc, ni progress, ni el adaptador", async () => {
+		const { adapter, escrituras } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		const docAntes = store.getState().doc;
+		const progressAntes = store.getState().progress;
+
+		const preview = store.getState().previewImport("no es json");
+		expect(preview).toEqual({ ok: false, reason: "json" });
+		expect(store.getState().doc).toBe(docAntes);
+		expect(store.getState().progress).toBe(progressAntes);
+		expect(escrituras()).toBe(0);
+	});
+
+	it("de un fichero válido no escribe, solo resume", async () => {
+		const { adapter, escrituras } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		const docAntes = store.getState().doc;
+
+		const doc = emptyPersistedState();
+		doc.settings.childName = "Sofía";
+		doc.sessions.push({
+			index: 0,
+			unitId: "phase0:clap",
+			stars: 2,
+			endedAt: "2026-09-01T12:00:00.000Z",
+		});
+		doc.units["phase0:clap"] = { status: "done", bestStars: 2 };
+
+		const preview = store.getState().previewImport(exportState(doc));
+		expect(preview.ok).toBe(true);
+		if (!preview.ok) throw new Error("se esperaba ok");
+		expect(preview.summary).toEqual({
+			sessions: 1,
+			totalStars: 2,
+			unitsDone: 1,
+			childName: "Sofía",
+			lastSessionAt: "2026-09-01T12:00:00.000Z",
+		});
+		expect(store.getState().doc).toBe(docAntes);
+		expect(escrituras()).toBe(0);
+	});
+
+	it("unitsDone se recalcula: una unidad vacía de la Fase 3 marcada 'done' en el documento no cuenta", async () => {
+		const { adapter } = adaptadorQueCuenta();
+		const { store } = crear(adapter);
+		await store.getState().load();
+
+		const doc = emptyPersistedState();
+		for (const [id, unit] of curriculum.units) {
+			if (unit.phase === 3) doc.units[id] = { status: "done", bestStars: 0 };
+		}
+		const fase3 = [...curriculum.units.values()].filter((u) => u.phase === 3);
+		expect(fase3.length).toBeGreaterThan(0);
+
+		const preview = store.getState().previewImport(exportState(doc));
+		expect(preview.ok).toBe(true);
+		if (!preview.ok) throw new Error("se esperaba ok");
+		expect(preview.summary.unitsDone).toBe(0);
+	});
+});
+
+describe("A6: importDoc", () => {
+	it("deja readFailed y recovered en false, guarda, conserva el pinHash y recalcula progress", async () => {
+		const { adapter, estado } = adaptadorConLectura("lanza");
+		const { store } = crear(adapter);
+		await store.getState().load();
+		expect(store.getState().readFailed).toBe(true);
+		expect(store.getState().recovered).toBe(true);
+
+		// setPin actualiza el documento en memoria aunque readFailed impida escribir.
+		await store.getState().setPin("1234");
+		const pinHashActual = store.getState().doc.settings.pinHash;
+		expect(pinHashActual).not.toBeNull();
+		expect(estado.escrituras).toHaveLength(0);
+
+		const importado = emptyPersistedState();
+		importado.settings.pinHash = "sha256:otro-hash-de-otro-dispositivo:0";
+		importado.units["phase1:vowel-a"] = { status: "done", bestStars: 3 };
+
+		await store.getState().importDoc(importado);
+		const s = store.getState();
+		expect(s.readFailed).toBe(false);
+		expect(s.recovered).toBe(false);
+		expect(s.doc.settings.pinHash).toBe(pinHashActual);
+		expect(s.doc.units["phase1:vowel-a"]).toEqual({
+			status: "done",
+			bestStars: 3,
+		});
+		expect(s.progress.units["phase1:vowel-a"]?.bestStars).toBe(3);
+		expect(estado.escrituras).toHaveLength(1);
+		expect(estado.escrituras[0]).toEqual(s.doc);
+	});
+});
+
+describe("A7: importDoc con una sesión en curso", () => {
+	it("lanza sin tocar nada", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		store.getState().beginSession();
+		const antes = store.getState();
+
+		const importado = emptyPersistedState();
+		await expect(store.getState().importDoc(importado)).rejects.toThrow();
+
+		const despues = store.getState();
+		expect(despues.doc).toBe(antes.doc);
+		expect(despues.run).toBe(antes.run);
+		expect(despues.readFailed).toBe(antes.readFailed);
+		expect(await adapter.read()).toBeNull();
+	});
+});
+
+describe("A8: resetAll", () => {
+	it("con readFailed devuelve {done: false, reason: 'read-failed'} sin clear ni write", async () => {
+		const { adapter: base, estado } = adaptadorConLectura("lanza");
+		const { adapter, clears } = conContadorDeClear(base);
+		const { store } = crear(adapter);
+		await store.getState().load();
+		expect(store.getState().readFailed).toBe(true);
+
+		const result = await store.getState().resetAll();
+		expect(result).toEqual({ done: false, reason: "read-failed" });
+		expect(clears()).toBe(0);
+		expect(estado.escrituras).toHaveLength(0);
+	});
+
+	it("con una sesión en curso devuelve {done: false, reason: 'in-session'} sin escribir", async () => {
+		const { adapter, clears } = conContadorDeClear(createMemoryAdapter());
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+
+		const result = await store.getState().resetAll();
+		expect(result).toEqual({ done: false, reason: "in-session" });
+		expect(clears()).toBe(0);
+	});
+
+	it("normal: llama a clear, deja doc vacío con el pinHash conservado y recalcula progress", async () => {
+		const { adapter, clears } = conContadorDeClear(createMemoryAdapter());
+		const { store } = crear(adapter);
+		await store.getState().load();
+		// Progreso real antes del reset, para que la comparación de después no sea vacua:
+		// sin esto, doc y progress ya eran los del estado vacío y un resetAll que no
+		// vaciara nada, o que no recalculara progress, pasaría el test igual.
+		await jugarSesionCompleta(store);
+		await store.getState().setPin("1234");
+		const pinHashActual = store.getState().doc.settings.pinHash;
+		expect(pinHashActual).not.toBeNull();
+		expect(store.getState().doc.sessionCounter).toBe(1);
+		expect(
+			store.getState().doc.rewards.unlockedAt["first-session"],
+		).toBeDefined();
+
+		const result = await store.getState().resetAll();
+		expect(result).toEqual({ done: true });
+		expect(clears()).toBe(1);
+
+		const s = store.getState();
+		const esperado = emptyPersistedState();
+		esperado.settings.pinHash = pinHashActual;
+		expect(s.doc).toEqual(esperado);
+		expect(s.progress.sessionCounter).toBe(0);
+		expect(s.progress).toEqual(toProgress(esperado, curriculum));
+		expect(await adapter.read()).toEqual(esperado);
+	});
+});
+
+describe("A9: updateSettings", () => {
+	it("guarda y la sesión siguiente usa el nuevo sessionLength", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		await store.getState().updateSettings({ sessionLength: 6 });
+		expect(store.getState().doc.settings.sessionLength).toBe(6);
+		expect(await adapter.read()).toMatchObject({
+			settings: { sessionLength: 6 },
+		});
+		store.getState().beginSession();
+		expect(store.getState().run?.exercises).toHaveLength(6);
+	});
+
+	it("un pinHash en el patch no cambia el PIN", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		const antes = store.getState().doc.settings.pinHash;
+		await store.getState().updateSettings({ pinHash: "x" } as never);
+		expect(store.getState().doc.settings.pinHash).toBe(antes);
+	});
+
+	it("un sessionLength inválido lanza y no guarda", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		await expect(
+			store.getState().updateSettings({ sessionLength: 7 } as never),
+		).rejects.toThrow();
+		expect(await adapter.read()).toBeNull();
+	});
+});
+
+describe("A10: setPin y checkPin", () => {
+	it("checkPin con pinHash null da false", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		expect(await store.getState().checkPin("1234")).toBe(false);
+	});
+
+	it("tras setPin, checkPin acierta con el PIN correcto y falla con otro", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		await store.getState().setPin("4321");
+		expect(await store.getState().checkPin("4321")).toBe(true);
+		expect(await store.getState().checkPin("0000")).toBe(false);
+		expect(await adapter.read()).toMatchObject({
+			settings: { pinHash: store.getState().doc.settings.pinHash },
+		});
+	});
+});
+
+describe("A11: equip", () => {
+	it("sin first-session desbloqueado, lanza", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		await expect(store.getState().equip("bg:pradera")).rejects.toThrow();
+	});
+
+	it("con first-session desbloqueado, guarda rewards.equipped.background", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		await jugarSesionCompleta(store);
+		expect(
+			store.getState().doc.rewards.unlockedAt["first-session"],
+		).toBeDefined();
+
+		await store.getState().equip("bg:pradera");
+		expect(store.getState().doc.rewards.equipped.background).toBe("bg:pradera");
+		expect(await adapter.read()).toMatchObject({
+			rewards: { equipped: { background: "bg:pradera" } },
+		});
+	});
+
+	it("la ranura de destino sale del catálogo: equipar un compañero no toca el fondo", async () => {
+		const { store, adapter } = crear();
+		await store.getState().load();
+		await jugarSesionCompleta(store);
+
+		await store.getState().equip("bg:pradera");
+		// companion:first tiene rewardId: null (siempre desbloqueado) y slot "companion":
+		// si equip escribiera siempre en "background" sin mirar el catálogo, esta llamada
+		// pisaría "bg:pradera" en vez de dejarlo y anotar el compañero en su propia ranura.
+		await store.getState().equip("companion:first");
+
+		const { equipped } = store.getState().doc.rewards;
+		expect(equipped.background).toBe("bg:pradera");
+		expect(equipped.companion).toBe("companion:first");
+		expect(await adapter.read()).toMatchObject({
+			rewards: {
+				equipped: { background: "bg:pradera", companion: "companion:first" },
+			},
+		});
+	});
+});
+
+describe("A12: lastSavedAt", () => {
+	it("es null al cargar", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		expect(store.getState().lastSavedAt).toBeNull();
+	});
+
+	it("tras un guardado bueno queda el now() inyectado", async () => {
+		const { store } = crear();
+		await store.getState().load();
+		store.getState().beginSession();
+		await store.getState().presentationDone();
+		expect(store.getState().lastSavedAt).toMatch(
+			/^2026-09-26T12:00:\d\d\.000Z$/,
+		);
+	});
+
+	it("tras un guardado fallido no cambia", async () => {
+		const { adapter, fallo } = adaptadorQueFalla();
+		const { store } = crear(adapter);
+		await store.getState().load();
+		store.getState().beginSession();
+		await store.getState().presentationDone();
+		const antes = store.getState().lastSavedAt;
+		expect(antes).not.toBeNull();
+
+		fallo.activo = true;
+		await hastaPrimeraEvaluacion(store);
+		await store.getState().answer(respuestaCorrecta(store));
+		expect(store.getState().saveFailed).toBe(true);
+		expect(store.getState().lastSavedAt).toBe(antes);
 	});
 });
