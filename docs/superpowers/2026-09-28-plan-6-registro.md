@@ -12,7 +12,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero (`grep -n` y el
 | Decisiones con el autor (D24-D31) | **hechas** (2026-09-28, abajo) |
 | Rulings de planificación (S1-S24) | **fijados** (S1-S16 abajo; S17-S23 en la sección «Decisiones» del plan) |
 | Redacción del plan | **hecha** (2026-09-28, Opus). Pendiente de revisión del autor |
-| Ejecución | en curso: Tareas 1-8/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
+| Ejecución | en curso: Tareas 1-9/11 completas (`/model sonnet`, `superpowers:subagent-driven-development`) |
 
 ## Decisiones tomadas con el autor (2026-09-28)
 
@@ -359,3 +359,28 @@ hay test del botón 🎁 (`onOpenRewards` en `MapScreen`) ni de la navegación a
 `rewards` en `App.tsx` más allá de los montajes existentes.
 
 Task 8: complete (commits `d0d8d34`..`fcf9801`, fix round 1/5, 3 minor deferred).
+
+**Tarea 9 (PWA: Serwist, manifest, actualización en inicio y pasos de Vercel):**
+implementador y revisor (Sonnet) aprobaron sin rondas de corrección. `sw.ts` fija
+`skipWaiting: false` de forma explícita y solo llama a `self.skipWaiting()` al recibir
+`{type: "SKIP_WAITING"}` — la mutación exigida (forzar `skipWaiting: true`) hace fallar H5,
+reproducida a mano por el revisor. `manifest.ts` usa los tokens reales del proyecto
+(`--color-surface`/`--color-action` de `globals.css`) para `background_color`/
+`theme_color`, no valores inventados. `StartScreen` corre `applyWaitingUpdate` en una
+carrera contra un timeout de 1s antes de `onStart`, sin doble invocación. `docs/
+despliegue-vercel.md` documenta los pasos del autor (importar en Vercel, pnpm, Node 22,
+checklist iPad, advertencia de URL pública) sin que el implementador ejecutara ningún
+despliegue ni tocara configuración remota — confirmado con `git show --stat`. El ajuste de
+`App.test.tsx` (test U2) a `await waitFor(...)`, necesario porque `StartScreen` ahora hace
+una comprobación async antes de `onStart`, se revisó línea a línea: no debilita la
+aserción original.
+
+**Minor (deferred) de la Tarea 9:** el route handler de la precaché
+(`src/app/serwist/[path]/route.ts`) usa `spawnSync("git", ...)` como respaldo de S23 cuando
+falta `VERCEL_GIT_COMMIT_SHA` — acopla el build a tener `git` disponible en el entorno de
+build; es justo lo que pide S23, no una desviación. `manifest.test.ts` no verifica el campo
+`description`, que el brief no exige como valor literal. Un flake puntual y no reproducible
+del test N8 (ajeno a esta tarea) apareció una vez bajo la suite completa; 5 corridas
+posteriores en verde y siempre pasa en aislamiento.
+
+Task 9: complete (commits `2021614`..`9d1e89b`, review clean, 2 minor deferred).
