@@ -54,6 +54,7 @@ function montar(
 			<MapScreen
 				onStart={onStart}
 				onOpenPanel={vi.fn()}
+				onOpenRewards={vi.fn()}
 				{...(opciones.implemented === undefined
 					? {}
 					: { implemented: opciones.implemented })}
@@ -358,7 +359,11 @@ describe("MapScreen", () => {
 				conProveedores(
 					store,
 					fakeAudio(),
-					<MapScreen onStart={vi.fn()} onOpenPanel={onOpenPanel} />,
+					<MapScreen
+						onStart={vi.fn()}
+						onOpenPanel={onOpenPanel}
+						onOpenRewards={vi.fn()}
+					/>,
 				),
 			);
 			const logo = screen.getByText("Silabín");

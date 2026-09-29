@@ -25,9 +25,14 @@ function resumen(
 	};
 }
 
-async function montar(summary: SessionSummary | null) {
+async function montar(
+	summary: SessionSummary | null,
+	opciones: { reducedCelebrations?: boolean } = {},
+) {
 	const store = crearStore();
 	await store.getState().load();
+	if (opciones.reducedCelebrations)
+		await store.getState().updateSettings({ reducedCelebrations: true });
 	store.setState({ summary });
 	const audio = fakeAudio();
 	const onDone = vi.fn();
@@ -84,5 +89,27 @@ describe("EndScreen", () => {
 		expect(claves()).toEqual([]);
 		expect(container.textContent).toBe("");
 		expect(onDone).toHaveBeenCalledTimes(1);
+	});
+
+	it("F5: con reducedCelebrations y un logro nuevo, no suena reward:new, no hay props ni clases de animación y el toque cierra", async () => {
+		const logro = REWARDS[0];
+		if (logro === undefined) throw new Error("no hay logros");
+		const { store, claves, onDone, container } = await montar(
+			resumen(3, [logro.id]),
+			{ reducedCelebrations: true },
+		);
+		expect(claves()).toEqual(["celebrate:session"]);
+
+		const estrellas = screen.getByRole("img", { name: "3 estrellas" });
+		const premio = container.querySelector("[data-reward]");
+		if (premio === null) throw new Error("falta el logro");
+		// Ni estrellas ni logro son `motion.span`: no llevan el estilo en línea que Motion añade
+		// a los elementos que anima (ni `transform` ni `opacity` puestos por la librería).
+		expect(estrellas.getAttribute("style")).toBeNull();
+		expect(premio.getAttribute("style")).toBeNull();
+
+		await userEvent.setup().click(screen.getByRole("button"));
+		expect(onDone).toHaveBeenCalledTimes(1);
+		expect(store.getState().summary).toBeNull();
 	});
 });

@@ -14,6 +14,7 @@ import {
 } from "@/engine";
 import { AdultDoor } from "@/features/adult/AdultDoor";
 import { useApp } from "@/features/app-context";
+import { Companion } from "@/features/rewards/Companion";
 import {
 	IMPLEMENTED_TEMPLATES,
 	isSessionPlayable,
@@ -198,9 +199,15 @@ function UnitButton(props: {
 export function MapScreen(props: {
 	onStart: () => void;
 	onOpenPanel: () => void;
+	onOpenRewards: () => void;
 	implemented?: ReadonlySet<TemplateId>;
 }) {
-	const { onStart, onOpenPanel, implemented = IMPLEMENTED_TEMPLATES } = props;
+	const {
+		onStart,
+		onOpenPanel,
+		onOpenRewards,
+		implemented = IMPLEMENTED_TEMPLATES,
+	} = props;
 	const progress: ProgressState = useApp((s) => s.progress);
 	const lastSavedAt = useApp((s) => s.lastSavedAt);
 	const saveFailed = useApp((s) => s.saveFailed);
@@ -218,6 +225,17 @@ export function MapScreen(props: {
 			<AdultDoor onOpen={onOpenPanel}>
 				<h1 className="text-center text-3xl font-bold">Silabín</h1>
 			</AdultDoor>
+			<div className="flex flex-row items-center justify-center gap-4">
+				<Companion />
+				<button
+					type="button"
+					aria-label="Mis premios"
+					onClick={onOpenRewards}
+					className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-card text-4xl"
+				>
+					🎁
+				</button>
+			</div>
 			<StarCounter total={estrellas} milestone={hito} />
 			{avanceActivo !== null && avanceActivo.mastered > 0 && (
 				<UnitDots mastered={avanceActivo.mastered} />

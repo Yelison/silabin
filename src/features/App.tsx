@@ -13,6 +13,9 @@ import { ParentGate } from "@/features/adult/ParentGate";
 import { SaveWarning } from "@/features/adult/SaveWarning";
 import { AppProviders, useApp } from "@/features/app-context";
 import { MapScreen } from "@/features/map/MapScreen";
+import { CosmeticBackground } from "@/features/rewards/CosmeticBackground";
+import { RewardsScreen } from "@/features/rewards/RewardsScreen";
+import { TrailLayer } from "@/features/rewards/TrailLayer";
 import { EndScreen } from "@/features/session/EndScreen";
 import { SessionScreen } from "@/features/session/SessionScreen";
 import { StartScreen } from "@/features/start/StartScreen";
@@ -51,15 +54,25 @@ function Screens() {
 	return (
 		<>
 			<SaveWarning />
+			{/* Montada una sola vez, para toda la interfaz (S10): decide ella misma cuándo callarse. */}
+			<TrailLayer />
 			{screen === "start" && <StartScreen onStart={() => setScreen("map")} />}
 			{screen === "map" && (
-				<MapScreen
-					onOpenPanel={() => setScreen("panel")}
-					onStart={() => {
-						beginSession();
-						setScreen("session");
-					}}
-				/>
+				<CosmeticBackground>
+					<MapScreen
+						onOpenPanel={() => setScreen("panel")}
+						onOpenRewards={() => setScreen("rewards")}
+						onStart={() => {
+							beginSession();
+							setScreen("session");
+						}}
+					/>
+				</CosmeticBackground>
+			)}
+			{screen === "rewards" && (
+				<CosmeticBackground>
+					<RewardsScreen onClose={() => setScreen("map")} />
+				</CosmeticBackground>
 			)}
 			{screen === "panel" && (
 				<ParentGate
@@ -73,7 +86,11 @@ function Screens() {
 					onExit={() => setScreen("map")}
 				/>
 			)}
-			{screen === "end" && <EndScreen onDone={() => setScreen("map")} />}
+			{screen === "end" && (
+				<CosmeticBackground>
+					<EndScreen onDone={() => setScreen("map")} />
+				</CosmeticBackground>
+			)}
 		</>
 	);
 }
