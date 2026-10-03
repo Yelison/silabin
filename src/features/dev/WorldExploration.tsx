@@ -1,10 +1,12 @@
 "use client";
 
 import { type CSSProperties, useState } from "react";
+import { worldNodeVisualFor } from "@/features/dev/world-node-visuals";
 
 type LevelState = "completed" | "current" | "locked";
 
 type LevelNodeProps = {
+	unitId: string;
 	number: number;
 	label: string;
 	state: LevelState;
@@ -47,7 +49,15 @@ function HqImage({
 	);
 }
 
+function variantLabel(unitId: string, variant: string | undefined): string | null {
+	if (variant === undefined) return null;
+	if (unitId === "phase3:enie") return "Ñ";
+	if (variant.length <= 2) return variant.toUpperCase();
+	return null;
+}
+
 function LevelNode({
+	unitId,
 	number,
 	label,
 	state,
@@ -58,52 +68,86 @@ function LevelNode({
 	const current = state === "current";
 	const completed = state === "completed";
 	const locked = state === "locked";
+	const visual = worldNodeVisualFor(unitId);
+	const badge = variantLabel(unitId, visual.variant);
+	const phase0Landmark =
+		visual.kind === "rhythm-stage" ||
+		visual.kind === "rhyme-bounce" ||
+		visual.kind === "sound-detective" ||
+		visual.kind === "listening-station";
 
-	const houseSrc = current
+	const fallback = current
 		? `${HQ}/level-house-current.webp`
 		: completed
 			? `${HQ}/level-house-completed.webp`
 			: `${HQ}/level-house-locked.webp`;
 
+	const imageSize = current ? 164 : phase0Landmark ? 118 : 106;
+	const boxSize = current ? 176 : phase0Landmark ? 124 : 112;
+
 	return (
 		<div
 			data-world-node={state}
+			data-unit-id={unitId}
+			data-visual-kind={visual.kind}
 			className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
 			style={{ left, top }}
 			title={label}
 			aria-label={`Nivel ${number}: ${label}`}
 		>
-			<div className={current ? "relative h-[168px] w-[152px]" : "relative h-[104px] w-[96px]"}>
+			<div
+				className="relative"
+				style={{ width: boxSize, height: current ? 184 : 126 }}
+			>
 				{current && (
 					<div
 						aria-hidden="true"
-						className="absolute left-1/2 top-[40%] -z-10 h-[76%] w-[94%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFD94F]/30 blur-xl"
+						className="absolute left-1/2 top-[42%] -z-10 h-[80%] w-[95%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFD94F]/32 blur-xl"
 					/>
 				)}
 
 				<HqImage
-					src={houseSrc}
-					fallback={`${SHARED}/house-01.svg`}
-					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_7px_9px_rgba(52,61,72,0.16)]"
-					style={
-						current
-							? { width: 148, height: 148 }
-							: { width: 96, height: 96 }
-					}
+					src={`${HQ}/${visual.asset}`}
+					fallback={fallback}
+					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_7px_10px_rgba(52,61,72,0.18)]"
+					style={{
+						width: imageSize,
+						height: imageSize,
+						filter: locked
+							? "grayscale(.74) saturate(.35) brightness(1.04)"
+							: undefined,
+					}}
 				/>
+
+				{badge !== null && (
+					<span
+						aria-hidden="true"
+						className={
+							current
+								? "absolute left-1/2 top-[19%] z-10 -translate-x-1/2 text-[25px] font-extrabold leading-none"
+								: "absolute left-1/2 top-[19%] z-10 -translate-x-1/2 text-[18px] font-extrabold leading-none"
+						}
+						style={{
+							color: locked ? "#807B83" : visual.accent,
+							textShadow: "0 2px 0 rgba(255,255,255,.72)",
+						}}
+					>
+						{badge}
+					</span>
+				)}
 
 				<span
 					className={
 						current
-							? "absolute left-1/2 top-[64%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
-							: "absolute left-1/2 top-[66%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.16)]"
+							? "absolute left-1/2 top-[66%] z-20 flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
+							: "absolute left-1/2 top-[68%] z-20 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.16)]"
 					}
 				>
 					{number}
 				</span>
 
 				{current && (
-					<div className="absolute bottom-0 left-1/2 w-[138px] -translate-x-1/2 rounded-[0.95rem] border border-[#F4D27A]/55 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_6px_14px_rgba(87,65,30,0.14)]">
+					<div className="absolute bottom-0 left-1/2 z-20 w-[146px] -translate-x-1/2 rounded-[1rem] border border-[#F4D27A]/60 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_6px_14px_rgba(87,65,30,0.14)]">
 						<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
 							{label}
 						</span>
@@ -116,7 +160,7 @@ function LevelNode({
 				)}
 
 				{completed && !current && (
-					<div className="absolute left-1/2 top-[84%] -translate-x-1/2 whitespace-nowrap text-[10px] font-extrabold tracking-[0.05em] text-celebrate">
+					<div className="absolute left-1/2 top-[88%] z-20 -translate-x-1/2 whitespace-nowrap text-[10px] font-extrabold tracking-[0.05em] text-celebrate">
 						{[0, 1, 2].map((i) => (
 							<span key={i}>{i < stars ? "★" : "☆"}</span>
 						))}
@@ -126,7 +170,7 @@ function LevelNode({
 				{locked && (
 					<span
 						aria-hidden="true"
-						className="absolute left-1/2 top-[83%] flex size-[16px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E7E3DE]/96 text-[8px] shadow-sm"
+						className="absolute left-1/2 top-[88%] z-20 flex size-[17px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E7E3DE]/96 text-[9px] shadow-sm"
 					>
 						🔒
 					</span>
@@ -166,7 +210,6 @@ function StateSample({
 	);
 }
 
-
 function RoutePath() {
 	return (
 		<svg
@@ -199,6 +242,7 @@ function RoutePath() {
 export function WorldExploration() {
 	const levels: LevelNodeProps[] = [
 		{
+			unitId: "phase0:clap",
 			number: 1,
 			label: "Palabras con palmas",
 			state: "current",
@@ -207,6 +251,7 @@ export function WorldExploration() {
 			top: "49%",
 		},
 		{
+			unitId: "phase0:rhyme",
 			number: 2,
 			label: "Rimas saltarinas",
 			state: "locked",
@@ -214,6 +259,7 @@ export function WorldExploration() {
 			top: "41%",
 		},
 		{
+			unitId: "phase0:initial",
 			number: 3,
 			label: "Detectives de sonidos",
 			state: "locked",
@@ -221,6 +267,7 @@ export function WorldExploration() {
 			top: "45%",
 		},
 		{
+			unitId: "phase0:hear-it",
 			number: 4,
 			label: "¿Lo oyes?",
 			state: "locked",
@@ -228,6 +275,7 @@ export function WorldExploration() {
 			top: "39%",
 		},
 		{
+			unitId: "phase1:vowel-a",
 			number: 5,
 			label: "La vocal a",
 			state: "locked",
@@ -235,6 +283,7 @@ export function WorldExploration() {
 			top: "42%",
 		},
 		{
+			unitId: "phase1:vowel-e",
 			number: 6,
 			label: "La vocal e",
 			state: "locked",
@@ -242,6 +291,7 @@ export function WorldExploration() {
 			top: "50%",
 		},
 		{
+			unitId: "phase1:vowel-o",
 			number: 7,
 			label: "La vocal o",
 			state: "locked",
@@ -249,6 +299,7 @@ export function WorldExploration() {
 			top: "62%",
 		},
 		{
+			unitId: "phase1:vowel-i",
 			number: 8,
 			label: "La vocal i",
 			state: "locked",
@@ -256,6 +307,7 @@ export function WorldExploration() {
 			top: "63%",
 		},
 		{
+			unitId: "phase1:vowel-u",
 			number: 9,
 			label: "La vocal u",
 			state: "locked",
@@ -263,6 +315,7 @@ export function WorldExploration() {
 			top: "62%",
 		},
 		{
+			unitId: "phase2:m",
 			number: 10,
 			label: "La m y sus sílabas",
 			state: "locked",
@@ -282,8 +335,9 @@ export function WorldExploration() {
 					Silabín — World Exploration
 				</h2>
 				<p className="text-sm font-semibold leading-relaxed text-ink-soft">
-					Dirección HQ refinada: nodos compactos sobre el sendero, menos ruido
-					visual y una jerarquía mucho más cercana al concepto de referencia.
+					Los nodos ahora comunican la actividad: ritmo, rimas, exploración,
+					escucha, vocales y construcción de sílabas sin perder una misma
+					familia visual.
 				</p>
 			</div>
 
@@ -297,7 +351,9 @@ export function WorldExploration() {
 							src={`${HQ}/bg-world-01.webp`}
 							fallback="/images/arte/bg-pradera.webp"
 							className="absolute inset-0 -z-20 h-full w-full object-cover"
-							style={{ filter: "saturate(.68) brightness(1.075) contrast(.89)" }}
+							style={{
+								filter: "saturate(.68) brightness(1.075) contrast(.89)",
+							}}
 						/>
 						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,251,241,0.16)_0%,rgba(255,255,255,0.12)_44%,rgba(255,249,235,0.10)_100%)]" />
 
@@ -322,8 +378,12 @@ export function WorldExploration() {
 								M
 							</div>
 							<div className="leading-tight">
-								<div className="text-[11px] font-extrabold text-[#173B6C]">Mateo</div>
-								<div className="text-[11px] font-extrabold text-celebrate">★ 12</div>
+								<div className="text-[11px] font-extrabold text-[#173B6C]">
+									Mateo
+								</div>
+								<div className="text-[11px] font-extrabold text-celebrate">
+									★ 12
+								</div>
 							</div>
 						</div>
 
@@ -336,7 +396,11 @@ export function WorldExploration() {
 							aria-label="Configuración"
 							className="absolute right-[2.5%] top-[2.7%] z-40 flex size-10 items-center justify-center rounded-full border border-white/90 bg-white/96 text-[18px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]"
 						>
-							<svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-[#234A91] stroke-[2.2]">
+							<svg
+								aria-hidden="true"
+								viewBox="0 0 24 24"
+								className="size-5 fill-none stroke-[#234A91] stroke-[2.2]"
+							>
 								<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
 								<path d="M19 13.1v-2.2l-2-.6a7.5 7.5 0 0 0-.8-1.8l1-1.8-1.6-1.6-1.8 1a7.5 7.5 0 0 0-1.8-.8l-.6-2H9.2l-.6 2a7.5 7.5 0 0 0-1.8.8L5 5.1 3.4 6.7l1 1.8a7.5 7.5 0 0 0-.8 1.8l-2 .6v2.2l2 .6a7.5 7.5 0 0 0 .8 1.8l-1 1.8L5 18.9l1.8-1a7.5 7.5 0 0 0 1.8.8l.6 2h2.2l.6-2a7.5 7.5 0 0 0 1.8-.8l1.8 1 1.6-1.6-1-1.8a7.5 7.5 0 0 0 .8-1.8l2-.6Z" />
 							</svg>
@@ -358,7 +422,7 @@ export function WorldExploration() {
 						</div>
 
 						{levels.map((level) => (
-							<LevelNode key={level.number} {...level} />
+							<LevelNode key={level.unitId} {...level} />
 						))}
 
 						<div className="absolute bottom-[8%] left-[3.4%] z-40 rounded-[0.8rem] border border-[#7D4928]/20 bg-[#98613A]/95 px-4 py-2.5 text-[12px] font-extrabold leading-tight text-white shadow-[0_7px_16px_rgba(85,53,34,0.24)]">
@@ -369,9 +433,24 @@ export function WorldExploration() {
 
 						<div className="absolute bottom-[3%] right-[2.8%] z-40 flex size-[52px] items-center justify-center rounded-[1rem] border border-white/90 bg-white/96 text-[22px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]">
 							<svg aria-hidden="true" viewBox="0 0 32 32" className="size-7">
-								<path d="M4 7.5 11 5l10 3 7-2.5v19L21 27l-10-3-7 2.5Z" fill="#F8D760" stroke="#2E6DB4" strokeWidth="1.7" strokeLinejoin="round" />
-								<path d="M11 5v19M21 8v19" fill="none" stroke="#2E6DB4" strokeWidth="1.7" />
-								<path d="M5.5 10 9.5 8.5v12.5L5.5 22.5ZM12.5 8l7 2v13l-7-2ZM22.5 10l4-1.5v12.5l-4 1.5Z" fill="#78CFF2" opacity=".9" />
+								<path
+									d="M4 7.5 11 5l10 3 7-2.5v19L21 27l-10-3-7 2.5Z"
+									fill="#F8D760"
+									stroke="#2E6DB4"
+									strokeWidth="1.7"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M11 5v19M21 8v19"
+									fill="none"
+									stroke="#2E6DB4"
+									strokeWidth="1.7"
+								/>
+								<path
+									d="M5.5 10 9.5 8.5v12.5L5.5 22.5ZM12.5 8l7 2v13l-7-2ZM22.5 10l4-1.5v12.5l-4 1.5Z"
+									fill="#78CFF2"
+									opacity=".9"
+								/>
 							</svg>
 						</div>
 					</div>
@@ -382,17 +461,17 @@ export function WorldExploration() {
 				<StateSample
 					state="completed"
 					title="Completado"
-					detail="Casita ilustrada + estrellas, sin competir con el nivel actual."
+					detail="El landmark conserva su identidad y muestra las estrellas."
 				/>
 				<StateSample
 					state="current"
 					title="Actual"
-					detail="Amarillo Silabín, mayor escala y glow cálido."
+					detail="Mayor escala, amarillo Silabín, glow y nombre visible."
 				/>
 				<StateSample
 					state="locked"
 					title="Bloqueado"
-					detail="Ilustración desaturada y menor contraste."
+					detail="Misma silueta, desaturada y con menor contraste."
 				/>
 			</div>
 
