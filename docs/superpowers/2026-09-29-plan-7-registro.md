@@ -14,6 +14,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | Rulings de planificación (V1-V16) | **fijados** (abajo) |
 | Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
 | Arte (D32) | **hecho salvo las bocas** (2026-09-29): 21 de las 27 piezas integradas; las 6 bocas se aplazaron (Ruling de la T3) |
+| Correcciones A y B (2026-10-02) | **planificadas** (T7 y T8, V17-V22; ver «Plan de corrección» al pie). Pendiente la ejecución en Sonnet |
 | Ejecución | **T1-T6 hechas** (2026-09-29). Pendientes: decisión del autor sobre los ★, revisión final de la rama (Opus), despliegue y checklist del autor, y el PR. Ver «Estado final» al pie |
 
 ## Decisiones tomadas con el autor (2026-09-29)
@@ -152,6 +153,8 @@ El prefijo V no choca con R (Planes 2 y 3), P (Plan 5) ni S (Plan 6).
 | 4 | **completa** (`76c07b1..f80f3fb`) | 0 | 2 (una: 🦊 por 🐘 en `five-vowels`, cerrada en `79566f6`; la otra n/d, el ledger no la nombra) |
 | 5 | **completa** (`e3f53ca..943baa2`; `79566f6` viene de su primer despacho abortado) | 1 | 3 de 16 tras la revisión completa (b4 banda «Álbum», c1 lector de tokens, h atenuación de bloqueadas); las 3 cerradas en la ronda 1 y las 3 mueren en la repetición del revisor |
 | 6 | **completa** (commit de cierre; revisión de cumplimiento pendiente, la despacha el coordinador) | n/d | n/a (docs, sin mutación) |
+| 7 (defecto A) | pendiente; plan en `docs/superpowers/plans/2026-10-02-silabin-plan-7-correcciones.md` | | |
+| 8 (defecto B) | pendiente; mismo plan | | |
 
 ## Escaneo previo (2026-09-29, sesión de ejecución 1)
 
@@ -358,3 +361,49 @@ primera corrida; con fechas válidas sale «30/9/2026») y «Oír otra vez» fue
 - Estado (2026-10-02): la deuda 1 **sigue abierta** (hardware real pendiente). Decisión del autor
   pendiente sobre A y B antes del PR: arreglarlos antes o aplazarlos.
 - La tabla de resultados de `docs/checklist-ipad.md` se rellenó con esta pasada.
+
+## Plan de corrección (2026-10-02)
+
+Decisión del autor (2026-10-02): **arreglar A y luego B antes del PR.** El plan es
+`docs/superpowers/plans/2026-10-02-silabin-plan-7-correcciones.md`, escrito en Opus, con dos
+tareas:
+- **T7 (A):** `Effort: high`, con mutaciones M1-M5.
+- **T8 (B):** `Effort: medium`, protegida por un e2e.
+
+Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
+
+- **V17 · A se arregla con un solo reproductor y el acento leído en vivo; no se recrea el
+  reproductor con `unlock()`.**
+  - Por qué: el acento cambia tras el `await guardar(...)` de `updateSettings`, fuera del
+    gesto.
+  - Un reproductor nuevo crea otro `AudioContext` (`createClicker`), que en iOS no se reanuda
+    sin gesto. `beat()` quedaría mudo y se rompería `count-syllables`, que es la primera
+    unidad. Además, el contexto anterior nunca se cierra.
+  - Coste si fuera un error: si alguna voz de iOS no respetara el `lang` o la `voice` por
+    utterance, el acento no cambiaría hasta recargar. Hoy ya se fija por utterance.
+- **V18 · El cambio de acento ya no llama a `stop()`.**
+  - Por qué: el panel de padres es del adulto y casi nunca suena nada mientras está abierto.
+    Lo encolado termina y lo siguiente sale con el acento nuevo.
+  - Coste si fuera un error: una frase en el acento anterior termina de sonar.
+- **V19 · `audioFactory` de `App` pasa a recibir un getter; `AudioPlayer` no cambia.**
+  - Se borra el test «con `audio` inyectado, cambiar el acento no crea un reproductor nuevo»,
+    porque ya no existe el efecto S3 que lo justificaba.
+  - Coste si fuera un error: ninguno funcional. Es la costura de test de `App`.
+- **V20 · B se protege con un e2e en `e2e/apaisado.spec.ts` (Chromium), no con mutaciones.**
+  - Por qué: jsdom no mide layout, y la hipótesis de C3 («cabe por aritmética») resultó
+    falsa. Es la vía 1 de «Trampas y deuda»: la trampa pasa a ser test.
+  - Coste: el e2e alarga `pnpm exec playwright test` unos minutos. No mide la barra de Safari,
+    que queda para el dispositivo real (deuda 1).
+- **V21 · El «60 % del lado corto» es la regla del plan de trazo (l. 72).**
+  - Se mide como en su Ruling 5: el lienzo contra el lado corto del viewport.
+  - Además, en 1194×834 el lienzo no puede encoger respecto a hoy.
+  - Coste si fuera un error: un lienzo algo menor en teléfonos en horizontal. El iPad no
+    cambia.
+- **V22 · La puerta de cada tarea son los tests del repo, no el preview.**
+  - Al final hay un solo despliegue y se vuelven a pasar:
+    - `ipad-acento.spec.ts` en `webkit-ipad`, con síntesis simulada, para A;
+    - `layout-trace.spec.ts` en `chromium-640x360` y a 667×375, para B.
+  - Por qué: cada despliegue lo dispara el autor, y esperar uno por tarea frena sin dar más
+    señal que el e2e local.
+  - Coste: un fallo que solo aparezca en el build de Vercel se vería al final.
+
