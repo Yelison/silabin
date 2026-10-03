@@ -35,7 +35,11 @@ async function paso(page: Page, resumen: Resumen): Promise<boolean> {
 
 	const ejercicio = page.locator(EJERCICIO).first();
 	if ((await ejercicio.count()) === 0) return false;
-	const plantilla = (await ejercicio.getAttribute("data-template")) ?? "";
+	// El ejercicio puede desmontarse entre `count()` y aquí (fin de sesión): sin tope, esperaría 180 s.
+	const plantilla = await ejercicio
+		.getAttribute("data-template", { timeout: 1_000 })
+		.catch(() => null);
+	if (plantilla === null) return false;
 
 	if (plantilla === "trace") {
 		const listo = page.locator(

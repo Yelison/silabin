@@ -181,26 +181,36 @@ for (const vp of VIEWPORTS) {
 			};
 
 			await comprobar("bandeja llena");
-			const pieza = page
-				.locator(
-					'[data-exercise-kind] button[data-state]:not(fieldset button):not([aria-disabled="true"])',
-				)
-				.first();
-			const marcada = page
-				.locator(
-					'[data-exercise-kind] button[data-state="marked"]:not(fieldset button)',
-				)
-				.first();
-			const habiaModelo = (await marcada.count()) > 0;
-			await (habiaModelo ? marcada : pieza).click();
+			const piezas = page.locator(
+				'[data-exercise-kind] button[data-state]:not(fieldset button):not([aria-disabled="true"])',
+			);
+			const marcada = page.locator(
+				'[data-exercise-kind] button[data-state="marked"]:not(fieldset button)',
+			);
+			const insignias = page.locator(
+				'[data-exercise-kind] span[aria-hidden="true"].absolute',
+			);
+			// La insignia numerada solo existe con el modelo (pista 3, tras errores): se provocan
+			// intentos con las dos últimas piezas hasta que el motor lo pida.
+			for (let i = 0; i < 8 && (await marcada.count()) === 0; i++) {
+				const n = await piezas.count();
+				await piezas.nth(n - 1).click();
+				await piezas.nth(n - 2).click();
+				await page.waitForTimeout(1800);
+			}
+			expect(await marcada.count(), "el modelo no apareció").toBeGreaterThan(0);
+			expect(await insignias.count(), "insignias del modelo").toBeGreaterThan(
+				0,
+			);
+			await comprobar("modelo en la bandeja");
+			await marcada.first().click();
 			await page.waitForTimeout(400);
-			// La insignia numerada solo existe mientras el modelo marca piezas: si hay, se mide.
-			if (habiaModelo)
-				expect(
-					await page
-						.locator('[data-exercise-kind] span[aria-hidden="true"].absolute')
-						.count(),
-				).toBeGreaterThan(0);
+			const enCasilla = page.locator(
+				'[data-exercise-kind] fieldset span[aria-hidden="true"].absolute',
+			);
+			expect(await enCasilla.count(), "insignia en la casilla").toBeGreaterThan(
+				0,
+			);
 			await comprobar("pieza colocada");
 		});
 
@@ -218,13 +228,16 @@ for (const vp of VIEWPORTS) {
 			const logros = await cajas(page, "[data-reward]");
 			expect(logros.length).toBeGreaterThanOrEqual(1);
 			for (const c of logros) dentro(c, vw, vh, "logro");
-			for (const c of await cajas(page, "[data-screen=end] [data-companion]"))
-				dentro(c, vw, vh, "compañero");
-			for (const c of await cajas(
+			const compañero = await cajas(page, "[data-screen=end] [data-companion]");
+			expect(compañero.length, "compañero").toBeGreaterThan(0);
+			for (const c of compañero) dentro(c, vw, vh, "compañero");
+			// Toda sesión da al menos 1 ★ (J1 de fase1 lo afirma): la caja debe existir.
+			const estrellas = await cajas(
 				page,
 				'[data-screen=end] [role="img"][aria-label$="estrella"], [data-screen=end] [role="img"][aria-label$="estrellas"]',
-			))
-				dentro(c, vw, vh, "estrellas");
+			);
+			expect(estrellas.length, "estrellas").toBeGreaterThan(0);
+			for (const c of estrellas) dentro(c, vw, vh, "estrellas");
 		});
 	});
 }
