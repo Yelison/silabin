@@ -65,8 +65,6 @@ function LevelNode({
 			? `${HQ}/level-house-completed.webp`
 			: `${HQ}/level-house-locked.webp`;
 
-	const nodeSize = current ? 140 : 96;
-
 	return (
 		<div
 			data-world-node={state}
@@ -76,50 +74,60 @@ function LevelNode({
 			aria-label={`Nivel ${number}: ${label}`}
 		>
 			<div
-				className="relative"
-				style={{ width: nodeSize, height: current ? 166 : 110 }}
+				className={current ? "relative h-[164px] w-[158px]" : "relative h-[112px] w-[112px]"}
 			>
 				{current && (
 					<div
 						aria-hidden="true"
-						className="absolute left-1/2 top-[40%] -z-10 h-[74%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFE178]/32 blur-xl"
+						className="absolute left-1/2 top-[48%] -z-10 h-[82%] w-[94%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFD94F]/28 blur-xl"
 					/>
 				)}
+
+				<div
+					aria-hidden="true"
+					className={
+						current
+							? "absolute bottom-[8px] left-1/2 h-[88px] w-[154px] -translate-x-1/2 rounded-[32px] border-[3px] border-[#FFE184] bg-[#FFF8E9]/97 shadow-[0_8px_0_rgba(188,139,25,0.16),0_16px_30px_rgba(77,62,35,0.16)]"
+							: "absolute bottom-[8px] left-1/2 h-[62px] w-[108px] -translate-x-1/2 rounded-[28px] border-[3px] border-white/90 bg-[#FFF8EC]/95 shadow-[0_6px_0_rgba(125,112,92,0.14),0_12px_20px_rgba(58,68,82,0.13)]"
+					}
+				/>
 
 				<HqImage
 					src={houseSrc}
 					fallback={`${SHARED}/house-01.svg`}
-					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_8px_10px_rgba(52,61,72,0.16)]"
-					style={{ width: nodeSize, height: nodeSize }}
+					className="pointer-events-none absolute left-1/2 -translate-x-1/2 object-contain drop-shadow-[0_7px_9px_rgba(52,61,72,0.15)]"
+					style={
+						current
+							? { width: 136, height: 136, top: -24 }
+							: { width: 88, height: 88, top: -8 }
+					}
 				/>
 
 				<span
 					className={
 						current
-							? "absolute left-1/2 top-[67%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
-							: "absolute left-1/2 top-[66%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.16)]"
+							? "absolute left-1/2 top-[62%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
+							: "absolute left-1/2 top-[60%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.14)]"
 					}
 				>
 					{number}
 				</span>
 
 				{current && (
-					<>
-						<div className="absolute left-1/2 top-[77%] w-[136px] -translate-x-1/2 rounded-[1rem] border border-[#F5D98B]/45 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_5px_12px_rgba(90,67,29,0.12)]">
-							<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
-								{label}
-							</span>
-							<div className="mt-1 whitespace-nowrap text-[15px] font-extrabold tracking-[0.07em] text-celebrate drop-shadow-[0_1px_0_white]">
-								{[0, 1, 2].map((i) => (
-									<span key={i}>{i < stars ? "★" : "☆"}</span>
-								))}
-							</div>
+					<div className="absolute bottom-[14px] left-1/2 w-[140px] -translate-x-1/2 text-center">
+						<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
+							{label}
+						</span>
+						<div className="mt-1 whitespace-nowrap text-[15px] font-extrabold tracking-[0.07em] text-celebrate">
+							{[0, 1, 2].map((i) => (
+								<span key={i}>{i < stars ? "★" : "☆"}</span>
+							))}
 						</div>
-					</>
+					</div>
 				)}
 
 				{completed && !current && (
-					<div className="absolute left-1/2 top-[86%] -translate-x-1/2 whitespace-nowrap text-[11px] font-extrabold tracking-[0.05em] text-celebrate">
+					<div className="absolute bottom-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-extrabold tracking-[0.05em] text-celebrate">
 						{[0, 1, 2].map((i) => (
 							<span key={i}>{i < stars ? "★" : "☆"}</span>
 						))}
@@ -129,7 +137,7 @@ function LevelNode({
 				{locked && (
 					<span
 						aria-hidden="true"
-						className="absolute left-1/2 top-[82%] flex size-[16px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E6E2DC]/96 text-[8px] shadow-sm"
+						className="absolute bottom-[14px] left-1/2 flex size-[17px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E8E4DE] text-[9px] shadow-sm"
 					>
 						🔒
 					</span>
@@ -271,7 +279,7 @@ export function WorldExploration() {
 							src={`${HQ}/bg-world-01.webp`}
 							fallback="/images/arte/bg-pradera.webp"
 							className="absolute inset-0 -z-20 h-full w-full object-cover"
-							style={{ filter: "saturate(.70) brightness(1.07) contrast(.90)" }}
+							style={{ filter: "saturate(.68) brightness(1.075) contrast(.89)" }}
 						/>
 						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,251,241,0.16)_0%,rgba(255,255,255,0.12)_44%,rgba(255,249,235,0.10)_100%)]" />
 
@@ -314,7 +322,7 @@ export function WorldExploration() {
 							</svg>
 						</button>
 
-						<div className="absolute left-[25%] top-[9%] z-[35] flex items-center gap-2">
+						<div className="absolute left-[25%] top-[10%] z-[35] flex items-center gap-2">
 							<img
 								src="/images/arte/companion-1.webp"
 								alt=""
