@@ -1,6 +1,6 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
-import { Andika } from "next/font/google";
+import { Andika, Nunito } from "next/font/google";
 import { THEME_COLORS } from "@/app/theme-colors";
 import "./globals.css";
 
@@ -9,6 +9,12 @@ const andika = Andika({
 	subsets: ["latin"],
 	weight: ["400", "700"],
 	variable: "--font-andika",
+});
+
+const nunito = Nunito({
+	subsets: ["latin"],
+	weight: ["600", "700", "800"],
+	variable: "--font-nunito",
 });
 
 export const metadata: Metadata = {
@@ -34,7 +40,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="es" className={`h-full antialiased ${andika.variable}`}>
+		<html lang="es" className={`h-full antialiased ${andika.variable} ${nunito.variable}`}>
 			<body className="min-h-full flex flex-col">
 				{/* Desactivado en desarrollo (S11): un SW cacheando en `next dev` confundiría los
 				    cambios en caliente con una app que no se actualiza. */}

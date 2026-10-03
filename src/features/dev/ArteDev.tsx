@@ -6,6 +6,7 @@ import { BigButton } from "@/components/BigButton";
 import { ICON_NAMES, Icon } from "@/components/Icon";
 import { MOUTH_SHAPES, Mouth } from "@/components/Mouth";
 import { cosmeticVisual } from "@/features/rewards/visuals";
+import { WorldExploration } from "@/features/dev/WorldExploration";
 
 // Herramienta de desarrollo (V15): enseña el arte y la paleta sueltos, sin sesión ni estado del
 // store, para revisar de un vistazo que casan. Los ratios se calculan aquí, en el navegador, con
@@ -390,6 +391,7 @@ export function ArteDev() {
 		<main className="mx-auto flex w-full max-w-5xl flex-col gap-10 p-6">
 			<h1 className="text-3xl font-bold">Arte y paleta (desarrollo)</h1>
 			<Paleta />
+			<WorldExploration />
 			<Companeros />
 			<Fondos />
 			<Pegatinas />
