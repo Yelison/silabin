@@ -21,7 +21,7 @@ describe("ArteDev", () => {
 			expect(screen.getByRole("heading", { name: titulo })).toBeDefined();
 		expect(container.querySelectorAll("[data-token]")).toHaveLength(12);
 		expect(container.querySelector("[data-world-composition]")).not.toBeNull();
-		expect(container.querySelectorAll("[data-world-node]")).toHaveLength(10);
+		expect(container.querySelectorAll("[data-world-node]")).toHaveLength(10);\n\t\texpect(container.querySelectorAll("[data-visual-kind]")).toHaveLength(10);
 		// Cuatro compañeros (dos, con y sin gorra) a dos tamaños; cuatro fondos en dos formatos.
 		expect(container.querySelectorAll('img[src*="companion-"]')).toHaveLength(
 			8,
