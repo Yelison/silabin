@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 
 type LevelState = "completed" | "current" | "locked";
 
@@ -27,7 +27,7 @@ function HqImage({
 	fallback: string;
 	alt?: string;
 	className?: string;
-	style?: React.CSSProperties;
+	style?: CSSProperties;
 }) {
 	const [resolvedSrc, setResolvedSrc] = useState(src);
 
@@ -317,12 +317,12 @@ export function WorldExploration() {
 						<HqImage
 							src={`${HQ}/cloud-01.webp`}
 							fallback={`${SHARED}/cloud-01.svg`}
-							className="world-cloud-a pointer-events-none absolute left-[3%] top-[3%] z-[2] w-[14%] opacity-48"
+							className="world-cloud-a pointer-events-none absolute left-[3%] top-[3%] z-[2] w-[14%] opacity-[0.48]"
 						/>
 						<HqImage
 							src={`${HQ}/cloud-02.webp`}
 							fallback={`${SHARED}/cloud-02.svg`}
-							className="world-cloud-b pointer-events-none absolute right-[10%] top-[6%] z-[2] w-[13%] opacity-42"
+							className="world-cloud-b pointer-events-none absolute right-[10%] top-[6%] z-[2] w-[13%] opacity-[0.42]"
 						/>
 
 						<ProgressPath />
@@ -379,7 +379,7 @@ export function WorldExploration() {
 							con palmas
 						</div>
 
-						<div className="absolute bottom-[3%] right-[2.8%] z-40 flex size-13 items-center justify-center rounded-[1rem] border border-white/90 bg-white/96 text-[22px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]">
+						<div className="absolute bottom-[3%] right-[2.8%] z-40 flex size-[52px] items-center justify-center rounded-[1rem] border border-white/90 bg-white/96 text-[22px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]">
 							🗺️
 						</div>
 					</div>
