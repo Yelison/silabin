@@ -4,7 +4,8 @@ export type WorldNodeVisualKind =
 	| "sound-detective"
 	| "listening-station"
 	| "vowel-garden"
-	| "syllable-workshop";
+	| "syllable-workshop"
+	| "future-landmark";
 
 export type WorldNodeVisual = {
 	kind: WorldNodeVisualKind;
@@ -13,7 +14,7 @@ export type WorldNodeVisual = {
 	accent: string;
 };
 
-export const WORLD_NODE_VISUALS: Readonly<Record<string, WorldNodeVisual>> = {
+const PHASE0_VISUALS: Readonly<Record<string, WorldNodeVisual>> = {
 	"phase0:clap": {
 		kind: "rhythm-stage",
 		asset: "node-rhythm.webp",
@@ -34,58 +35,73 @@ export const WORLD_NODE_VISUALS: Readonly<Record<string, WorldNodeVisual>> = {
 		asset: "node-listen.webp",
 		accent: "#F3A77C",
 	},
-	"phase1:vowel-a": {
-		kind: "vowel-garden",
-		variant: "a",
-		asset: "node-vowel-base.webp",
-		accent: "#A994F4",
-	},
-	"phase1:vowel-e": {
-		kind: "vowel-garden",
-		variant: "e",
-		asset: "node-vowel-base.webp",
-		accent: "#82C8F5",
-	},
-	"phase1:vowel-o": {
-		kind: "vowel-garden",
-		variant: "o",
-		asset: "node-vowel-base.webp",
-		accent: "#F3A77C",
-	},
-	"phase1:vowel-i": {
-		kind: "vowel-garden",
-		variant: "i",
-		asset: "node-vowel-base.webp",
-		accent: "#CBB6FF",
-	},
-	"phase1:vowel-u": {
-		kind: "vowel-garden",
-		variant: "u",
-		asset: "node-vowel-base.webp",
-		accent: "#9ED8C3",
-	},
-	"phase2:m": {
-		kind: "syllable-workshop",
-		variant: "m",
-		asset: "node-syllable-base.webp",
-		accent: "#FFD8C2",
-	},
-	"phase2:l": {
-		kind: "syllable-workshop",
-		variant: "l",
-		asset: "node-syllable-base.webp",
-		accent: "#F5C3A6",
-	},
-	"phase2:s": {
-		kind: "syllable-workshop",
-		variant: "s",
-		asset: "node-syllable-base.webp",
-		accent: "#F3B996",
-	},
-	"phase2:p": {
-		kind: "syllable-workshop",
-		variant: "p",
-		asset: "node-syllable-base.webp",
-		accent: "#EFAE87",
-	},
 };
+
+const VOWEL_ACCENTS: Readonly<Record<string, string>> = {
+	a: "#A994F4",
+	e: "#82C8F5",
+	o: "#F3A77C",
+	i: "#CBB6FF",
+	u: "#9ED8C3",
+};
+
+const CONSONANT_ACCENTS = [
+	"#FFD8C2",
+	"#F5C3A6",
+	"#F3B996",
+	"#EFAE87",
+	"#EDC89D",
+	"#DDB7A4",
+	"#F2C7B7",
+	"#E7B892",
+] as const;
+
+function stableAccent(value: string): string {
+	let hash = 0;
+	for (const character of value) {
+		hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+	}
+	return CONSONANT_ACCENTS[hash % CONSONANT_ACCENTS.length] ?? "#FFD8C2";
+}
+
+/**
+ * Resuelve la identidad visual por patrón curricular, no con una lista cerrada de unidades.
+ *
+ * Fase 0 tiene cuatro experiencias deliberadamente únicas.
+ * Las vocales comparten una familia y solo cambia la vocal/acento.
+ * Las consonantes y sílabas comparten un taller y la variante sale del slug de la unidad.
+ * Así las fases futuras pueden crecer sin necesitar un edificio nuevo por cada unidad.
+ */
+export function worldNodeVisualFor(unitId: string): WorldNodeVisual {
+	const phase0 = PHASE0_VISUALS[unitId];
+	if (phase0 !== undefined) return phase0;
+
+	const vowelMatch = /^phase1:vowel-(.+)$/.exec(unitId);
+	if (vowelMatch !== null) {
+		const variant = vowelMatch[1] ?? "a";
+		return {
+			kind: "vowel-garden",
+			variant,
+			asset: "node-vowel-base.webp",
+			accent: VOWEL_ACCENTS[variant] ?? "#82C8F5",
+		};
+	}
+
+	const consonantMatch = /^phase(?:2|3):(.+)$/.exec(unitId);
+	if (consonantMatch !== null) {
+		const variant = consonantMatch[1] ?? "letter";
+		return {
+			kind: "syllable-workshop",
+			variant,
+			asset: "node-syllable-base.webp",
+			accent: stableAccent(variant),
+		};
+	}
+
+	return {
+		kind: "future-landmark",
+		variant: unitId,
+		asset: "node-future-base.webp",
+		accent: "#E9E2D7",
+	};
+}
