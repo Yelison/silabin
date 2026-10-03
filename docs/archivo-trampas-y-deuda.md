@@ -1,10 +1,10 @@
 # Archivo de trampas y deuda menor
 
 Texto completo de las trampas y la deuda menor tal como estaban en el README al cerrar el
-Plan 4 (2026-09-27), más lo que salió del README al cerrar el Plan 5 (2026-09-28, sección
-«Plan 5» del final). **No se lee al retomar**: el README solo guarda lo vivo (ver la regla de
-poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una entrada del README
-remita a él.
+Plan 4 (2026-09-27), más lo que salió del README al cerrar los Planes 5, 6 y 7 (secciones
+«Plan 5», «Plan 6» y «Plan 7» del final). **No se lee al retomar**: el README solo guarda lo
+vivo (ver la regla de poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una
+entrada del README remita a él.
 
 ## Trampas conocidas
 
@@ -238,3 +238,110 @@ Del registro del Plan 5 (`docs/superpowers/2026-09-27-plan-5-registro.md`, busca
 - **Pendiente heredado de la Tarea 4:** el layout apaisado 640 × 360 de la franja de 3 botones
   de `trace` se razonó por aritmética y no se ha verificado en pantalla; va a la prueba manual y
   a `checklist-ipad.md`.
+
+**Plan 7 (2026-09-29): lo que salió del README al podarlo**
+
+Al añadir las entradas del Plan 7 (bocas, minors del plan, arte a criterio) la deuda estaba en
+el tope de 10, así que se fusionaron entradas. Ninguna se convirtió en test ni se resolvió: todas
+siguen vivas, con el mismo contenido, en menos líneas.
+
+- **Deuda 1 anterior (prueba en dispositivos reales):** iPhone/iPad, Firefox (sobre todo el
+  arrastre de `build`), 360 × 640 y apaisado 640 × 360 (franja de botones de `trace`), los
+  adaptadores reales y la prueba con niños de la boca (D21). Se escribía «sobre la versión con el
+  arte final; la prueba manual del Plan 6 (ledger) cubre lo funcional». Ahora es
+  `docs/checklist-ipad.md`, ya escrita, que incluye también la prueba del Plan 6.
+- **Deuda 5 anterior, fusionada en la 6 (ilustraciones a criterio del autor):** `una`, `asa`,
+  `sumo`, contraste de iglú y velo, imágenes al borde del cuadro, estilo mixto; emoji de
+  respaldo dudosos. Se le añaden los glifos sin arte de V10.
+- **Deuda 6 anterior, fusionada en la 7 (duplicaciones del motor y mutaciones supervivientes de
+  los Planes 2 y 3):** `planReviewOnly` repite `makeExercise`, claves `letter:`/`picture:` en
+  línea; lista en la sección «Plan 3» de este archivo.
+- **Deuda 7 anterior, fusionada en la 7 (interfaz del Plan 2 sin reverificar):** parpadeo al
+  cerrar sesión, `void ...` sin `.catch`, instrucción doble en StrictMode, `Presentation` sin
+  botón de repetir.
+- **Deuda 9 anterior, fusionada en la 7 (minors del Plan 6 sin arreglar):** `ParentGate` sin
+  `.catch` en `setPin`/`checkPin`, el nombre del niño no se resincroniza dentro del panel,
+  `DataSection` con 220 líneas, sin test de `{capture, passive}` en `TrailLayer` ni de la
+  navegación del 🎁. (Su estado actual no se ha reverificado en el Plan 7: el ledger del Plan 6
+  tiene el detalle.)
+- **Minors por tarea del Plan 7** (todos en el ledger, `minor (deferred)`):
+  - T1: OP1 no comprueba `img.format` de cada salida; ningún test comprueba que OP1 no emite
+    `aviso:` con orígenes cuadrados; el docstring de `optimizar-arte.py` dice «cuenta» donde quiere
+    decir «lista»; la escritura no es atómica (disco lleno a mitad deja un lote parcial).
+  - T2: `cosmeticVisual` usa `COSMETIC_VISUALS[id] ?? …`, así que `cosmeticVisual("toString")`
+    devuelve una función (igualar con `Object.hasOwn` como `rewardArt`; no se dispara hoy); cast
+    `REWARD_ART[rewardId] as Art` evitable; `withCap` reutiliza el emoji del compañero (si falla
+    `companion-N-gorra.webp` el respaldo es el animal sin gorra); `className="block"` de
+    `TrailLayer` choca con el `inline-flex` del respaldo; AR9 comprueba 2 de las 6 clases del `img`
+    de fondo y no hay test de que la miniatura de fondo del álbum caiga al degradado tras `error`.
+  - T3: JSDoc de `Mouth` con una línea de más de 150 caracteres (resuelto en la corrección final).
+  - T4: `art-files.test.ts:57` `expect(rutas.length).toBe(18)` obliga a subir el número a mano al
+    añadir un cosmético con fichero nuevo (mejor mínimo más presencia del conjunto obligatorio);
+    FI5 falla con «expected undefined to be 'true'» si falta el icono (afirmar antes
+    `not.toBeNull()`); rama `cosmetic === null` de `Companion.tsx:22` es código muerto
+    (`resolveEquipped(...).companion` siempre trae compañero).
+  - T5: `Mouth.tsx` no funciona si se renderiza en el servidor (su `onError` no salta y los
+    fotogramas quedan rotos; en la app no pasa porque sale tras un toque); el `ring-4 ring-action`
+    de la unidad activa del mapa es del mismo color que su fondo y no se ve (anterior a la T5); el
+    MCP de Playwright no funciona en este entorno (pide `/opt/google/chrome/chrome`) y browser-qa
+    se hace con `@playwright/test` del repo; la regex `\bbg-` de `legibility.test.tsx` casa también
+    con `hover:bg-card`/`disabled:bg-card` (hoy no hay ninguno; endurecer con `(?<![\w:-])`); la
+    fórmula de contraste y la lista de pares están duplicadas en `ArteDev.tsx` y `tokens.test.ts`, y
+    los pares del test no leen la tabla del `.md`; un `--color-x: #rrggbb` sin `;` antes de `}` lo
+    ignora `leerTokens`, y `cierra = css.indexOf("}", abre)` corta en la primera `}` del bloque
+    `@theme inline` si algún día hay una dentro.
+  - Ya resueltos durante el plan: el test parametrizado del emoji de respaldo de `REWARD_ART` y el
+    del cambio directo entre dos rastros con cursor (`79566f6`), y el comentario del `manifest.ts`
+    sobre la máscara (Tarea 6).
+- **Glifos que quedan sin arte (V10):** 🔁 de «Repasar» (solo sale con el currículo agotado), ✓ del
+  equipado y de «guardado», ✕ de salir (del adulto) y ★/☆ (glifos tipográficos con colores de
+  token).
+- **Bocas aplazadas:** ver Ruling en el ledger del Plan 7 (2026-09-29). Corrección final: el
+  interruptor `BOCAS_PUBLICADAS = false` de `Mouth.tsx` hace que `Mouth` pinte el SVG sin pedir
+  las seis imágenes, así que ya no hay 404 en cada montaje.
+- **Trampa 1 del Plan 7, convertida en test (FI2 + `BOCAS_PUBLICADAS`):** `optimizar-arte.py`
+  genera también las seis bocas y, por defecto, las escribe en `public/`; regenerar el arte habría
+  publicado las bocas fotorrealistas que el autor rechazó (deuda 5). El texto de la trampa decía
+  «usa `--destino` a una carpeta temporal y copia solo lo que no sea `mouth-*`» y «no se
+  automatiza: FI2 acepta ninguna o las seis». Ahora FI2 (`art-files.test.ts`) exige que no haya
+  ningún `mouth-*.webp` en `public/images/arte/` mientras `BOCAS_PUBLICADAS` sea `false`, y las seis
+  (< 30 KB) cuando sea `true`; el mensaje del fallo dice qué hacer.
+
+**Plan 7, ronda de corrección 1 de la Tarea 6: texto completo de las deudas que se recortaron a dos líneas en el README**
+
+- **Deuda 1 (prueba en dispositivos reales):** `docs/checklist-ipad.md` (escrita en el Plan 7) la
+  pasa el autor una sola vez sobre el despliegue de Vercel: iPad, iPhone, la PWA instalada,
+  Chrome y Firefox (el arrastre de `build`), 360 × 640 y 640 × 360, y los adaptadores reales de
+  voz. Sigue viva hasta que la pase; no se automatiza porque depende de un dispositivo real (D11).
+- **Deuda 2 (`AudioPlayer`):** debe resolver o rechazar siempre: si `play` se queda colgado, las
+  presentaciones de `hear-it`, `listen-tap`, `rhyme` y `ChoiceEvaluation` no avanzan. No se puede
+  automatizar con un invariante: depende de cada reproductor real.
+- **Deuda 4 (accesibilidad y objetivos táctiles < 72 px):** círculos del modelo (56 px), icono de
+  `SaveWarning` (~36 px, sin `aria-modal` ni foco), tambor con `onClick` y 224 px fijos, y el
+  `<input type="file">` de importar (lo controla el navegador).
+- **Deuda 5 (la boca sigue esquemática, bocas aplazadas, Plan 7):** el autor rechazó dos veces el
+  arte fotorrealista y D21 pide una boca esquemática: no hay `mouth-*.webp` y `Mouth` pinta su SVG
+  sin pedir imágenes (`BOCAS_PUBLICADAS = false`). Falta rehacer la sección 5 de `docs/arte-plan-7-prompts.md` con un estilo que
+  apruebe el autor, y probar con un niño que cada forma se distingue a 128 px. Es una decisión de
+  arte, no se automatiza.
+- **Deuda 6 (arte y glifos a criterio del autor):** ilustraciones `una`, `asa`, `sumo`, contraste
+  de iglú y velo, imágenes al borde, estilo mixto y emojis de respaldo dudosos; y los glifos sin
+  arte (V10): 🔁 «Repasar», ✓ del equipado y de «guardado», ✕ de salir, ★/☆.
+- **Deuda 7 (minors de los Planes 2, 3 y 6):** duplicaciones del motor y mutaciones supervivientes
+  (`planReviewOnly` repite `makeExercise`), interfaz del Plan 2 sin reverificar, `ParentGate` sin
+  `.catch`, `DataSection` de 220 líneas y tests de `TrailLayer` y del 🎁 que faltan. **Corrección:**
+  lo del 🎁 ya no es cierto (el botón usa el icono de galería; `map/MapScreen.test.tsx` FI6 prohíbe el
+  emoji y `features/App.test.tsx` hace clic en «Mis premios»). Comprobado en el repo el resto que sigue
+  vigente: `ParentGate` sin `.catch` (`setPin`/`checkPin`), `DataSection` de 220 líneas y ningún
+  test de `{capture, passive}` en `TrailLayer`. Sin reverificar: la interfaz del Plan 2 y la
+  duplicación del motor.
+- **Deuda 8 (minors del Plan 7):** el script (sin comprobar `img.format`, escritura no atómica),
+  `visuals.ts` (`cosmeticVisual("toString")`), `art-files.test.ts` con `toBe(18)` y FI5 sin
+  `not.toBeNull()`, rama muerta en `Companion.tsx:22`, `Mouth` no funciona renderizada en
+  servidor, `ring-4 ring-action` invisible en la unidad activa, la regex `\bbg-` de
+  `legibility.test.tsx`, la fórmula de contraste duplicada (`ArteDev.tsx` y `tokens.test.ts`),
+  `leerTokens` con `}` o sin `;`, y el MCP de Playwright caído en este entorno (usa `@playwright/test` del repo). Desglose por tarea
+  arriba, en «Minors por tarea del Plan 7».
+- **Deuda 10 (e2e frágil):** semilla 7 (S22), el solver solo prueba `initial-sound`, `say-it`,
+  `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit
+  (`PW_WEBKIT=1`) sin probar. No se automatiza más sin forzar el planificador.

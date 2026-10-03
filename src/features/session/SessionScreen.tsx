@@ -302,12 +302,12 @@ export function SessionScreen(props: {
 		return null;
 
 	return (
-		<main data-screen="session" className="flex min-h-screen flex-col">
-			<header className="flex items-center gap-4 p-4">
+		<main data-screen="session" className="flex min-h-svh flex-col">
+			<header className="flex items-center gap-4 p-4 apaisado-bajo:p-2">
 				<Progreso cursor={run.cursor} total={run.exercises.length} />
 				<SalirAdulto onLongPress={salir} />
 			</header>
-			<div className="flex flex-1 items-center justify-center p-4">
+			<div className="flex flex-1 items-center justify-center p-4 apaisado-bajo:p-2">
 				<ExerciseView
 					key={exercise.id}
 					exercise={exercise}

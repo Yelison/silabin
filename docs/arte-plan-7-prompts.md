@@ -1,22 +1,42 @@
 # Prompts del arte del Plan 7 (D25)
 
+> **Estado (al cerrar el Plan 7, 2026-09-29): integrado, salvo las bocas.** Las secciones 1-4 y 6 (21
+> piezas) están publicadas en `public/`. La **sección 5 (la boca) queda «por rehacer»**: el autor
+> probó dos veces el arte y lo rechazó (fotorrealista y desagradable; D21 pide esquemática, no
+> realista), así que no hay ningún `mouth-*.webp` y la boca sigue siendo el SVG esquemático.
+> Antes de volver a generarla, decide si el estilo es otro (por ejemplo plano y esquemático, como
+> los iconos) y cuidado con `scripts/optimizar-arte.py`: genera las seis bocas si están los
+> 27 orígenes, y no deben copiarse a `public/` mientras no haya arte aprobado.
+
 Prompts para que el autor genere, mientras se ejecuta el Plan 6, el arte que hoy son marcadores
-provisionales (S21). El Plan 7 los integra con `scripts/optimizar-ilustraciones.py` y cambia solo
-`src/features/rewards/visuals.ts` y los assets; ninguna vista decide qué se pinta.
+provisionales (S21). El Plan 7 (`docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md`)
+los integra con `scripts/optimizar-arte.py`. `src/features/rewards/visuals.ts` sigue siendo el
+único sitio que traduce un id a una imagen.
 
 Sigue el método de [`docs/ilustraciones-prompts.md`](ilustraciones-prompts.md): **un chat para
 las piezas 3D** (pega primero su «Bloque de estilo», tal cual, y confirma que lo entiende), **un
 chat aparte para los iconos planos**. Genera de una en una; si una desentona, pide «Rehazla
 respetando el bloque de estilo del principio». Guarda cada una con el fichero de la tabla
-(sin tildes ni ñ). Los PNG originales no se versionan; se optimizan a WebP (menos de 60 KB).
+(sin tildes ni ñ). Los PNG originales no se versionan; `scripts/optimizar-arte.py` (Plan 7,
+Tarea 1) los convierte a WebP o PNG con el tamaño y el peso de cada clase.
+
+**Dónde guardarlas (D32):** todas juntas, sin subcarpetas, en
+`C:\Users\Yelisson\Downloads\silabin-arte-plan-7`. Son **27 ficheros** (la lista exacta está en
+la sección «Precondición del arte» del Plan 7). La Tarea 4 del plan no empieza hasta que estén
+todos.
 
 > **Las dos reglas del bloque de estilo que más importan aquí:** sin texto, letras ni números
-> en la imagen (las pegatinas de 10, 25, 50 y 100 estrellas **no llevan el número escrito**: el
-> número lo pinta la interfaz), y sin rojo ni verde intensos como color dominante.
+> en la imagen, y sin rojo ni verde intensos como color dominante. Las pegatinas de 10, 25, 50
+> y 100 estrellas **no llevan el número escrito**, y la interfaz tampoco lo pinta (V6, spec
+> §9: el niño no ve texto). La serie se reconoce porque crece en tamaño y en adornos.
 
-**Antes de generar, decide con el autor:** el compañero es un personaje nuevo (D8 lo dejó
-abierto). Los marcadores actuales son un pollito (`companion:first`) y un zorro
-(`companion:second`); son solo una sugerencia, no un requisito.
+**Compañeros (D36, sustituye a D33):** un **loro** (`companion:first`, también es el icono de la
+app) y un **elefantito** (`companion:second`). Antes eran un pollito y un zorrito.
+
+**Tamaños:** si el chat no puede dar el tamaño exacto, vale lo más parecido: un fondo de
+1024 × 1536 o una pieza cuadrada de 1024 × 1024 sirven. El script recorta al centro y reduce.
+Lo que no admite es una imagen **más pequeña** que su salida, ni una pieza que debe ser
+transparente con un fondo opaco: se vería como una caja.
 
 ---
 
@@ -44,10 +64,10 @@ el logro `ten-sessions` («Gorra del compañero», 10 sesiones).
 
 | Fichero | Tamaño | Sustituye a | Descripción para el prompt |
 |---|---|---|---|
-| `companion-1.png` | 1024 × 1024, transparente | `companion:first` (emoji 🐣) | Un personaje pequeño, redondeado y tierno (por ejemplo un pollito), de cuerpo entero, de frente, sonriendo, sin nada en la cabeza. Colores cálidos, amarillo y naranja suave. |
-| `companion-1-gorra.png` | 1024 × 1024, transparente | `companion:first` + logro `ten-sessions` | El mismo personaje, idéntico, con una gorra de béisbol azul suave puesta, sin ningún texto ni logotipo en la gorra. |
-| `companion-2.png` | 1024 × 1024, transparente | `companion:second` (emoji 🦊) | Un segundo personaje distinto del primero (por ejemplo un zorrito), redondeado y tierno, de cuerpo entero, de frente, sonriendo, sin nada en la cabeza. Naranja suave y crema, sin rojo intenso. |
-| `companion-2-gorra.png` | 1024 × 1024, transparente | `companion:second` + logro `ten-sessions` | El mismo zorrito, idéntico, con una gorra de béisbol azul suave puesta, sin ningún texto ni logotipo. |
+| `companion-1.png` | 1024 × 1024, transparente | `companion:first` (respaldo 🦜) | Un loro pequeño, redondeado y tierno, de cuerpo entero, de frente, sonriendo con el pico entreabierto, alas pegadas al cuerpo y nada en la cabeza. Amarillo cálido en el cuerpo y azul suave en alas y cola, sin rojo ni verde intensos. |
+| `companion-1-gorra.png` | 1024 × 1024, transparente | `companion:first` + logro `ten-sessions` | El mismo loro, idéntico, con una gorra de béisbol naranja suave puesta, sin ningún texto ni logotipo en la gorra. |
+| `companion-2.png` | 1024 × 1024, transparente | `companion:second` (respaldo 🐘) | Un elefantito pequeño, redondeado y tierno, de la misma colección que el loro y del mismo tamaño en el cuadro, de cuerpo entero, de frente, sonriendo, orejas grandes, trompa caída y nada en la cabeza. Gris azulado suave y lila claro, sin rojo ni verde intensos. |
+| `companion-2-gorra.png` | 1024 × 1024, transparente | `companion:second` + logro `ten-sessions` | El mismo elefantito, idéntico, con una gorra de béisbol amarilla suave puesta, sin ningún texto ni logotipo. |
 
 ## 2. Fondos
 
@@ -121,16 +141,18 @@ uniforme, relleno liso sin brillo, sin fondo, legible a 72 px. Sin rojo ni verde
 | `ui-erase.png` | 512 × 512, transparente | botón «Borrar» de `trace` (emoji 🧽) | Una goma de borrar rosa suave, de perfil, con una pequeña estela de migas. |
 | `ui-done.png` | 512 × 512, transparente | botón «Listo» de `trace` (emoji 👍) | Un pulgar hacia arriba amable, redondeado, de color piel cálido. Sin verde. |
 | `ui-gallery.png` | 512 × 512, transparente | botón «Mis premios» del mapa (emoji 🎁) | Un regalo pequeño con lazo, en amarillo y azul suave. |
-| `app-192.png` | 192 × 192, opaco | `public/icons/app-192.png` («S» provisional) | Icono de la app: el compañero 1 (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea). Sin texto. Estilo 3D del chat de ilustraciones, no plano. |
-| `app-512.png` | 512 × 512, opaco | `public/icons/app-512.png` | El mismo icono, a 512 px, con el personaje ocupando el 70 % central (zona segura de icono enmascarable). |
+| `ui-lock.png` | 512 × 512, transparente | unidad bloqueada del mapa y cosméticos por descubrir (emoji 🔒) | Un candado pequeño y redondeado, cerrado, en gris azulado suave, con el arco grueso. Amable, nada amenazante. |
+| `app-512.png` | 1024 × 1024 o 512 × 512, opaco | `public/icons/app-512.png`, `app-192.png` y `apple-touch-icon.png` («S» provisional) | Icono de la app: el loro (cabeza y cara, sin gorra) centrado sobre un fondo liso crema cálido con esquinas cuadradas (el sistema las redondea), **ocupando el 70 % central** (zona segura de icono enmascarable). Sin texto. **Estilo 3D del chat de ilustraciones, no plano.** |
 
-`apple-touch-icon.png` (180 × 180) se deriva de `app-512.png`; el Plan 7 lo regenera con
-`scripts/iconos-pwa.py`.
+Solo hace falta `app-512.png` (V5): el script saca de él los de 192 y 180 px
+(`apple-touch-icon.png`). Ya no se pide un `app-192.png` aparte.
 
 ---
 
 ## Después de generarlas
 
-- Guarda los originales fuera del repositorio y pásalos por `scripts/optimizar-ilustraciones.py`.
-- Que `visuals.ts` sirva estos ficheros en vez de los emoji es una tarea del Plan 7.
-- Instala entonces `frontend-design@claude-plugins-official` (no antes).
+- Guárdalos en la carpeta de D32. **No los metas en el repositorio**: la Tarea 4 del Plan 7
+  los pasa por `scripts/optimizar-arte.py`, y solo se versionan las salidas.
+- `visuals.ts` sirve estos ficheros en vez de los emoji (Plan 7, Tareas 2 y 4), con el emoji
+  como respaldo si alguno no carga.
+- El plugin `frontend-design@claude-plugins-official` lo usa la Tarea 5 (la paleta).

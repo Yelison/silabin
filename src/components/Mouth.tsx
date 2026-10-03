@@ -26,13 +26,40 @@ function useMovimientoReducido(): boolean {
 	return useSyncExternalStore(suscribir, movimientoReducido, () => false);
 }
 
+/**
+ * Los seis fotogramas, en el orden en que se apilan. `as const satisfies` y no una anotación
+ * `readonly MouthShape[]`: con la anotación, `(typeof MOUTH_SHAPES)[number]` sería `MouthShape`
+ * entero y la comprobación de cobertura de abajo pasaría en vacío.
+ */
+export const MOUTH_SHAPES = [
+	"open",
+	"spread",
+	"round",
+	"closed",
+	"teeth",
+	"tongue",
+] as const satisfies readonly MouthShape[];
+
+// Deja de compilar si se añade una forma a `MouthShape` y no a `MOUTH_SHAPES`.
+const _cubre: Exclude<MouthShape, (typeof MOUTH_SHAPES)[number]> extends never
+	? true
+	: never = true;
+
+/** Mientras el autor no apruebe las bocas, no se publican ni se piden: `Mouth` pinta su SVG. */
+export const BOCAS_PUBLICADAS: boolean = false;
+
+/** El fotograma de una forma, en `public/images/arte/`. */
+export function mouthFrameSrc(shape: MouthShape): string {
+	return `/images/arte/mouth-${shape}.webp`;
+}
+
 function contar(clave: string): number {
 	return clave === "" ? 0 : clave.split(",").length;
 }
 
 /**
  * El interior de la boca de cada forma (D21). Es un dibujo esquemático y provisional: la
- * identidad visual llega en el Plan 6. Solo usa los tokens de `globals.css`.
+ * identidad visual del Plan 7 aplazó las bocas. Solo usa los tokens de `globals.css`.
  */
 function Interior({ forma }: { forma: MouthShape }) {
 	switch (forma) {
@@ -89,20 +116,50 @@ function Interior({ forma }: { forma: MouthShape }) {
 	}
 }
 
+/** El dibujo esquemático de una forma: lo que se ve mientras no haya bocas publicadas y el
+ * respaldo si con ellas algún fotograma no carga (V7). */
+function MouthSchematic({ forma }: { forma: MouthShape }) {
+	return (
+		<svg
+			aria-hidden="true"
+			data-shape={forma}
+			viewBox="0 0 120 90"
+			className="h-24 w-32"
+		>
+			<ellipse
+				cx="60"
+				cy="45"
+				rx="56"
+				ry="40"
+				className="fill-mark stroke-mark-border"
+				strokeWidth="4"
+			/>
+			<Interior forma={forma} />
+		</svg>
+	);
+}
+
 /**
- * Boca esquemática que recorre las formas de un sonido, una cada `MOUTH_STEP_MS`, y avisa con
- * `onDone` al acabar. Es decorativa: nada de lo que dice es necesario para jugar. Con movimiento
- * reducido enseña la última forma quieta, y `onDone` llega al mismo tiempo total, así que quien
- * espera a la boca avanza igual.
+ * Boca que recorre las formas de un sonido, una cada `MOUTH_STEP_MS`, y avisa con `onDone` al
+ * acabar. Con `BOCAS_PUBLICADAS` apagado (hoy) pinta el dibujo esquemático de cada forma y no
+ * pide ninguna imagen. Con él encendido apila los seis fotogramas desde el montaje y solo cambia
+ * la opacidad (V12): así, al pedir cada imagen la primera vez, no queda un hueco mientras se
+ * descarga. Es decorativa: nada de lo que dice es necesario para jugar. Con movimiento reducido
+ * enseña la última forma quieta, y `onDone` llega al mismo tiempo total, así que quien espera a
+ * la boca avanza igual. `publicadas` solo existe para probar la rama de los fotogramas.
  */
 export function Mouth(props: {
 	shapes: readonly MouthShape[];
 	playing: boolean;
 	onDone?(): void;
+	publicadas?: boolean;
 }) {
-	const { shapes, playing } = props;
+	const { shapes, playing, publicadas = BOCAS_PUBLICADAS } = props;
 	const reducido = useMovimientoReducido();
 	const [paso, setPaso] = useState(0);
+	// Si algún fotograma no carga, toda la boca cae al dibujo esquemático: el paso y los
+	// tiempos no cambian, solo lo que se pinta.
+	const [fallida, setFallida] = useState(false);
 	const alTerminar = useRef(props.onDone);
 	useEffect(() => {
 		alTerminar.current = props.onDone;
@@ -129,22 +186,23 @@ export function Mouth(props: {
 
 	const indice = reducido ? total - 1 : Math.min(paso, total - 1);
 	const forma: MouthShape = shapes[Math.max(indice, 0)] ?? "closed";
+	if (!publicadas || fallida) return <MouthSchematic forma={forma} />;
 	return (
-		<svg
-			aria-hidden="true"
-			data-shape={forma}
-			viewBox="0 0 120 90"
-			className="h-24 w-32"
-		>
-			<ellipse
-				cx="60"
-				cy="45"
-				rx="56"
-				ry="40"
-				className="fill-mark stroke-mark-border"
-				strokeWidth="4"
-			/>
-			<Interior forma={forma} />
-		</svg>
+		<div aria-hidden="true" data-shape={forma} className="relative size-32">
+			{MOUTH_SHAPES.map((f) => (
+				// biome-ignore lint/performance/noImgElement: los WebP ya vienen a su tamaño y la PWA los precachea tal cual; el optimizador de next/image no aporta nada y necesita servidor
+				<img
+					key={f}
+					src={mouthFrameSrc(f)}
+					alt=""
+					data-frame={f}
+					draggable={false}
+					onError={() => setFallida(true)}
+					className={`absolute inset-0 size-full select-none motion-safe:transition-opacity motion-safe:duration-150 ${
+						f === forma ? "opacity-100" : "opacity-0"
+					}`}
+				/>
+			))}
+		</div>
 	);
 }

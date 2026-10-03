@@ -55,7 +55,7 @@ async function avanzar(ms: number) {
 }
 
 const siguiente = () => screen.queryByRole("button", { name: "Siguiente" });
-const boca = (c: HTMLElement) => c.querySelector("svg[data-shape]");
+const boca = (c: HTMLElement) => c.querySelector("[data-shape]");
 
 describe("say-it/Presentation", () => {
 	it("Y2: con letter:a pinta A y a, suena su audio, monta la boca abierta y cierra con onDone", async () => {

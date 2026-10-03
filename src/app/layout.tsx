@@ -1,6 +1,7 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
 import { Andika } from "next/font/google";
+import { THEME_COLORS } from "@/app/theme-colors";
 import "./globals.css";
 
 // Letras de un solo piso (a, g), pensada para alfabetización: ver docs/diseno-visual.md.
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 // El mismo color que `theme_color` en `src/app/manifest.ts` (`--color-action`).
 export const viewport: Viewport = {
-	themeColor: "#f5b83d",
+	themeColor: THEME_COLORS.action,
 };
 
 export default function RootLayout({

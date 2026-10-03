@@ -38,7 +38,7 @@ function createStore(): StoreApi<AppState> {
 }
 
 /** Voz del navegador mientras no haya locuciones reales; silencio si ni eso existe. */
-function createAudio(accent: Settings["accent"]): AudioPlayer {
+function createAudio(accent: () => Settings["accent"]): AudioPlayer {
 	if (typeof globalThis.speechSynthesis === "undefined")
 		return createSilentPlayer();
 	return createSpeechPlayer({ synth: globalThis.speechSynthesis, accent });
@@ -97,21 +97,22 @@ function Screens() {
 
 /**
  * Raíz de la interfaz. Crea el store una sola vez, lo carga en un efecto (IndexedDB solo
- * existe en el cliente) y, cuando ya se conoce el acento guardado, crea el reproductor.
- * `store` y `audio` se pueden inyectar para los tests; con `audio` puesto, el acento no
- * recrea el reproductor (S3): el test tiene el control del que le dieron.
- * `audioFactory` reemplaza la fábrica real (voz del navegador) por una de test.
+ * existe en el cliente) y, ya cargado, crea un único reproductor. El acento le llega como
+ * un getter sobre el store: el panel de padres lo cambia en vivo y el mismo reproductor,
+ * ya desbloqueado, lo lee en cada locución. Recrearlo lo dejaría mudo (nace sin `unlock`,
+ * y reanudar su `AudioContext` fuera de un gesto no funciona en iOS).
+ * `store` y `audio` se pueden inyectar para los tests; `audioFactory` reemplaza la fábrica
+ * real (voz del navegador) por una de test.
  */
 export function App(props: {
 	store?: StoreApi<AppState>;
 	audio?: AudioPlayer;
-	audioFactory?: (accent: Settings["accent"]) => AudioPlayer;
+	audioFactory?: (accent: () => Settings["accent"]) => AudioPlayer;
 }) {
 	const [store] = useState(() => props.store ?? createStore());
 	const [audio, setAudio] = useState<AudioPlayer | null>(props.audio ?? null);
 	const started = useRef(false);
 	const factory = props.audioFactory ?? createAudio;
-	const injectedAudio = props.audio !== undefined;
 
 	useEffect(() => {
 		// El modo estricto de React monta dos veces en desarrollo: se carga una sola.
@@ -122,28 +123,11 @@ export function App(props: {
 			.load()
 			.then(() => {
 				setAudio(
-					(actual) => actual ?? factory(store.getState().doc.settings.accent),
+					(actual) =>
+						actual ?? factory(() => store.getState().doc.settings.accent),
 				);
 			});
 	}, [store, factory]);
-
-	// S3: el acento cambia en vivo desde el panel de padres. Solo se activa una vez que ya hay
-	// un reproductor (la carga terminó), para no competir con el efecto de arriba por quién
-	// crea el primero; y solo si nadie inyectó ya un reproductor fijo para el test.
-	const listo = audio !== null;
-	useEffect(() => {
-		if (injectedAudio || !listo) return;
-		let accentActual = store.getState().doc.settings.accent;
-		return store.subscribe((state) => {
-			const accent = state.doc.settings.accent;
-			if (accent === accentActual) return;
-			accentActual = accent;
-			setAudio((anterior) => {
-				anterior?.stop();
-				return factory(accent);
-			});
-		});
-	}, [store, factory, injectedAudio, listo]);
 
 	if (audio === null) return null;
 	return (

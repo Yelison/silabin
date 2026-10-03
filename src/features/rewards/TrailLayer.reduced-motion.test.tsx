@@ -20,7 +20,9 @@ beforeEach(() => {
 	vi.stubGlobal(
 		"matchMedia",
 		vi.fn((query: string) => ({
-			matches: query.includes("prefers-reduced-motion"),
+			matches:
+				query.includes("prefers-reduced-motion") ||
+				query.includes("pointer: fine"),
 			media: query,
 			addEventListener: () => {},
 			removeEventListener: () => {},
@@ -30,6 +32,8 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+	document.documentElement.removeAttribute("data-trail-cursor");
+	document.documentElement.style.removeProperty("--trail-cursor");
 	vi.unstubAllGlobals();
 });
 
@@ -54,5 +58,32 @@ describe("TrailLayer con movimiento reducido del sistema", () => {
 			conProveedores(store, fakeAudio(), <TrailLayer />),
 		);
 		expect(container.querySelector('[data-testid="trail-layer"]')).toBeNull();
+	});
+
+	it("RA4: el cursor es estático, así que con movimiento reducido sigue puesto", async () => {
+		const doc = documentoConUnidadesHechas(null);
+		const store = crearStore(
+			createMemoryAdapter({
+				...doc,
+				rewards: {
+					unlockedAt: {
+						"word-reader": "2026-09-26T12:00:00.000Z",
+						"first-syllable-voice": "2026-09-26T12:00:00.000Z",
+					},
+					equipped: {
+						background: null,
+						companion: null,
+						trail: "trail:estrellitas",
+					},
+				},
+			}),
+		);
+		await store.getState().load();
+		render(conProveedores(store, fakeAudio(), <TrailLayer />));
+		const html = document.documentElement;
+		expect(html.getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		expect(html.style.getPropertyValue("--trail-cursor")).toBe(
+			'url("/icons/cursor-estrellita.png") 16 16',
+		);
 	});
 });

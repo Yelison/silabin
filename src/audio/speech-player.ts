@@ -30,7 +30,11 @@ const ACCENT_LANG: Record<Accent, string> = {
 
 type Deps = {
 	synth: SpeechSynthesis | undefined;
-	accent: Accent;
+	/**
+	 * Con una función, el acento se lee en cada uso: el panel de padres lo cambia en vivo y
+	 * el mismo reproductor (ya desbloqueado, con su `AudioContext`) debe seguirlo.
+	 */
+	accent: Accent | (() => Accent);
 	/** Por omisión, el manifiesto de audio. */
 	textFor?: (key: string) => string | undefined;
 	/** Golpe audible. Por omisión, un clic con `AudioContext`. */
@@ -145,7 +149,10 @@ function createClicker(): { prepare(): Promise<void>; beat(): void } {
 }
 
 export function createSpeechPlayer(deps: Deps): AudioPlayer {
-	const { synth, accent } = deps;
+	const { synth } = deps;
+	const accentDep = deps.accent;
+	const currentAccent = (): Accent =>
+		typeof accentDep === "function" ? accentDep() : accentDep;
 	const textFor = deps.textFor ?? defaultTextFor;
 	const clicker = createClicker();
 	const beat = deps.beat ?? clicker.beat;
@@ -160,11 +167,20 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 	/** Termina antes de tiempo lo que esté esperando ahora (utterance o pausa). */
 	let interrupt: (() => void) | null = null;
 
-	if (synth !== undefined) {
+	/** Acento para el que se eligió `voice`: si el vigente es otro, se elige de nuevo. */
+	let voiceAccent: Accent = currentAccent();
+
+	function refreshVoice(accent: Accent): void {
+		if (synth === undefined) return;
 		voice = pickVoice(synth.getVoices(), accent);
-		// Las voces de iOS llegan tarde.
+		voiceAccent = accent;
+	}
+
+	if (synth !== undefined) {
+		refreshVoice(voiceAccent);
+		// Las voces de iOS llegan tarde. Se elige para el acento de ahora, no el de la creación.
 		synth.addEventListener("voiceschanged", () => {
-			voice = pickVoice(synth.getVoices(), accent);
+			refreshVoice(currentAccent());
 		});
 	}
 
@@ -232,6 +248,8 @@ export function createSpeechPlayer(deps: Deps): AudioPlayer {
 
 			if (synth === undefined) return succeed();
 			try {
+				const accent = currentAccent();
+				if (accent !== voiceAccent) refreshVoice(accent);
 				const utterance = new SpeechSynthesisUtterance(text);
 				mine = utterance;
 				utterance.lang = voice?.lang ?? ACCENT_LANG[accent];

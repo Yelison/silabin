@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { asSynth, FakeSynth, FakeUtterance, voice } from "@/audio/fake-synth";
 import { createSilentPlayer } from "@/audio/silent-player";
 import {
 	createSpeechPlayer,
@@ -7,71 +8,6 @@ import {
 	SPEECH_GUARD_MIN_MS,
 	SYLLABLE_GAP_MS,
 } from "@/audio/speech-player";
-
-class FakeUtterance {
-	text: string;
-	lang = "";
-	voice: SpeechSynthesisVoice | null = null;
-	onstart: (() => void) | null = null;
-	onend: (() => void) | null = null;
-	onerror: (() => void) | null = null;
-	constructor(text: string) {
-		this.text = text;
-	}
-}
-
-class FakeSynth {
-	spoken: FakeUtterance[] = [];
-	cancelCalls = 0;
-	log: string[] | undefined;
-	/** Retraso antes de `onstart`; por omisión dispara en el mismo tick de `speak()`. */
-	startDelayMs: number | undefined;
-	/** Si es `true`, `onstart` nunca llega (para probar el respaldo). */
-	suppressOnstart = false;
-	private voices: SpeechSynthesisVoice[] = [];
-	private listeners = new Set<() => void>();
-
-	speak = (u: FakeUtterance) => {
-		this.spoken.push(u);
-		this.log?.push(`speak:${u.text}`);
-		if (this.suppressOnstart) return;
-		const fire = () => u.onstart?.();
-		if (this.startDelayMs === undefined) fire();
-		else setTimeout(fire, this.startDelayMs);
-	};
-	cancel = () => {
-		this.cancelCalls++;
-	};
-	getVoices = () => this.voices;
-	addEventListener = (type: string, listener: () => void) => {
-		if (type === "voiceschanged") this.listeners.add(listener);
-	};
-	removeEventListener = (type: string, listener: () => void) => {
-		if (type === "voiceschanged") this.listeners.delete(listener);
-	};
-	setVoices(voices: SpeechSynthesisVoice[]) {
-		this.voices = voices;
-	}
-	fireVoicesChanged() {
-		for (const l of this.listeners) l();
-	}
-	/** Textos dichos, sin la locución vacía de `unlock`. */
-	texts() {
-		return this.spoken.map((u) => u.text).filter((t) => t !== "");
-	}
-	/** Termina de sonar la última utterance. */
-	endLast() {
-		this.spoken[this.spoken.length - 1]?.onend?.();
-	}
-}
-
-function voice(lang: string, name = lang): SpeechSynthesisVoice {
-	return { lang, name } as unknown as SpeechSynthesisVoice;
-}
-
-function asSynth(fake: FakeSynth): SpeechSynthesis {
-	return fake as unknown as SpeechSynthesis;
-}
 
 const settle = () => vi.advanceTimersByTimeAsync(0);
 
@@ -614,6 +550,123 @@ describe("voz", () => {
 	it("A13: penalizar no es excluir: una única voz de fantasía se devuelve igual", () => {
 		const grandma = voice("es-MX", "Grandma");
 		expect(pickVoice([grandma], "mx")).toBe(grandma);
+	});
+});
+
+describe("acento en vivo", () => {
+	type Accent = "do" | "mx" | "neutro";
+
+	it("un getter que pasa de mx a do cambia la voz y el lang sin perder el desbloqueo", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(mx);
+		synth.endLast();
+		await first;
+
+		actual = "do";
+		const second = player.play({ key: "word:casa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		expect(player.unlocked).toBe(true);
+		synth.endLast();
+		await second;
+	});
+
+	it("dos cambios seguidos antes de sonar: sin voces, el lang es el del acento vigente", async () => {
+		let actual: Accent = "do";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "mx";
+		actual = "neutro";
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBeNull();
+		expect(utterance?.lang).toBe("es-US");
+		synth.endLast();
+		await done;
+	});
+
+	it("voiceschanged tras el cambio elige la voz del acento vigente, no la del acento de la creación", async () => {
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "do";
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		synth.fireVoicesChanged();
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(dom);
+		synth.endLast();
+		await done;
+	});
+
+	it("voiceschanged después de hablar con el acento nuevo no devuelve la voz del acento de la creación", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "do";
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(dom);
+		synth.endLast();
+		await first;
+
+		synth.fireVoicesChanged();
+		const second = player.play({ key: "word:casa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		synth.endLast();
+		await second;
+	});
+
+	it("cambiar el acento con algo sonando: lo encolado sale con el acento nuevo y ambas promesas resuelven", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(mx);
+
+		actual = "do";
+		const second = player.play({ key: "word:casa" });
+		synth.endLast();
+		await first;
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.text).toBe("casa");
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		synth.endLast();
+		await expect(second).resolves.toBeUndefined();
+	});
+
+	it("regresión: con un acento literal todo sigue igual", async () => {
+		const mx = voice("es-MX");
+		synth.setVoices([voice("es-DO"), mx]);
+		const player = await unlockedPlayer({ accent: "mx" });
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(mx);
+		expect(utterance?.lang).toBe("es-MX");
+		synth.endLast();
+		await done;
 	});
 });
 

@@ -52,7 +52,10 @@ async function storeConTrail(
 				reducedCelebrations: opciones.reducedCelebrations ?? false,
 			},
 			rewards: {
-				unlockedAt: { "word-reader": "2026-09-26T12:00:00.000Z" },
+				unlockedAt: {
+					"word-reader": "2026-09-26T12:00:00.000Z",
+					"first-syllable-voice": "2026-09-26T12:00:00.000Z",
+				},
 				equipped: { background: null, companion: null, trail: cosmeticId },
 			},
 		}),
@@ -313,6 +316,29 @@ describe("TrailLayer", () => {
 		});
 	});
 
+	describe("AR13: la partícula es la imagen del rastro", () => {
+		it("con trail:estrellitas un pointerdown crea una partícula que es una imagen de 28 px, sin emoji", async () => {
+			const store = await storeConTrail("trail:estrellitas");
+			const { container } = render(
+				conProveedoresDefault(<TrailLayer />, store),
+			);
+			act(() => {
+				document.body.dispatchEvent(
+					new PointerEvent("pointerdown", {
+						bubbles: true,
+						clientX: 5,
+						clientY: 5,
+					}),
+				);
+			});
+			const capa = container.querySelector('[data-testid="trail-layer"]');
+			const img = capa?.querySelector("img");
+			expect(img?.getAttribute("src")).toMatch(/\/particle-estrellita\.webp$/);
+			expect(img?.getAttribute("width")).toBe("28");
+			expect(capa?.textContent).not.toContain("✨");
+		});
+	});
+
 	describe("F7: sin trail:none ni con movimiento reducido", () => {
 		it("con trail:none no monta la capa ni tras un pointerdown", async () => {
 			const store = await storeConTrail("trail:none");
@@ -341,5 +367,128 @@ describe("TrailLayer", () => {
 			);
 			expect(container.querySelector('[data-testid="trail-layer"]')).toBeNull();
 		});
+	});
+});
+
+/** matchMedia con `(pointer: …)` controlable: `cambiar` dispara `change` a quien escucha. */
+function conPuntero(tipo: "fine" | "coarse") {
+	let actual = tipo;
+	const oyentes = new Set<() => void>();
+	vi.stubGlobal(
+		"matchMedia",
+		vi.fn((query: string) => ({
+			get matches() {
+				return query.includes("pointer: fine") && actual === "fine";
+			},
+			media: query,
+			addEventListener: (_: string, f: () => void) => oyentes.add(f),
+			removeEventListener: (_: string, f: () => void) => oyentes.delete(f),
+		})),
+	);
+	return {
+		cambiar(nuevo: "fine" | "coarse") {
+			actual = nuevo;
+			act(() => {
+				for (const f of [...oyentes]) f();
+			});
+		},
+	};
+}
+
+const html = () => document.documentElement;
+const CURSOR_ESTRELLITA = 'url("/icons/cursor-estrellita.png") 16 16';
+
+describe("TrailLayer: cursor de PC por rastro (V11)", () => {
+	afterEach(() => {
+		html().removeAttribute("data-trail-cursor");
+		html().style.removeProperty("--trail-cursor");
+	});
+
+	it("RA1: con (pointer: fine) pone el atributo y la propiedad en <html>", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe(
+			CURSOR_ESTRELLITA,
+		);
+	});
+
+	it("RA2: con (pointer: coarse) no toca <html>", async () => {
+		conPuntero("coarse");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().hasAttribute("data-trail-cursor")).toBe(false);
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe("");
+	});
+
+	it("RA3: al equipar trail:none quita el atributo y la propiedad", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().hasAttribute("data-trail-cursor")).toBe(true);
+		await act(async () => {
+			await store.getState().equip("trail:none");
+		});
+		expect(html().hasAttribute("data-trail-cursor")).toBe(false);
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe("");
+	});
+
+	it("RA3: al desmontar quita el atributo y la propiedad", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas");
+		const { unmount } = render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().hasAttribute("data-trail-cursor")).toBe(true);
+		unmount();
+		expect(html().hasAttribute("data-trail-cursor")).toBe(false);
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe("");
+	});
+
+	it("RA4: con reducedCelebrations el cursor sigue puesto y no sale ninguna partícula", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas", {
+			reducedCelebrations: true,
+		});
+		const { container } = render(conProveedoresDefault(<TrailLayer />, store));
+		act(() => {
+			document.body.dispatchEvent(
+				new PointerEvent("pointerdown", {
+					bubbles: true,
+					clientX: 5,
+					clientY: 5,
+				}),
+			);
+		});
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe(
+			CURSOR_ESTRELLITA,
+		);
+		expect(container.querySelector('[data-testid="trail-layer"]')).toBeNull();
+		expect(container.querySelector("img")).toBeNull();
+	});
+
+	it("RA6: cambiar directo de un rastro con cursor a otro cambia el cursor, sin pasar por trail:none", async () => {
+		conPuntero("fine");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		await act(async () => {
+			await store.getState().equip("trail:burbujas");
+		});
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:burbujas");
+		expect(html().style.getPropertyValue("--trail-cursor")).toBe(
+			'url("/icons/cursor-burbuja.png") 16 16',
+		);
+	});
+
+	it("RA5: si el puntero pasa de coarse a fine, el cursor aparece sin volver a montar", async () => {
+		const mq = conPuntero("coarse");
+		const store = await storeConTrail("trail:estrellitas");
+		render(conProveedoresDefault(<TrailLayer />, store));
+		expect(html().hasAttribute("data-trail-cursor")).toBe(false);
+		mq.cambiar("fine");
+		expect(html().getAttribute("data-trail-cursor")).toBe("trail:estrellitas");
+		mq.cambiar("coarse");
+		expect(html().hasAttribute("data-trail-cursor")).toBe(false);
 	});
 });

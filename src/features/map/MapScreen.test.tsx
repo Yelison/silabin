@@ -157,9 +157,21 @@ describe("MapScreen", () => {
 	it("una unidad bloqueada lleva candado y no arranca nada al tocarla", async () => {
 		const { unidad, onStart } = montar(await storeConDisco(() => {}));
 		const rhyme = unidad("phase0:rhyme");
-		expect(within(rhyme).getByText("🔒")).toBeDefined();
+		const candado = rhyme.querySelector('img[src="/icons/ui-lock.png"]');
+		expect(candado?.getAttribute("aria-hidden")).toBe("true");
+		expect(candado?.getAttribute("width")).toBe("32");
+		expect(rhyme.textContent).not.toContain("🔒");
 		await userEvent.click(rhyme);
 		expect(onStart).not.toHaveBeenCalled();
+	});
+
+	it("FI6: «Mis premios» pinta el icono de galería, sin 🎁", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		const premios = screen.getByRole("button", { name: "Mis premios" });
+		expect(
+			premios.querySelector('img[src="/icons/ui-gallery.png"]'),
+		).not.toBeNull();
+		expect(container.textContent).not.toContain("🎁");
 	});
 
 	it("trampa 4: no pinta ninguna barra de dominio dentro de las unidades", async () => {
@@ -309,9 +321,27 @@ describe("MapScreen", () => {
 		const clap = unidad("phase0:clap");
 		expect(clap.getAttribute("aria-label")).toBe(LLEGA_DESPUES);
 		expect(clap.getAttribute("aria-disabled")).toBe("true");
-		expect(clap.className).toMatch(/opacity/);
+		// La ficha sigue opaca (V13): lo que baja de opacidad es su contenido.
+		expect(clap.className).not.toMatch(/opacity/);
+		expect(clap.querySelector('[data-dim="true"]')?.className ?? "").toMatch(
+			/opacity-50/,
+		);
 		await userEvent.click(clap);
 		expect(onStart).not.toHaveBeenCalled();
+	});
+
+	it("U7b: una unidad bloqueada atenúa su contenido (opacity-60), no la ficha, que sigue opaca", async () => {
+		const { unidad } = montar(await storeConDisco(() => {}));
+		const rimas = unidad("phase0:rhyme");
+		expect(rimas.getAttribute("data-status")).toBe("locked");
+		expect(rimas.className).toContain("bg-card");
+		expect(rimas.className).not.toMatch(/opacity/);
+		const contenido = rimas.querySelector('[data-dim="true"]');
+		expect(contenido?.className ?? "").toMatch(/\bopacity-60\b/);
+		// La activa jugable no se atenúa.
+		const clap = unidad("phase0:clap");
+		expect(clap.querySelector('[data-dim="true"]')).toBeNull();
+		expect(clap.querySelector('[data-dim="false"]')).not.toBeNull();
 	});
 
 	it("sin unidad activa ofrece el repaso, sujeto a la misma comprobación", async () => {

@@ -261,28 +261,31 @@ export function Evaluation(props: EvaluationProps) {
 	}
 
 	return (
-		<div className="flex flex-col items-center gap-6">
-			<ReplayButton
-				aria-label="Oír otra vez"
-				disabled={locked}
-				onReplay={() => {
-					audio.play({ key: item.audioKey }).catch(() => {
-						// Sin voz también se puede jugar.
-					});
-				}}
-			/>
-			<div className="flex flex-row items-center justify-center gap-4">
-				{casillas.map((id, i) => (
-					<fieldset
-						// biome-ignore lint/suspicious/noArrayIndexKey: son dos casillas fijas
-						key={i}
-						aria-label={`Casilla ${i + 1}`}
-						data-casilla={i}
-						className="flex min-h-24 min-w-24 items-center justify-center rounded-card border-4 border-dashed border-calm-border bg-card font-reading text-ink"
-					>
-						{id !== null && pieza(id)}
-					</fieldset>
-				))}
+		<div className="flex flex-col items-center gap-6 apaisado-bajo:flex-row apaisado-bajo:gap-6">
+			{/* En apaisado bajo, «Oír» y las casillas van en una columna y la bandeja al lado. */}
+			<div className="flex flex-col items-center gap-6 apaisado-bajo:gap-4">
+				<ReplayButton
+					aria-label="Oír otra vez"
+					disabled={locked}
+					onReplay={() => {
+						audio.play({ key: item.audioKey }).catch(() => {
+							// Sin voz también se puede jugar.
+						});
+					}}
+				/>
+				<div className="flex flex-row items-center justify-center gap-4">
+					{casillas.map((id, i) => (
+						<fieldset
+							// biome-ignore lint/suspicious/noArrayIndexKey: son dos casillas fijas
+							key={i}
+							aria-label={`Casilla ${i + 1}`}
+							data-casilla={i}
+							className="flex min-h-24 min-w-24 items-center justify-center rounded-card border-4 border-dashed border-calm-border bg-card font-reading text-ink"
+						>
+							{id !== null && pieza(id)}
+						</fieldset>
+					))}
+				</div>
 			</div>
 			{/* El hueco entre filas (28 px) es donde cabe la mano de la pieza marcada del modelo. */}
 			<div className="flex flex-row flex-wrap items-center justify-center gap-x-3 gap-y-7 font-reading">

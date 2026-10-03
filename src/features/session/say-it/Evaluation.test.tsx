@@ -125,7 +125,7 @@ async function avanzar(ms: number) {
 
 const mic = () => screen.getByRole("button", { name: "Micrófono" });
 const micDeshabilitado = () => mic().getAttribute("aria-disabled") === "true";
-const boca = (c: HTMLElement) => c.querySelector("svg[data-shape]");
+const boca = (c: HTMLElement) => c.querySelector("[data-shape]");
 
 /** Un `play` cuyas promesas resuelve el test a mano. */
 function conPlayManual(audio: ReturnType<typeof fakeAudio>) {

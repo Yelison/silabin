@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon, type IconName } from "@/components/Icon";
 import { ReplayButton } from "@/components/ReplayButton";
 import { type TraceAnimation, TraceCanvas } from "@/components/TraceCanvas";
 import type { TraceGuide, TraceStroke } from "@/engine";
@@ -12,17 +13,15 @@ import { traceEffect } from "@/features/session/trace/hint-effects";
 export const TRACE_IDLE_MS = 1500;
 
 /**
- * Botón de «Borrar»/«Listo»: misma forma y tamaño que `ReplayButton`, con un emoji provisional
- * como contenido en vez de un `Icon`. S21 (registro del Plan 6) fija iconos provisionales con
- * emoji para borrar/listo hasta el Plan 7: darles una entrada en `ICON_NAMES` ahora exigiría un
- * PNG real que ese plan va a reemplazar de todos modos.
+ * Botón de «Borrar»/«Listo»: misma forma y tamaño que `ReplayButton`, con su `Icon` de arte como
+ * contenido. El nombre accesible va en el botón; el icono es decorativo.
  */
 function BotonAccion(props: {
-	emoji: string;
+	icon: IconName;
 	"aria-label": string;
 	onClick: () => void;
 }) {
-	const { emoji, onClick, ...rest } = props;
+	const { icon, onClick, ...rest } = props;
 	return (
 		<button
 			type="button"
@@ -30,7 +29,7 @@ function BotonAccion(props: {
 			className="flex min-h-18 min-w-18 items-center justify-center rounded-card bg-action p-4 text-action-ink shadow-md active:scale-95"
 			{...rest}
 		>
-			<span aria-hidden="true">{emoji}</span>
+			<Icon name={icon} />
 		</button>
 	);
 }
@@ -262,7 +261,7 @@ export function Evaluation(props: EvaluationProps) {
 				<div className="flex h-18 w-18 items-center justify-center">
 					{mostrarBotones && (
 						<BotonAccion
-							emoji="🧽"
+							icon="erase"
 							aria-label="Borrar"
 							onClick={handleBorrar}
 						/>
@@ -270,7 +269,7 @@ export function Evaluation(props: EvaluationProps) {
 				</div>
 				<div className="flex h-18 w-18 items-center justify-center">
 					{mostrarBotones && (
-						<BotonAccion emoji="👍" aria-label="Listo" onClick={handleListo} />
+						<BotonAccion icon="done" aria-label="Listo" onClick={handleListo} />
 					)}
 				</div>
 			</div>
@@ -283,11 +282,15 @@ export function Evaluation(props: EvaluationProps) {
 			 * igual con uno o con tres botones: el ancho de la franja no consume alto) + el
 			 * hueco no empujen la página a hacer scroll en 360×640, sin que la letra pierda nada
 			 * (sigue limitada por el ancho). En horizontal (`landscape:`) la franja se pone al
-			 * lado, ahora de tres botones en columna (3×72 + 2×16 = 248 px, dentro de los ~328 px
-			 * que quedan libres de los 360 px de alto en apaisado 640×360) para no comerle alto
+			 * lado, ahora de tres botones en columna (3×72 + 2×16 = 248 px), para no comerle alto
 			 * al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el spec.
+			 * En apaisado bajo (`apaisado-bajo:`) el alto del lienzo es `100svh - 5rem`: esos 80 px
+			 * son lo que `SessionScreen` gasta alrededor, la cabecera (botones de 48 px + 2×8 px de
+			 * relleno `p-2` = 64 px) y el relleno vertical `p-2` del contenedor (2×8 = 16 px). Quedan
+			 * 280 px en 640×360, y la franja de 248 px cabe en ellos con 32 px de sobra, así que ni
+			 * la franja ni el lienzo (280 px) empujan la página a hacer scroll.
 			 */}
-			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
+			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw] apaisado-bajo:h-[calc(100svh-5rem)]">
 				<TraceCanvas
 					glyph={guiaMostrada.glyph}
 					level={guiaMostrada.level}
