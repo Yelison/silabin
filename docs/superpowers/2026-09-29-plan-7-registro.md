@@ -15,7 +15,7 @@ Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y
 | Redacción del plan | **hecha** (2026-09-29, Opus). Pendiente de la revisión del autor |
 | Arte (D32) | **hecho salvo las bocas** (2026-09-29): 21 de las 27 piezas integradas; las 6 bocas se aplazaron (Ruling de la T3) |
 | Correcciones A y B (2026-10-02) | **planificadas** (T7 y T8, V17-V22; ver «Plan de corrección» al pie). Pendiente la ejecución en Sonnet |
-| Ejecución | **T1-T6 hechas** (2026-09-29). Pendientes: decisión del autor sobre los ★, revisión final de la rama (Opus), despliegue y checklist del autor, y el PR. Ver «Estado final» al pie |
+| Ejecución | **T1-T6 hechas** (2026-09-29); **T7 hecha** (2026-10-03), T8 pendiente. Pendientes: decisión del autor sobre los ★, revisión final de la rama (Opus), despliegue y checklist del autor, y el PR. Ver «Estado final» al pie |
 
 ## Decisiones tomadas con el autor (2026-09-29)
 
@@ -430,7 +430,13 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
 - **Ruling:** el hallazgo de M2 se trata como defecto de aceptación, no como minor. El brief
   exige que cada M1-M5 mate un test, y el revisor lo puso como Minor. Va a la ronda 1. Si
   fuera un error, cuesta un test de más.
-- Task 7: fix round 1/5 (1 abierto — falta un test que mate M2 literal)
+- Task 7: fix round 1/5 (1 addressed, 0 open — test nuevo que mata M2 literal; commits 354aadc..4f5f172)
+  - Re-revisión (Sonnet): ADDRESSED. El revisor aplicó M2 literal en un worktree aparte:
+    57/57 en verde sin mutar y 56 pasan con 1 fallo (el test nuevo, `speech-player.test.ts:612`).
+  - Medida para el criterio de Effort: **1 ronda de corrección, 1 mutación sobrevivía** (M2, por
+    un juicio erróneo del implementador sobre equivalencia). Con `high`.
+- Task 7: complete (commits c0c0cdb..4f5f172, review clean, 3 minors deferred). Puertas del
+  coordinador: `pnpm test` 1403 pasan y 1 omitido, typecheck y lint en verde.
 - Task 7: minor (deferred): con estilos `by-syllable` o `beats`, un cambio de acento a mitad de
   frase hace que las sílabas siguientes usen otra voz; cada `speakOne` lee el acento en vivo.
   Es una carrera de milisegundos. Opción: fijar el acento una vez por `perform`.
