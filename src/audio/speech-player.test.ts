@@ -553,6 +553,100 @@ describe("voz", () => {
 	});
 });
 
+describe("acento en vivo", () => {
+	type Accent = "do" | "mx" | "neutro";
+
+	it("un getter que pasa de mx a do cambia la voz y el lang sin perder el desbloqueo", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(mx);
+		synth.endLast();
+		await first;
+
+		actual = "do";
+		const second = player.play({ key: "word:casa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		expect(player.unlocked).toBe(true);
+		synth.endLast();
+		await second;
+	});
+
+	it("dos cambios seguidos antes de sonar: sin voces, el lang es el del acento vigente", async () => {
+		let actual: Accent = "do";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "mx";
+		actual = "neutro";
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBeNull();
+		expect(utterance?.lang).toBe("es-US");
+		synth.endLast();
+		await done;
+	});
+
+	it("voiceschanged tras el cambio elige la voz del acento vigente, no la del acento de la creación", async () => {
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "do";
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		synth.fireVoicesChanged();
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(dom);
+		synth.endLast();
+		await done;
+	});
+
+	it("cambiar el acento con algo sonando: lo encolado sale con el acento nuevo y ambas promesas resuelven", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(mx);
+
+		actual = "do";
+		const second = player.play({ key: "word:casa" });
+		synth.endLast();
+		await first;
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.text).toBe("casa");
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		synth.endLast();
+		await expect(second).resolves.toBeUndefined();
+	});
+
+	it("regresión: con un acento literal todo sigue igual", async () => {
+		const mx = voice("es-MX");
+		synth.setVoices([voice("es-DO"), mx]);
+		const player = await unlockedPlayer({ accent: "mx" });
+		const done = player.play({ key: "word:mesa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(mx);
+		expect(utterance?.lang).toBe("es-MX");
+		synth.endLast();
+		await done;
+	});
+});
+
 describe("pausa entre sílabas con voces de red", () => {
 	it("A15: con latencia 0, la pausa sigue siendo SYLLABLE_GAP_MS", async () => {
 		const player = await unlockedPlayer();

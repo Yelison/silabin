@@ -9,26 +9,14 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AudioPlayer, AudioRequest } from "@/audio";
+import { type AudioPlayer, createSpeechPlayer } from "@/audio";
+import { asSynth, FakeSynth, FakeUtterance } from "@/audio/fake-synth";
 import { curriculum } from "@/engine";
 import { App } from "@/features/App";
 import { TAP_SETTLE_MS } from "@/features/session/count-syllables/Evaluation";
 import { templateViews } from "@/features/session/registry";
 import { crearStore, fakeAudio, vistasFalsas } from "@/features/test-support";
 import { createMemoryAdapter, type Settings } from "@/store";
-
-/** Como `fakeAudio`, pero anota el acento con el que la fábrica la creó. */
-function reproductorFalsoCon(accent: Settings["accent"]) {
-	const audio = {
-		accent,
-		unlocked: false,
-		unlock: vi.fn(async () => {}),
-		play: vi.fn(async (_request: AudioRequest) => {}),
-		stop: vi.fn(),
-		beat: vi.fn(),
-	} satisfies AudioPlayer & { accent: Settings["accent"] };
-	return audio;
-}
 
 // Las vistas reales de la plantilla, para devolverlas tras cada test que las sustituye.
 const vistasReales = templateViews["count-syllables"];
@@ -42,6 +30,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.useRealTimers();
+	vi.unstubAllGlobals();
 	templateViews["count-syllables"] = vistasReales;
 });
 
@@ -249,37 +238,33 @@ describe("App", () => {
 		}
 	});
 
-	it("N8: cambiar el acento en el panel de padres para el reproductor anterior y crea uno nuevo con la fábrica inyectada", async () => {
+	it("N8: cambiar el acento en el panel de padres no recrea el reproductor y el desbloqueado sigue hablando con el acento nuevo", async () => {
+		vi.stubGlobal("SpeechSynthesisUtterance", FakeUtterance);
+		const fakeSynth = new FakeSynth();
 		const store = crearStore();
-		const fabrica = vi.fn((accent: Settings["accent"]) =>
-			reproductorFalsoCon(accent),
+		// El reproductor real, no `props.audio`: inyectarlo desactivaría justo el camino que falló (I9).
+		const fabrica = vi.fn((getAccent: () => Settings["accent"]) =>
+			createSpeechPlayer({
+				synth: asSynth(fakeSynth),
+				accent: getAccent,
+				beat: vi.fn(),
+			}),
 		);
 		render(<App store={store} audioFactory={fabrica} />);
-		await iniciar();
+		const user = userEvent.setup();
+		// Camino real del `unlock`: el toque de `StartScreen`.
+		await user.click(await iniciar());
+		expect(fakeSynth.spoken.map((u) => u.text)).toEqual([""]);
+
+		await act(async () => {
+			await store.getState().updateSettings({ accent: "mx" });
+		});
+
+		const reproductor = fabrica.mock.results[0]?.value as AudioPlayer;
+		void reproductor.play({ key: "word:mesa" });
+		await waitFor(() => expect(fakeSynth.spoken).toHaveLength(2));
 		expect(fabrica).toHaveBeenCalledTimes(1);
-		expect(fabrica).toHaveBeenLastCalledWith("neutro");
-		const primero = fabrica.mock.results[0]?.value as ReturnType<
-			typeof reproductorFalsoCon
-		>;
-
-		await act(async () => {
-			await store.getState().updateSettings({ accent: "mx" });
-		});
-
-		await waitFor(() => expect(fabrica).toHaveBeenCalledTimes(2));
-		expect(fabrica).toHaveBeenLastCalledWith("mx");
-		expect(primero.stop).toHaveBeenCalledTimes(1);
-	});
-
-	it("con `audio` inyectado, cambiar el acento no crea un reproductor nuevo", async () => {
-		const store = crearStore();
-		const audio = fakeAudio();
-		render(<App store={store} audio={audio} />);
-		await iniciar();
-		await act(async () => {
-			await store.getState().updateSettings({ accent: "mx" });
-		});
-		expect(audio.stop).not.toHaveBeenCalled();
+		expect(fakeSynth.spoken[1]?.lang).toMatch(/^es-MX/);
 	});
 
 	it("el fondo cosmético envuelve el mapa y la galería, pero nunca la sesión", async () => {
