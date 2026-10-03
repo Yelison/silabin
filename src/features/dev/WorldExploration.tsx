@@ -73,48 +73,37 @@ function LevelNode({
 			title={label}
 			aria-label={`Nivel ${number}: ${label}`}
 		>
-			<div
-				className={current ? "relative h-[164px] w-[158px]" : "relative h-[112px] w-[112px]"}
-			>
+			<div className={current ? "relative h-[168px] w-[152px]" : "relative h-[104px] w-[96px]"}>
 				{current && (
 					<div
 						aria-hidden="true"
-						className="absolute left-1/2 top-[48%] -z-10 h-[82%] w-[94%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFD94F]/28 blur-xl"
+						className="absolute left-1/2 top-[40%] -z-10 h-[76%] w-[94%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFD94F]/30 blur-xl"
 					/>
 				)}
-
-				<div
-					aria-hidden="true"
-					className={
-						current
-							? "absolute bottom-[8px] left-1/2 h-[88px] w-[154px] -translate-x-1/2 rounded-[32px] border-[3px] border-[#FFE184] bg-[#FFF8E9]/97 shadow-[0_8px_0_rgba(188,139,25,0.16),0_16px_30px_rgba(77,62,35,0.16)]"
-							: "absolute bottom-[8px] left-1/2 h-[62px] w-[108px] -translate-x-1/2 rounded-[28px] border-[3px] border-white/90 bg-[#FFF8EC]/95 shadow-[0_6px_0_rgba(125,112,92,0.14),0_12px_20px_rgba(58,68,82,0.13)]"
-					}
-				/>
 
 				<HqImage
 					src={houseSrc}
 					fallback={`${SHARED}/house-01.svg`}
-					className="pointer-events-none absolute left-1/2 -translate-x-1/2 object-contain drop-shadow-[0_7px_9px_rgba(52,61,72,0.15)]"
+					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_7px_9px_rgba(52,61,72,0.16)]"
 					style={
 						current
-							? { width: 136, height: 136, top: -24 }
-							: { width: 88, height: 88, top: -8 }
+							? { width: 148, height: 148 }
+							: { width: 96, height: 96 }
 					}
 				/>
 
 				<span
 					className={
 						current
-							? "absolute left-1/2 top-[62%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
-							: "absolute left-1/2 top-[60%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.14)]"
+							? "absolute left-1/2 top-[64%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
+							: "absolute left-1/2 top-[66%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.16)]"
 					}
 				>
 					{number}
 				</span>
 
 				{current && (
-					<div className="absolute bottom-[14px] left-1/2 w-[140px] -translate-x-1/2 text-center">
+					<div className="absolute bottom-0 left-1/2 w-[138px] -translate-x-1/2 rounded-[0.95rem] border border-[#F4D27A]/55 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_6px_14px_rgba(87,65,30,0.14)]">
 						<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
 							{label}
 						</span>
@@ -127,7 +116,7 @@ function LevelNode({
 				)}
 
 				{completed && !current && (
-					<div className="absolute bottom-[13px] left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-extrabold tracking-[0.05em] text-celebrate">
+					<div className="absolute left-1/2 top-[84%] -translate-x-1/2 whitespace-nowrap text-[10px] font-extrabold tracking-[0.05em] text-celebrate">
 						{[0, 1, 2].map((i) => (
 							<span key={i}>{i < stars ? "★" : "☆"}</span>
 						))}
@@ -137,7 +126,7 @@ function LevelNode({
 				{locked && (
 					<span
 						aria-hidden="true"
-						className="absolute bottom-[14px] left-1/2 flex size-[17px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E8E4DE] text-[9px] shadow-sm"
+						className="absolute left-1/2 top-[83%] flex size-[16px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E7E3DE]/96 text-[8px] shadow-sm"
 					>
 						🔒
 					</span>
@@ -177,6 +166,35 @@ function StateSample({
 	);
 }
 
+
+function RoutePath() {
+	return (
+		<svg
+			aria-hidden="true"
+			viewBox="0 0 1180 738"
+			preserveAspectRatio="none"
+			className="pointer-events-none absolute inset-0 z-[14] h-full w-full"
+		>
+			<path
+				d="M 195 355 C 270 300, 330 286, 390 296 S 500 345, 555 318 S 650 258, 710 275 S 820 310, 865 302 S 960 309, 1010 360 C 1055 408, 1018 452, 950 454 S 850 430, 804 438 S 704 455, 635 440 S 530 425, 460 445"
+				fill="none"
+				stroke="rgba(177,128,61,0.18)"
+				strokeWidth="24"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			<path
+				d="M 195 355 C 270 300, 330 286, 390 296 S 500 345, 555 318 S 650 258, 710 275 S 820 310, 865 302 S 960 309, 1010 360 C 1055 408, 1018 452, 950 454 S 850 430, 804 438 S 704 455, 635 440 S 530 425, 460 445"
+				fill="none"
+				stroke="rgba(255,239,196,0.92)"
+				strokeWidth="14"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeDasharray="2 18"
+			/>
+		</svg>
+	);
+}
 
 export function WorldExploration() {
 	const levels: LevelNodeProps[] = [
@@ -293,6 +311,8 @@ export function WorldExploration() {
 							fallback={`${SHARED}/cloud-02.svg`}
 							className="world-cloud-b pointer-events-none absolute right-[10%] top-[6%] z-[2] w-[13%] opacity-[0.42]"
 						/>
+
+						<RoutePath />
 
 						<div className="absolute left-[2.4%] top-[2.5%] z-40 flex items-center gap-2 rounded-[1rem] border border-white/80 bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
 							<div
