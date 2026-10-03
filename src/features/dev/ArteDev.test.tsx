@@ -11,6 +11,7 @@ describe("ArteDev", () => {
 		const { container } = render(<ArteDev />);
 		for (const titulo of [
 			"Paleta",
+			"Silabín — World Exploration",
 			"Compañeros, sin y con gorra",
 			"Fondos con la banda del mapa",
 			"Pegatinas, trofeo y partículas",
@@ -19,6 +20,8 @@ describe("ArteDev", () => {
 		])
 			expect(screen.getByRole("heading", { name: titulo })).toBeDefined();
 		expect(container.querySelectorAll("[data-token]")).toHaveLength(12);
+		expect(container.querySelector("[data-world-composition]")).not.toBeNull();
+		expect(container.querySelectorAll("[data-world-node]")).toHaveLength(9);
 		// Cuatro compañeros (dos, con y sin gorra) a dos tamaños; cuatro fondos en dos formatos.
 		expect(container.querySelectorAll('img[src*="companion-"]')).toHaveLength(
 			8,
