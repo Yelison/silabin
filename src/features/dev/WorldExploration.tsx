@@ -46,9 +46,13 @@ function LevelNode({
 				{state === "current" && (
 					<span
 						aria-hidden="true"
-						className="absolute -right-2 -top-3 rounded-full bg-white px-2 py-1 text-sm shadow-md"
+						className="absolute -right-4 -top-5 flex size-10 items-center justify-center rounded-full bg-white shadow-md"
 					>
-						🐥
+						<img
+							src="/images/arte/companion-1.webp"
+							alt=""
+							className="size-9 object-contain"
+						/>
 					</span>
 				)}
 			</div>
@@ -79,7 +83,7 @@ function Asset({
 	return (
 		// biome-ignore lint/performance/noImgElement: assets de exploración del mapa, ya optimizados en WebP
 		<img
-			src={`${SHARED}/${name}.webp`}
+			src={`${SHARED}/${name}.svg`}
 			alt=""
 			aria-hidden="true"
 			draggable={false}
@@ -332,7 +336,13 @@ export function WorldExploration() {
 						<div className="absolute left-[45%] top-[7%] z-40 rounded-full border-2 border-white/80 bg-white/90 px-5 py-2 text-2xl font-extrabold text-[#234A91] shadow-md">
 							Silabín
 						</div>
-						<div className="absolute left-[38%] top-[10%] z-40 rounded-[1.25rem] bg-white px-3 py-2 text-center text-[11px] font-bold text-[#234A91] shadow-md">
+						<img
+							src="/images/arte/companion-1.webp"
+							alt=""
+							aria-hidden="true"
+							className="world-mascot absolute left-[34%] top-[6%] z-40 w-[72px] object-contain drop-shadow-md"
+						/>
+						<div className="absolute left-[40%] top-[13%] z-40 rounded-[1.25rem] bg-white px-3 py-2 text-center text-[11px] font-bold text-[#234A91] shadow-md">
 							¡Vamos a leer juntos!
 						</div>
 					</div>
@@ -380,6 +390,7 @@ export function WorldExploration() {
 				@media (prefers-reduced-motion: no-preference) {
 					.world-cloud-a { animation: silabin-cloud-a 14s ease-in-out infinite alternate; }
 					.world-cloud-b { animation: silabin-cloud-b 18s ease-in-out infinite alternate; }
+					.world-mascot { animation: silabin-mascot 3.4s ease-in-out infinite; }
 					[data-world-node="current"] { animation: silabin-current 2.8s ease-in-out infinite; }
 				}
 				@keyframes silabin-cloud-a {
@@ -393,6 +404,10 @@ export function WorldExploration() {
 				@keyframes silabin-current {
 					0%, 100% { transform: translate(-50%, -50%) translateY(0); }
 					50% { transform: translate(-50%, -50%) translateY(-4px); }
+				}
+				@keyframes silabin-mascot {
+					0%, 100% { transform: translateY(0) rotate(-2deg); }
+					50% { transform: translateY(-6px) rotate(2deg); }
 				}
 			`}</style>
 		</section>
