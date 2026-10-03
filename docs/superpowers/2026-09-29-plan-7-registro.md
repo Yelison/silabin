@@ -446,3 +446,37 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
 - Task 7: minor (deferred): `void reproductor.play(...)` en N8 no guarda la promesa. Si la clave
   literal dejara de existir, el rechazo no se controla, aunque N8 fallaría igualmente por
   timeout.
+
+### T8 · apaisado bajo sin scroll en `trace`, `build` y fin de sesión (B, C3/H2) — Effort medium
+
+- Implementación: `db3166d` (variante `apaisado-bajo`, estilos de `trace`, `build`, `EndScreen`,
+  `SessionScreen` y `e2e/apaisado.spec.ts` con helpers en `e2e/helpers/documentos.ts`).
+  RED: 11 fallos en 640×360, 667×375 y 852×393 antes del arreglo; después 15/15.
+- Medidas (Chromium): lienzo de `trace` a 640×360 de 306 a 280 px (78 % del lado corto);
+  «Listo» acaba en y=340 (antes 383 a 667×375); en 1194×834 el lienzo sigue en 708,89 px, que es
+  el límite inferior fijado en el test. Capturas 640×360 en `.superpowers/sdd/plan-7/` (ignorado).
+- **Ruling:** variante nueva `apaisado-bajo` (landscape, max-height 500) en vez de
+  `landscape:short:`: `short` llega a 760 y metería al iPad mini en horizontal (744). Si fuera
+  equivocada, cuesta unificar dos variantes.
+- Revisión de tarea (Sonnet): spec ❌ parcial. Important: la insignia de `build` no se medía
+  (rama `habiaModelo` nunca corría con la semilla 2, aserción vacía). Minor: compañero y ★ del fin
+  sin `length > 0`.
+- Task 8: fix round 1/5 (2 addressed, 0 open — insignia medida provocando errores hasta que sale
+  la pieza marcada, y `length > 0` en compañero y ★; commits db3166d..b291fc4). Re-revisión
+  (Sonnet): Approved, sin roturas nuevas.
+- **Ruling:** se acepta el cambio de `e2e/helpers/solve.ts:38` (timeout de 1 s con `return false`)
+  que el implementador hizo contra la indicación de diferirlo: `apaisado 852×393 fin` fallaba dos
+  veces seguidas esperando 180 s porque el fin desmonta el ejercicio entre `count()` y
+  `getAttribute`. El re-revisor lo juzgó seguro. Si fuera un error, cuesta revertir una línea.
+- Medida para el criterio de Effort: **1 ronda de corrección, 0 mutaciones** (sin mutaciones por V20).
+  Con `medium`.
+- Task 8: complete (commits ceec097..b291fc4, review clean, 4 minors deferred). Puertas del
+  coordinador: `pnpm test` 1403 pasan y 1 omitido, typecheck y lint en verde; e2e `apaisado` 15/15
+  (implementador). `fase1` y `offline` no se repasaron tras la ronda 1: van en el despliegue final (V22).
+- Task 8: minor (deferred): scroll «antes» sin cifras en el informe; el test solo afirma `<= 0`.
+  Los 48 px del fin de sesión a 640×360 siguen sin confirmar.
+- Task 8: minor (deferred): `waitForTimeout` fijos de 1,2-1,5 s en `apaisado.spec.ts`.
+- Task 8: minor (deferred): `min-h-screen` → `min-h-svh` se aplica en todas las pantallas, no solo en
+  `apaisado-bajo`; en iPad Safari con barra de URL el alto será algo menor.
+- Task 8: minor (deferred): `documentos.ts` repite el patrón `count()` + `getAttribute` sin timeout
+  (carrera de desmontaje) fuera del `try` de `avanzarHasta`.
