@@ -407,3 +407,36 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
     señal que el e2e local.
   - Coste: un fallo que solo aparezca en el build de Vercel se vería al final.
 
+
+## Ejecución de las correcciones (2026-10-03, Sonnet)
+
+### T7 · un solo reproductor, acento en vivo (A, I9) — Effort high
+
+- Implementación: `11208bc` (extrae `fake-synth.ts`) y `7f4145e` (getter en `speech-player` y
+  `App` con una sola fábrica). `pnpm test` 1402 pasan, typecheck y lint en verde.
+- Mutaciones del implementador: M1, M3, M4 y M5 mueren. Dijo que M2 sobrevivía por ser
+  equivalente.
+- Revisión de tarea (Sonnet, con mutaciones propias en un worktree aparte): **Approved**, sin
+  Critical ni Important.
+  - Mutaciones del revisor: M1, el getter congelado, M3, M4 y M5 mueren.
+  - **M2 literal sobrevive y no es equivalente**: listener con el acento inicial, sin tocar
+    `voiceAccent`, desincroniza voz y acento. El implementador se equivocaba.
+  - M3b y M2c sobreviven y sí son equivalentes: `speakOne` revalida antes de hablar.
+- Desviaciones del implementador, todas legítimas:
+  - N8 usa la clave literal `"word:mesa"` porque `boundaries.test.ts` (U8) prohíbe importar
+    `@/content/*` desde `features/`.
+  - Borra `reproductorFalsoCon` e `injectedAudio`, que quedaban sin uso.
+  - Añade `vi.unstubAllGlobals()` al `afterEach` de `App.test.tsx`.
+- **Ruling:** el hallazgo de M2 se trata como defecto de aceptación, no como minor. El brief
+  exige que cada M1-M5 mate un test, y el revisor lo puso como Minor. Va a la ronda 1. Si
+  fuera un error, cuesta un test de más.
+- Task 7: fix round 1/5 (1 abierto — falta un test que mate M2 literal)
+- Task 7: minor (deferred): con estilos `by-syllable` o `beats`, un cambio de acento a mitad de
+  frase hace que las sílabas siguientes usen otra voz; cada `speakOne` lee el acento en vivo.
+  Es una carrera de milisegundos. Opción: fijar el acento una vez por `perform`.
+- Task 7: minor (deferred): una mutación V18 (`generation++` y `cancel()` al cambiar el acento
+  dentro de `speakOne`) sobrevive. Ningún test cubre «el cambio de acento no corta una frase por
+  sílabas». Va con el minor anterior.
+- Task 7: minor (deferred): `void reproductor.play(...)` en N8 no guarda la promesa. Si la clave
+  literal dejara de existir, el rechazo no se controla, aunque N8 fallaría igualmente por
+  timeout.
