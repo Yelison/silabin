@@ -33,6 +33,12 @@
 
 /* Pantallas bajas (móvil apaisado o pequeño): lo que no cabe a lo alto se reordena, no se recorta. */
 @custom-variant short (@media (max-height: 760px));
+/* Teléfono en horizontal (360-430 de alto): deja fuera al iPad (744 el mini en horizontal, 834 el
+   Pro), que con `short:` quedaría dentro. Aquí cada pantalla del ejercicio central y la de fin
+   de sesión se recompone para no hacer scroll (Plan 7, T8). */
+@custom-variant apaisado-bajo (
+	@media (orientation: landscape) and (max-height: 500px)
+);
 
 body {
 	background: var(--color-surface);

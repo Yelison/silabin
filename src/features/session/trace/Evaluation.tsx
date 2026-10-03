@@ -286,7 +286,7 @@ export function Evaluation(props: EvaluationProps) {
 			 * que quedan libres de los 360 px de alto en apaisado 640×360) para no comerle alto
 			 * al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el spec.
 			 */}
-			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw]">
+			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw] apaisado-bajo:h-[calc(100svh-5rem)]">
 				<TraceCanvas
 					glyph={guiaMostrada.glyph}
 					level={guiaMostrada.level}
