@@ -499,3 +499,16 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
   va a la checklist del iPad.
 - Final: minor (deferred), anterior al rango: la bandeja de `build` separa las piezas 12 px, por
   debajo de los 16 px exigidos (`build/Evaluation.tsx:291`).
+
+### Despliegue y re-medida (V22)
+
+- Push de la rama con `4a1ea31` y preview en https://silabin-2m35r9u6e-yelison1s-projects.vercel.app.
+- Arnés `~/qa-silabin` (la URL ahora se da con `PREVIEW`):
+  - `ipad-acento.spec.ts` en `webkit-ipad`, con síntesis simulada: `es-US`, luego `es-DO` y `es-MX`
+    sin recargar. **I9 resuelto (emulado).**
+  - `layout-trace.spec.ts` en `chromium-640x360`: `scrollY` 0, «Listo» acaba en y=340 y el lienzo
+    mide 499×280. Con `VP=667x375`: `scrollY` 0, «Listo» en y=348 y el lienzo mide 520×295.
+    **C3/H2 resueltos (emulado).**
+- `docs/checklist-ipad.md` actualizado (I9, H2 y C3) y README al día. La trampa de la «aritmética
+  optimista» ya no estaba entre las vivas del README. La separación de 12 px de la bandeja de `build`
+  pasa a la deuda 4 del README.

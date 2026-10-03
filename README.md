@@ -583,9 +583,10 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 **Plan 7 ejecutado en su rama (2026-09-29); revisión final hecha (`Final review clean`) y preview
 desplegado, con la pasada automatizada hecha el 2026-10-02.** Queda, en este orden:
 
-1. **Decidir los dos fallos abiertos antes del PR** (el autor): I9, la voz queda muda tras cambiar
-   el acento en el panel, y C3/H2, `trace`, `build` y el fin de sesión desbordan en apaisado
-   bajo. Detalle en el ledger del Plan 7, «Pasada de verificación sobre el preview».
+1. **Los dos fallos de la pasada están arreglados** (2026-10-03): I9 (T7, un solo reproductor
+   con el acento en vivo) y C3/H2 (T8, variante `apaisado-bajo` y `e2e/apaisado.spec.ts`).
+   Re-medidos sobre el preview de `4a1ea31`. Detalle en el ledger del Plan 7, «Ejecución de las
+   correcciones».
 2. **Cerrar la deuda 1 con dispositivo real** en `docs/checklist-ipad.md`: lo que solo vale en
    hardware (I1-I3, I6, H1, P1-P3, P8, P9, I12-I13, I15 con niño). Nadie lo prueba por el autor.
 3. **Abrir el PR** de `feat/plan-7-identidad-visual` contra `main`.
@@ -695,7 +696,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 3. **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): «Reintentar» solo
    desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
 4. **Accesibilidad y objetivos táctiles < 72 px:** modelo (56 px), `SaveWarning` (~36 px), tambor de
-   224 px fijos y el `<input type="file">` de importar (lo controla el navegador).
+   224 px fijos, el `<input type="file">` de importar (lo controla el navegador) y las piezas de la
+   bandeja de `build`, separadas 12 px en vez de 16.
 5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
    (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
 6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
