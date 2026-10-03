@@ -609,6 +609,29 @@ describe("acento en vivo", () => {
 		await done;
 	});
 
+	it("voiceschanged después de hablar con el acento nuevo no devuelve la voz del acento de la creación", async () => {
+		const mx = voice("es-MX");
+		const dom = voice("es-DO");
+		synth.setVoices([mx, dom]);
+		let actual: Accent = "mx";
+		const player = await unlockedPlayer({ accent: () => actual });
+		actual = "do";
+		const first = player.play({ key: "word:mesa" });
+		await settle();
+		expect(synth.spoken[synth.spoken.length - 1]?.voice).toBe(dom);
+		synth.endLast();
+		await first;
+
+		synth.fireVoicesChanged();
+		const second = player.play({ key: "word:casa" });
+		await settle();
+		const utterance = synth.spoken[synth.spoken.length - 1];
+		expect(utterance?.voice).toBe(dom);
+		expect(utterance?.lang).toBe("es-DO");
+		synth.endLast();
+		await second;
+	});
+
 	it("cambiar el acento con algo sonando: lo encolado sale con el acento nuevo y ambas promesas resuelven", async () => {
 		const mx = voice("es-MX");
 		const dom = voice("es-DO");
