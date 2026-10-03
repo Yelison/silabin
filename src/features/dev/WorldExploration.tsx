@@ -273,7 +273,7 @@ export function WorldExploration() {
 							⚙️
 						</button>
 
-						<div className="absolute left-[26%] top-[9%] z-35 flex items-center gap-2">
+						<div className="absolute left-[26%] top-[9%] z-[35] flex items-center gap-2">
 							<img
 								src="/images/arte/companion-1.webp"
 								alt=""
