@@ -7,7 +7,8 @@ type LevelNodeProps = {
 	label: string;
 	state: LevelState;
 	stars?: number;
-	className?: string;
+	left: string;
+	top: string;
 };
 
 const SHARED = "/images/worlds/shared";
@@ -17,96 +18,77 @@ function LevelNode({
 	label,
 	state,
 	stars = 0,
-	className = "",
+	left,
+	top,
 }: LevelNodeProps) {
-	const styles = {
-		completed:
-			"border-white/90 bg-white text-ink shadow-[0_8px_0_rgba(70,83,115,0.14),0_14px_28px_rgba(43,42,51,0.12)]",
-		current:
-			"border-[#FFD95C] bg-action text-action-ink shadow-[0_0_0_8px_rgba(249,190,35,0.22),0_10px_0_rgba(177,124,9,0.18),0_18px_32px_rgba(249,190,35,0.3)]",
-		locked:
-			"border-white/75 bg-[#F2EFEA]/95 text-[#8C8790] shadow-[0_7px_0_rgba(86,80,90,0.09),0_12px_22px_rgba(43,42,51,0.08)]",
-	}[state];
+	const locked = state === "locked";
+	const current = state === "current";
 
 	return (
 		<div
 			data-world-node={state}
-			className={`absolute z-30 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 ${className}`}
+			className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
+			style={{ left, top }}
 		>
 			<div
-				className={`relative flex size-[72px] items-center justify-center rounded-full border-[5px] text-2xl font-extrabold ${styles}`}
+				className={
+					current
+						? "relative flex w-[150px] flex-col items-center rounded-[2rem] border-4 border-[#FFE27A] bg-[#FFF8E8] px-3 pb-3 pt-14 shadow-[0_0_0_9px_rgba(249,190,35,0.18),0_14px_0_rgba(201,138,0,0.16),0_24px_45px_rgba(89,67,18,0.20)]"
+						: "relative flex w-[106px] flex-col items-center rounded-[2rem] border-4 border-white/85 bg-[#FFF8EC]/95 px-2 pb-3 pt-11 shadow-[0_8px_0_rgba(84,77,67,0.10),0_18px_30px_rgba(52,66,84,0.16)]"
+				}
 			>
-				{state === "locked" ? (
-					<span aria-hidden="true" className="text-[23px]">
-						🔒
-					</span>
-				) : (
-					number
+				<div
+					className={
+						current
+							? "absolute -top-[69px] left-1/2 w-[104px] -translate-x-1/2"
+							: "absolute -top-[48px] left-1/2 w-[78px] -translate-x-1/2"
+					}
+				>
+					<img
+						src={`${SHARED}/house-01.svg`}
+						alt=""
+						aria-hidden="true"
+						className={locked ? "w-full grayscale opacity-55" : "w-full"}
+					/>
+				</div>
+
+				<span
+					className={
+						current
+							? "mb-1 flex size-8 items-center justify-center rounded-full bg-action text-sm font-extrabold text-action-ink shadow-sm"
+							: "mb-1 flex size-7 items-center justify-center rounded-full bg-white text-xs font-extrabold text-[#234A91] shadow-sm"
+					}
+				>
+					{number}
+				</span>
+
+				<span
+					className={
+						locked
+							? "max-w-[92px] text-center text-[10px] font-bold leading-tight text-[#97939B]"
+							: "max-w-[126px] text-center text-[11px] font-extrabold leading-tight text-[#173B6C]"
+					}
+				>
+					{label}
+				</span>
+
+				{state === "completed" && (
+					<div className="mt-1 text-sm font-extrabold tracking-[0.08em] text-celebrate">
+						{[0, 1, 2].map((i) => (
+							<span key={i}>{i < stars ? "★" : "☆"}</span>
+						))}
+					</div>
 				)}
-				{state === "current" && (
+
+				{locked && (
 					<span
 						aria-hidden="true"
-						className="absolute -right-4 -top-5 flex size-10 items-center justify-center rounded-full bg-white shadow-md"
+						className="mt-1 flex size-6 items-center justify-center rounded-full bg-[#E7E3DE] text-[13px]"
 					>
-						<img
-							src="/images/arte/companion-1.webp"
-							alt=""
-							className="size-9 object-contain"
-						/>
+						🔒
 					</span>
 				)}
 			</div>
-			{state !== "locked" && (
-				<div
-					aria-hidden="true"
-					className="min-h-5 whitespace-nowrap text-sm font-bold tracking-[0.08em] text-celebrate"
-				>
-					{[0, 1, 2].map((i) => (
-						<span key={i}>{i < stars ? "★" : "☆"}</span>
-					))}
-				</div>
-			)}
-			<span className="max-w-28 rounded-full bg-white/90 px-2.5 py-1 text-center text-[11px] font-bold leading-tight text-ink shadow-sm">
-				{label}
-			</span>
-		</div>
-	);
-}
-
-function Asset({
-	name,
-	className,
-}: {
-	name: string;
-	className: string;
-}) {
-	return (
-		// biome-ignore lint/performance/noImgElement: assets de exploración del mapa, ya optimizados en WebP
-		<img
-			src={`${SHARED}/${name}.svg`}
-			alt=""
-			aria-hidden="true"
-			draggable={false}
-			className={`pointer-events-none absolute select-none object-contain ${className}`}
-		/>
-	);
-}
-
-function TerritoryLabel({
-	title,
-	subtitle,
-	className,
-}: {
-	title: string;
-	subtitle: string;
-	className: string;
-}) {
-	return (
-		<div
-			className={`absolute z-20 -translate-x-1/2 rounded-[1.25rem] border-2 border-white/75 bg-white/92 px-4 py-2 text-center shadow-[0_8px_20px_rgba(43,42,51,0.10)] backdrop-blur-sm ${className}`}
-		>
-			<div className="text-sm font-extrabold text-ink">{title}</div>
-			<div className="text-[10px] font-semibold text-ink-soft">{subtitle}</div>
 		</div>
 	);
 }
@@ -120,18 +102,18 @@ function StateSample({
 	title: string;
 	detail: string;
 }) {
-	const dotStyle = {
-		completed: "border-white bg-white",
-		current: "border-[#FFD95C] bg-action",
-		locked: "border-white bg-[#E9E2D7]",
+	const styles = {
+		completed: "bg-white border-white",
+		current: "bg-action border-[#FFE27A]",
+		locked: "bg-[#E9E2D7] border-white",
 	}[state];
 
 	return (
 		<div className="flex items-center gap-3 rounded-card bg-card p-3 shadow-sm">
 			<span
-				className={`flex size-12 shrink-0 items-center justify-center rounded-full border-4 text-lg font-extrabold shadow-md ${dotStyle}`}
+				className={`flex size-12 shrink-0 items-center justify-center rounded-full border-4 text-lg font-extrabold shadow-md ${styles}`}
 			>
-				{state === "locked" ? "🔒" : state === "current" ? "3" : "2"}
+				{state === "locked" ? "🔒" : state === "current" ? "1" : "2"}
 			</span>
 			<span>
 				<span className="block text-sm font-bold">{title}</span>
@@ -142,6 +124,80 @@ function StateSample({
 }
 
 export function WorldExploration() {
+	const levels: LevelNodeProps[] = [
+		{
+			number: 1,
+			label: "Palabras con palmas",
+			state: "current",
+			stars: 2,
+			left: "18%",
+			top: "40%",
+		},
+		{
+			number: 2,
+			label: "Rimas saltarinas",
+			state: "locked",
+			left: "34%",
+			top: "31%",
+		},
+		{
+			number: 3,
+			label: "Detectives de sonidos",
+			state: "locked",
+			left: "50%",
+			top: "38%",
+		},
+		{
+			number: 4,
+			label: "¿Lo oyes?",
+			state: "locked",
+			left: "66%",
+			top: "31%",
+		},
+		{
+			number: 5,
+			label: "La vocal a",
+			state: "locked",
+			left: "82%",
+			top: "36%",
+		},
+		{
+			number: 6,
+			label: "La vocal e",
+			state: "locked",
+			left: "84%",
+			top: "61%",
+		},
+		{
+			number: 7,
+			label: "La vocal o",
+			state: "locked",
+			left: "67%",
+			top: "69%",
+		},
+		{
+			number: 8,
+			label: "La vocal i",
+			state: "locked",
+			left: "50%",
+			top: "62%",
+		},
+		{
+			number: 9,
+			label: "La vocal u",
+			state: "locked",
+			left: "34%",
+			top: "70%",
+		},
+		{
+			number: 10,
+			label: "Las sílabas",
+			state: "locked",
+			left: "18%",
+			top: "64%",
+		},
+	];
+
 	return (
 		<section
 			aria-labelledby="world-exploration-title"
@@ -152,198 +208,160 @@ export function WorldExploration() {
 					Silabín — World Exploration
 				</h2>
 				<p className="text-sm leading-relaxed text-ink-soft">
-					Prueba visual del mapa tipo aventura para iPad landscape. Los colores
-					identifican territorios; el amarillo sigue reservado para la unidad
-					actual y las acciones principales.
+					Segunda dirección: un único paisaje ilustrado con camino serpenteante y
+					nodos tipo casita. Esta composición se acerca al concepto de iPad aprobado
+					y evita la sensación de islas planas.
 				</p>
 			</div>
 
 			<div className="overflow-x-auto pb-2">
-				<div className="min-w-[920px]">
+				<div className="min-w-[980px]">
 					<div
 						data-world-composition
-						className="relative isolate mx-auto aspect-[4/3] w-full max-w-[1024px] overflow-hidden rounded-[2rem] border-[10px] border-[#252830] bg-[#BFE9FF] shadow-[0_24px_60px_rgba(43,42,51,0.18)]"
+						className="relative isolate mx-auto aspect-[16/10] w-full max-w-[1180px] overflow-hidden rounded-[2.25rem] border-[12px] border-[#20242D] bg-[#BDEBFF] shadow-[0_26px_70px_rgba(43,42,51,0.22)]"
 					>
-						<div className="absolute inset-0 bg-[linear-gradient(180deg,#BDEBFF_0%,#EAF8FF_48%,#D9F5D1_100%)]" />
-						<div className="absolute inset-x-0 bottom-0 h-[44%] bg-[linear-gradient(180deg,#88DBEF_0%,#52C4E5_100%)]" />
+						<img
+							src="/images/arte/bg-pradera.webp"
+							alt=""
+							aria-hidden="true"
+							className="absolute inset-0 -z-20 h-full w-full object-cover"
+						/>
+						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(180,232,255,0.18)_0%,rgba(255,255,255,0.03)_44%,rgba(116,197,109,0.08)_100%)]" />
 
-						<Asset
-							name="mountains-01"
-							className="left-[19%] top-[4%] z-[1] w-[58%] opacity-75"
+						<img
+							src={`${SHARED}/cloud-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="world-cloud-a absolute left-[5%] top-[4%] z-[1] w-[15%] opacity-80"
 						/>
-						<Asset
-							name="cloud-01"
-							className="world-cloud-a left-[4%] top-[5%] z-[3] w-[16%] opacity-90"
-						/>
-						<Asset
-							name="cloud-02"
-							className="world-cloud-b right-[5%] top-[7%] z-[3] w-[18%] opacity-90"
+						<img
+							src={`${SHARED}/cloud-02.svg`}
+							alt=""
+							aria-hidden="true"
+							className="world-cloud-b absolute right-[7%] top-[7%] z-[1] w-[17%] opacity-80"
 						/>
 
-						<div className="absolute left-[5%] top-[33%] z-[5] h-[46%] w-[28%] rotate-[-3deg] rounded-[48%_52%_45%_55%] border-[5px] border-white/35 bg-[linear-gradient(145deg,#E9DFFF,#CFC0F3)] shadow-[0_18px_0_rgba(123,91,175,0.12),0_28px_45px_rgba(43,42,51,0.12)]" />
-						<div className="absolute left-[34%] top-[24%] z-[6] h-[50%] w-[32%] rotate-[1deg] rounded-[52%_48%_50%_50%] border-[5px] border-white/35 bg-[linear-gradient(145deg,#DDF4FF,#BCE5FA)] shadow-[0_18px_0_rgba(71,135,183,0.12),0_28px_45px_rgba(43,42,51,0.12)]" />
-						<div className="absolute right-[6%] top-[35%] z-[5] h-[43%] w-[29%] rotate-[3deg] rounded-[52%_48%_46%_54%] border-[5px] border-white/35 bg-[linear-gradient(145deg,#FFE4D2,#F8C7AA)] shadow-[0_18px_0_rgba(190,115,73,0.12),0_28px_45px_rgba(43,42,51,0.12)]" />
-						<div className="absolute bottom-[3%] right-[1.5%] z-[4] h-[18%] w-[19%] rounded-[50%] border-[4px] border-white/30 bg-[linear-gradient(145deg,#EEE8DF,#D8D0C5)] opacity-90" />
+						<img
+							src={`${SHARED}/castle-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="absolute right-[6%] top-[7%] z-[3] w-[13%] opacity-90 drop-shadow-md"
+						/>
+
+						<div className="absolute left-[2.4%] top-[2.7%] z-40 flex items-center gap-2 rounded-[1.1rem] bg-white/95 px-3 py-2 shadow-md">
+							<img
+								src="/images/arte/companion-1.webp"
+								alt=""
+								aria-hidden="true"
+								className="size-9 object-contain"
+							/>
+							<div className="leading-tight">
+								<div className="text-[11px] font-extrabold text-[#173B6C]">Mateo</div>
+								<div className="text-[11px] font-bold text-celebrate">★ 12</div>
+							</div>
+						</div>
+
+						<h3 className="absolute left-1/2 top-[3%] z-40 -translate-x-1/2 text-[34px] font-extrabold tracking-tight text-[#234A91] drop-shadow-[0_2px_0_rgba(255,255,255,0.55)]">
+							Silabín
+						</h3>
+
+						<button
+							type="button"
+							aria-label="Configuración"
+							className="absolute right-[2.5%] top-[3%] z-40 flex size-11 items-center justify-center rounded-full bg-white/95 text-xl shadow-md"
+						>
+							⚙️
+						</button>
+
+						<div className="absolute left-[26%] top-[9%] z-35 flex items-center gap-2">
+							<img
+								src="/images/arte/companion-1.webp"
+								alt=""
+								aria-hidden="true"
+								className="world-mascot w-[84px] object-contain drop-shadow-lg"
+							/>
+							<div className="relative rounded-[1.4rem] bg-white px-4 py-3 text-sm font-extrabold text-[#234A91] shadow-md">
+								¡Vamos a leer juntos!
+								<span className="absolute -left-2 top-1/2 size-4 -translate-y-1/2 rotate-45 bg-white" />
+							</div>
+						</div>
 
 						<svg
 							aria-hidden="true"
-							viewBox="0 0 1024 768"
+							viewBox="0 0 1180 738"
 							className="pointer-events-none absolute inset-0 z-10 h-full w-full"
 							preserveAspectRatio="none"
 						>
 							<path
-								d="M 120 430 C 165 360, 245 360, 305 430 S 405 510, 455 410 S 555 310, 625 405 S 715 505, 780 425 S 875 385, 940 445"
+								d="M 195 294 C 285 225, 340 210, 420 255 S 545 338, 615 277 S 760 202, 866 246 S 1010 337, 1002 450 S 890 559, 790 531 S 650 424, 563 468 S 449 590, 357 567 S 225 519, 194 475"
 								fill="none"
-								stroke="rgba(255,255,255,.82)"
-								strokeWidth="30"
+								stroke="rgba(231,198,145,.98)"
+								strokeWidth="34"
 								strokeLinecap="round"
-								strokeDasharray="2 22"
+								strokeLinejoin="round"
 							/>
 							<path
-								d="M 120 430 C 165 360, 245 360, 305 430 S 405 510, 455 410 S 555 310, 625 405 S 715 505, 780 425 S 875 385, 940 445"
+								d="M 195 294 C 285 225, 340 210, 420 255 S 545 338, 615 277 S 760 202, 866 246 S 1010 337, 1002 450 S 890 559, 790 531 S 650 424, 563 468 S 449 590, 357 567 S 225 519, 194 475"
 								fill="none"
-								stroke="rgba(192,157,103,.46)"
-								strokeWidth="14"
+								stroke="rgba(255,237,196,.95)"
+								strokeWidth="22"
 								strokeLinecap="round"
-								strokeDasharray="3 18"
+								strokeLinejoin="round"
+								strokeDasharray="2 20"
+							/>
+							<path
+								d="M 447 549 C 493 510, 528 507, 570 523 S 640 550, 692 527"
+								fill="none"
+								stroke="rgba(93,198,232,.80)"
+								strokeWidth="84"
+								strokeLinecap="round"
 							/>
 						</svg>
 
-						<TerritoryLabel
-							title="Oído de explorador"
-							subtitle="Fase 0 · 4 unidades"
-							className="left-[19%] top-[27%]"
-						/>
-						<TerritoryLabel
-							title="Las vocales"
-							subtitle="Fase 1 · 5 unidades"
-							className="left-[50%] top-[18%]"
-						/>
-						<TerritoryLabel
-							title="Las sílabas"
-							subtitle="Fase 2 · 4 unidades"
-							className="left-[81%] top-[29%]"
-						/>
-						<TerritoryLabel
-							title="Próximamente"
-							subtitle="fases futuras"
-							className="left-[90%] top-[79%]"
-						/>
-
-						<Asset
-							name="tree-02"
-							className="left-[1.5%] top-[30%] z-[16] w-[14%]"
-						/>
-						<Asset
-							name="tree-01"
-							className="left-[28%] top-[20%] z-[15] w-[12%]"
-						/>
-						<Asset
-							name="tree-01"
-							className="right-[17%] top-[27%] z-[15] w-[11%]"
-						/>
-						<Asset
-							name="bush-01"
-							className="left-[23%] top-[61%] z-[16] w-[12%]"
-						/>
-						<Asset
-							name="flowers-01"
-							className="left-[4%] top-[67%] z-[18] w-[11%]"
-						/>
-						<Asset
-							name="rocks-01"
-							className="right-[5%] top-[63%] z-[17] w-[10%]"
-						/>
-						<Asset
-							name="bridge-01"
-							className="left-[29%] top-[57%] z-[22] w-[16%] rotate-[4deg]"
-						/>
-						<Asset
-							name="bridge-01"
-							className="right-[28%] top-[58%] z-[22] w-[14%] -rotate-[5deg]"
-						/>
-
-						<div className="absolute left-[7%] top-[43%] z-30">
-							<div className="relative">
-								<Asset
-									name="sign-01"
-									className="!relative !left-auto !top-auto w-[130px]"
-								/>
-								<span className="absolute left-1/2 top-[26%] w-[92px] -translate-x-1/2 text-center text-[10px] font-extrabold leading-tight text-[#6F431C]">
-									¡Empieza la aventura!
-								</span>
-							</div>
-						</div>
-
-						<LevelNode
-							number={1}
-							label="Palmas"
-							state="completed"
-							stars={3}
-							className="left-[14%] top-[55%]"
-						/>
-						<LevelNode
-							number={2}
-							label="Rimas"
-							state="completed"
-							stars={2}
-							className="left-[24%] top-[48%]"
-						/>
-						<LevelNode
-							number={3}
-							label="Sonidos"
-							state="current"
-							stars={1}
-							className="left-[36%] top-[57%]"
-						/>
-						<LevelNode
-							number={4}
-							label="¿Lo oyes?"
-							state="locked"
-							className="left-[45%] top-[46%]"
-						/>
-						<LevelNode
-							number={5}
-							label="a"
-							state="locked"
-							className="left-[55%] top-[38%]"
-						/>
-						<LevelNode
-							number={6}
-							label="e"
-							state="locked"
-							className="left-[64%] top-[50%]"
-						/>
-						<LevelNode
-							number={7}
-							label="m"
-							state="locked"
-							className="left-[75%] top-[56%]"
-						/>
-						<LevelNode
-							number={8}
-							label="l"
-							state="locked"
-							className="left-[85%] top-[49%]"
-						/>
-						<LevelNode
-							number={9}
-							label="futuro"
-							state="locked"
-							className="left-[93%] top-[68%]"
-						/>
-
-						<div className="absolute left-[45%] top-[7%] z-40 rounded-full border-2 border-white/80 bg-white/90 px-5 py-2 text-2xl font-extrabold text-[#234A91] shadow-md">
-							Silabín
-						</div>
 						<img
-							src="/images/arte/companion-1.webp"
+							src={`${SHARED}/bridge-01.svg`}
 							alt=""
 							aria-hidden="true"
-							className="world-mascot absolute left-[34%] top-[6%] z-40 w-[72px] object-contain drop-shadow-md"
+							className="absolute left-[44%] top-[66%] z-20 w-[13%] rotate-[2deg] drop-shadow-md"
 						/>
-						<div className="absolute left-[40%] top-[13%] z-40 rounded-[1.25rem] bg-white px-3 py-2 text-center text-[11px] font-bold text-[#234A91] shadow-md">
-							¡Vamos a leer juntos!
+
+						<img
+							src={`${SHARED}/flowers-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="absolute bottom-[4%] left-[5%] z-20 w-[12%]"
+						/>
+						<img
+							src={`${SHARED}/tree-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="absolute left-[4%] top-[34%] z-20 w-[11%]"
+						/>
+						<img
+							src={`${SHARED}/tree-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="absolute right-[4%] top-[38%] z-20 w-[10%]"
+						/>
+						<img
+							src={`${SHARED}/bush-01.svg`}
+							alt=""
+							aria-hidden="true"
+							className="absolute bottom-[5%] right-[7%] z-20 w-[12%]"
+						/>
+
+						{levels.map((level) => (
+							<LevelNode key={level.number} {...level} />
+						))}
+
+						<div className="absolute bottom-[2.5%] right-[2.5%] z-40 flex size-14 items-center justify-center rounded-[1.1rem] bg-white/95 text-2xl shadow-md">
+							🗺️
+						</div>
+
+						<div className="absolute bottom-[5%] left-[4%] z-40 rounded-[0.8rem] bg-[#966035]/95 px-4 py-3 text-sm font-extrabold leading-tight text-white shadow-md">
+							Palabras
+							<br />
+							con palmas
 						</div>
 					</div>
 				</div>
@@ -353,61 +371,42 @@ export function WorldExploration() {
 				<StateSample
 					state="completed"
 					title="Completado"
-					detail="Claro y positivo, sin competir con el nivel actual."
+					detail="Casita clara + estrellas. No compite con el actual."
 				/>
 				<StateSample
 					state="current"
 					title="Actual"
-					detail="Amarillo Silabín + glow suave."
+					detail="Tarjeta grande, amarillo Silabín y glow."
 				/>
 				<StateSample
 					state="locked"
 					title="Bloqueado"
-					detail="Neutral y desaturado; nunca rojo."
+					detail="Casita desaturada, candado y menor contraste."
 				/>
-			</div>
-
-			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-				<div className="rounded-card bg-[#D8CCFF] p-4">
-					<div className="font-bold">Oído de explorador</div>
-					<div className="text-xs text-ink-soft">#D8CCFF · lila suave</div>
-				</div>
-				<div className="rounded-card bg-[#CBEAFF] p-4">
-					<div className="font-bold">Las vocales</div>
-					<div className="text-xs text-ink-soft">#CBEAFF · azul cielo</div>
-				</div>
-				<div className="rounded-card bg-[#FFD8C2] p-4">
-					<div className="font-bold">Las sílabas</div>
-					<div className="text-xs text-ink-soft">#FFD8C2 · melocotón</div>
-				</div>
-				<div className="rounded-card bg-[#E9E2D7] p-4">
-					<div className="font-bold">Futuro</div>
-					<div className="text-xs text-ink-soft">#E9E2D7 · beige neutral</div>
-				</div>
 			</div>
 
 			<style>{`
 				@media (prefers-reduced-motion: no-preference) {
-					.world-cloud-a { animation: silabin-cloud-a 14s ease-in-out infinite alternate; }
-					.world-cloud-b { animation: silabin-cloud-b 18s ease-in-out infinite alternate; }
-					.world-mascot { animation: silabin-mascot 3.4s ease-in-out infinite; }
+					.world-cloud-a { animation: silabin-cloud-a 15s ease-in-out infinite alternate; }
+					.world-cloud-b { animation: silabin-cloud-b 19s ease-in-out infinite alternate; }
+					.world-mascot { animation: silabin-mascot 3.2s ease-in-out infinite; }
 					[data-world-node="current"] { animation: silabin-current 2.8s ease-in-out infinite; }
 				}
 				@keyframes silabin-cloud-a {
 					from { transform: translateX(0); }
-					to { transform: translateX(22px); }
+					to { transform: translateX(24px); }
 				}
 				@keyframes silabin-cloud-b {
 					from { transform: translateX(0); }
 					to { transform: translateX(-28px); }
 				}
-				@keyframes silabin-current {
-					0%, 100% { transform: translate(-50%, -50%) translateY(0); }
-					50% { transform: translate(-50%, -50%) translateY(-4px); }
-				}
 				@keyframes silabin-mascot {
 					0%, 100% { transform: translateY(0) rotate(-2deg); }
-					50% { transform: translateY(-6px) rotate(2deg); }
+					50% { transform: translateY(-7px) rotate(2deg); }
+				}
+				@keyframes silabin-current {
+					0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+					50% { transform: translate(-50%, -50%) translateY(-5px); }
 				}
 			`}</style>
 		</section>
