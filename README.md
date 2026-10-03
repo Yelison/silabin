@@ -350,6 +350,11 @@ final de la rama y el PR. Resultado: **la Fase 0 entera es jugable** (`phase0:cl
   en `public/icons/`, generados con `scripts/optimizar-ilustraciones.py` a partir de las
   ilustraciones originales; `Picture` e `Icon` usan `<img>` y, si la imagen no carga, `Picture`
   cae al emoji de respaldo.
+- **Correcciones tras la pasada sobre el preview (T7-T8, plan `2026-10-02-...-correcciones`):**
+  un solo reproductor de audio con el acento leído en vivo (I9: la voz ya no enmudece al cambiar el
+  acento en el panel) y la variante `apaisado-bajo` (landscape y ≤ 500 px de alto) para que
+  `trace`, `build` y el fin de sesión no hagan scroll en teléfonos en horizontal, con
+  `e2e/apaisado.spec.ts` como protección (C3/H2).
 - **Cierre (Tarea 6):** una prueba de integración con vistas, motor y store reales juega la
   Fase 0 de punta a punta (incluido un fallo a propósito en cada rung hasta el modelo), y la
   ruta `/dev/plantillas` (solo en desarrollo; 404 en producción) muestra `listen-tap` y `build`.
@@ -505,8 +510,8 @@ de este plan lo espera, y todo lo provisional pasa por `src/features/rewards/vis
 Plan 7 = **identidad visual y lista de verificación en iPad**, en la rama
 `feat/plan-7-identidad-visual` (6 tareas; ledger en
 `docs/superpowers/2026-09-29-plan-7-registro.md`, con los rulings V1-V16 y las decisiones
-D32-D36 [en la tabla](#decisiones-tomadas)). **Sin fusionar**: faltan la revisión final de la
-rama, el despliegue y la prueba del autor, y el PR (ver «Siguientes pasos»).
+D32-D36 [en la tabla](#decisiones-tomadas)). **En PR**: revisión final hecha, preview desplegado y
+re-medido; falta la prueba del autor en dispositivo real (ver «Siguientes pasos»).
 
 - **Arte (D32, D36):** el autor generó 27 piezas; están integradas **21** (25 ficheros: 16 WebP y
   9 PNG, unos 746 KB) en `public/images/arte/` y `public/icons/`: los compañeros (**loro**,
