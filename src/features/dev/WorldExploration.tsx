@@ -65,7 +65,7 @@ function LevelNode({
 			? `${HQ}/level-house-completed.webp`
 			: `${HQ}/level-house-locked.webp`;
 
-	const nodeSize = current ? 150 : 94;
+	const nodeSize = current ? 140 : 96;
 
 	return (
 		<div
@@ -77,7 +77,7 @@ function LevelNode({
 		>
 			<div
 				className="relative"
-				style={{ width: nodeSize, height: current ? 176 : 108 }}
+				style={{ width: nodeSize, height: current ? 166 : 110 }}
 			>
 				{current && (
 					<div
@@ -105,7 +105,7 @@ function LevelNode({
 
 				{current && (
 					<>
-						<div className="absolute left-1/2 top-[77%] w-[142px] -translate-x-1/2 rounded-[1rem] border border-[#F5D98B]/45 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_5px_12px_rgba(90,67,29,0.12)]">
+						<div className="absolute left-1/2 top-[77%] w-[136px] -translate-x-1/2 rounded-[1rem] border border-[#F5D98B]/45 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_5px_12px_rgba(90,67,29,0.12)]">
 							<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
 								{label}
 							</span>
@@ -178,7 +178,7 @@ export function WorldExploration() {
 			state: "current",
 			stars: 2,
 			left: "17%",
-			top: "48%",
+			top: "49%",
 		},
 		{
 			number: 2,
@@ -220,28 +220,28 @@ export function WorldExploration() {
 			label: "La vocal o",
 			state: "locked",
 			left: "82%",
-			top: "69%",
+			top: "62%",
 		},
 		{
 			number: 8,
 			label: "La vocal i",
 			state: "locked",
-			left: "68%",
-			top: "75%",
+			left: "69%",
+			top: "63%",
 		},
 		{
 			number: 9,
 			label: "La vocal u",
 			state: "locked",
-			left: "52%",
-			top: "72%",
+			left: "55%",
+			top: "62%",
 		},
 		{
 			number: 10,
 			label: "La m y sus sílabas",
 			state: "locked",
-			left: "36%",
-			top: "73%",
+			left: "38%",
+			top: "64%",
 		},
 	];
 
@@ -271,9 +271,9 @@ export function WorldExploration() {
 							src={`${HQ}/bg-world-01.webp`}
 							fallback="/images/arte/bg-pradera.webp"
 							className="absolute inset-0 -z-20 h-full w-full object-cover"
-							style={{ filter: "saturate(.76) brightness(1.06) contrast(.92)" }}
+							style={{ filter: "saturate(.70) brightness(1.07) contrast(.90)" }}
 						/>
-						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,251,241,0.12)_0%,rgba(255,255,255,0.10)_44%,rgba(255,249,235,0.08)_100%)]" />
+						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,251,241,0.16)_0%,rgba(255,255,255,0.12)_44%,rgba(255,249,235,0.10)_100%)]" />
 
 						<HqImage
 							src={`${HQ}/cloud-01.webp`}
@@ -289,9 +289,9 @@ export function WorldExploration() {
 						<div className="absolute left-[2.4%] top-[2.5%] z-40 flex items-center gap-2 rounded-[1rem] border border-white/80 bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
 							<div
 								aria-hidden="true"
-								className="flex size-9 items-center justify-center rounded-full bg-[#E7F3FF] text-[23px] shadow-inner"
+								className="flex size-9 items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(145deg,#CBEAFF,#FFF2C8)] text-[15px] font-extrabold text-[#234A91] shadow-inner"
 							>
-								👦🏽
+								M
 							</div>
 							<div className="leading-tight">
 								<div className="text-[11px] font-extrabold text-[#173B6C]">Mateo</div>
@@ -299,7 +299,7 @@ export function WorldExploration() {
 							</div>
 						</div>
 
-						<h3 className="absolute left-1/2 top-[2.4%] z-40 -translate-x-1/2 text-[36px] font-extrabold tracking-[-0.035em] text-[#234A91] drop-shadow-[0_2px_0_rgba(255,255,255,0.75)]">
+						<h3 className="absolute left-1/2 top-[2.4%] z-40 -translate-x-1/2 text-[34px] font-extrabold tracking-[-0.035em] text-[#234A91] drop-shadow-[0_2px_0_rgba(255,255,255,0.75)]">
 							Silabín
 						</h3>
 
@@ -314,12 +314,12 @@ export function WorldExploration() {
 							</svg>
 						</button>
 
-						<div className="absolute left-[24%] top-[9%] z-[35] flex items-center gap-2">
+						<div className="absolute left-[25%] top-[9%] z-[35] flex items-center gap-2">
 							<img
 								src="/images/arte/companion-1.webp"
 								alt=""
 								aria-hidden="true"
-								className="world-mascot w-[82px] object-contain drop-shadow-[0_9px_9px_rgba(23,59,108,0.18)]"
+								className="world-mascot w-[78px] object-contain drop-shadow-[0_9px_9px_rgba(23,59,108,0.18)]"
 							/>
 							<div className="relative rounded-[1.25rem] border border-white/80 bg-white/96 px-3.5 py-2 text-[12px] font-extrabold text-[#234A91] shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
 								¡Vamos a
