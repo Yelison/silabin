@@ -580,13 +580,14 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 7 ejecutado en su rama (2026-09-29).** Queda, en este orden:
+**Plan 7 ejecutado en su rama (2026-09-29); revisión final hecha (`Final review clean`) y preview
+desplegado, con la pasada automatizada hecha el 2026-10-02.** Queda, en este orden:
 
-1. **Revisión final de la rama** con `model: "opus"` (`/model sonnet` para el resto).
-2. **El autor despliega en Vercel** (`docs/despliegue-vercel.md`; D29) y pasa
-   `docs/checklist-ipad.md`, que incluye la prueba del Plan 6 (D35). Nadie despliega por él. Los
-   fallos entran al ledger del Plan 7 antes del PR; cuando todo esté OK o anotado, se cierra la
-   deuda 1.
+1. **Decidir los dos fallos abiertos antes del PR** (el autor): I9, la voz queda muda tras cambiar
+   el acento en el panel, y C3/H2, `trace`, `build` y el fin de sesión desbordan en apaisado
+   bajo. Detalle en el ledger del Plan 7, «Pasada de verificación sobre el preview».
+2. **Cerrar la deuda 1 con dispositivo real** en `docs/checklist-ipad.md`: lo que solo vale en
+   hardware (I1-I3, I6, H1, P1-P3, P8, P9, I12-I13, I15 con niño). Nadie lo prueba por el autor.
 3. **Abrir el PR** de `feat/plan-7-identidad-visual` contra `main`.
 4. **Después:** rehacer la boca con un estilo que apruebe el autor (deuda 5) y, si procede, el
    refactor de diseño o los objetos de los compañeros.

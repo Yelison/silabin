@@ -394,41 +394,48 @@ dónde viene cada punto para que, si falla, se sepa qué documento abrir.
 
 | ID | Punto | Origen | Resultado | Nota |
 |---|---|---|---|---|
-| I1 | Permiso de micrófono (iPad) | spec §10; Plan 5 (1, 4); deuda 1 | | |
-| I2 | Audio tras el primer toque (iPad) | spec §10 | | |
-| I3 | `say-it` con micrófono real en Safari | deuda 1 (adaptadores); Plan 5 (2, 3, 7) | | |
-| I4 | PIN: alta, error y olvido | Plan 6, punto 1 | | |
-| I5 | Importar (real, rota y `<input type="file">`) | Plan 6, punto 2 y añadido | | |
-| I6 | Borrar y listo en `trace` | Plan 6, punto 3 | | |
-| I7 | Minúsculas en `trace` | Plan 6, punto 4 | | |
+| I1 | Permiso de micrófono (iPad) | spec §10; Plan 5 (1, 4); deuda 1 | | solo dispositivo real |
+| I2 | Audio tras el primer toque (iPad) | spec §10 | | solo dispositivo real |
+| I3 | `say-it` con micrófono real en Safari | deuda 1 (adaptadores); Plan 5 (2, 3, 7) | | solo dispositivo real |
+| I4 | PIN: alta, error y olvido | Plan 6, punto 1 | OK (emulado) | WebKit iPad Pro 11, ratón. Alta de PIN (1234), PIN equivocado → «PIN incorrecto»; ¿Olvidaste? → respuesta mala «Otra vez», buena → PIN nuevo (5678) y el progreso queda intacto (el documento sin el hash es idéntico; el hash cambió); entra con el nuevo |
+| I5 | Importar (real, rota y `<input type="file">`) | Plan 6, punto 2 y añadido | OK parcial (emulado) | WebKit iPad Pro 11. Exportación **del mismo navegador**, editada (no «de otro dispositivo») e importada: resumen «Sin nombre — 3 sesiones, 3 estrellas, 1 unidades completas, última sesión el 30/9/2026», sustituye y conserva el PIN. 5 rotas (versión 99, sin `items`, sin `rewards`, no es JSON, fecha de premio no texto): mensaje de rechazo correcto y documento **sin cambios** en las 5. Comodidad del `<input type="file">` con el dedo: sin probar (deuda 4) |
+| I6 | Borrar y listo en `trace` | Plan 6, punto 3 | | 👶 dispositivo real |
+| I7 | Minúsculas en `trace` | Plan 6, punto 4 |  | nota: J2 pasa en Chromium iPhone 13 (minúsculas, sesión completa con trazo); no se marca OK |
 | I8 | Rastro sobre `trace` y `build` | Plan 6, punto 5; deuda 1 (`build`) | | |
-| I9 | Acento en vivo | Plan 6, punto 9 | | |
-| I10 | Compañero en mapa y fin de sesión, con y sin gorra | arte (Plan 7) | | |
-| I11 | Los cuatro fondos, legibles | arte (Plan 7); V13 | | |
-| I12 | Serie de pegatinas y trofeo | arte (Plan 7); V6, V8 | | |
-| I13 | Partículas al trazar y al arrastrar | arte (Plan 7) | | |
-| I14 | Cursor con trackpad (si hay) | arte (Plan 7); V11 | | |
-| I15 | Boca: fluida y cada forma distinguible a 128 px, con niño | arte (Plan 7); D21; deuda 1; bocas aplazadas | | |
-| H1 | Micrófono y audio tras el primer toque (iPhone) | spec §10; deuda 1 | | |
-| H2 | Franja de 3 botones de `trace` en apaisado | Plan 6, añadido; deuda 1 | | |
-| H3 | Pantalla estrecha en vertical | deuda 1 (iPhone) | | |
-| H4 | Arte legible en pantalla pequeña | arte (Plan 7) | | |
-| H5 | Rastro y arrastre de `build` con el dedo | deuda 1 | | |
-| P1 | Instalación en pantalla de inicio | spec §10; Plan 6, punto 6 | | |
-| P2 | Icono sin recortes con máscara | arte (Plan 7); Ruling del icono (81 %) | | |
-| P3 | Color de la barra (`theme_color`) | arte (Plan 7); CO3 | | |
-| P4 | Comportamiento sin red (y arte precacheado) | spec §10; Plan 6, punto 7 | | |
+| I9 | Acento en vivo | Plan 6, punto 9 | **Falla** | ⚠️ ver defecto A del registro del Plan 7. WebKit iPad Pro 11 con síntesis real y con síntesis simulada |
+| I10 | Compañero en mapa y fin de sesión, con y sin gorra | arte (Plan 7) | OK (autor: con gorra) + (emulado: sin gorra) | Autor, iPad real: con gorra OK, importando con `ten-sessions`. Emulado: documento **sembrado en IndexedDB** (no importado) sin `ten-sessions`: mapa en WebKit iPad Pro 11 `data-wears-cap=false` y `companion-1.webp`/`companion-2.webp` a 112×112; fin de sesión en Chromium con viewport iPad Pro 11 a 160×160, `companion-2.webp` sin gorra y `companion-2-gorra.webp` con gorra |
+| I11 | Los cuatro fondos, legibles | arte (Plan 7); V13 | OK (autor) | Emulado además: los 4 fondos cargan (`naturalWidth` 960) en WebKit iPad Pro 11; capturas de Espacio y Bosque (mapa y «Mis premios», vertical) legibles; apaisado capturado pero no leído |
+| I12 | Serie de pegatinas y trofeo | arte (Plan 7); V6, V8 |  | el autor no lo reportó |
+| I13 | Partículas al trazar y al arrastrar | arte (Plan 7) |  | el autor no lo reportó |
+| I14 | Cursor con trackpad (si hay) | arte (Plan 7); V11 | OK (autor) |  |
+| I15 | Boca: fluida y cada forma distinguible a 128 px, con niño | arte (Plan 7); D21; deuda 1; bocas aplazadas | OK con nota (autor) | la boca esquemática no se anima (deuda 5, `minor (deferred)`); falta la prueba con niño 👶 |
+| H1 | Micrófono y audio tras el primer toque (iPhone) | spec §10; deuda 1 | | dispositivo real |
+| H2 | Franja de 3 botones de `trace` en apaisado | Plan 6, añadido; deuda 1 | **Falla** | ⚠️ ver defecto B del registro del Plan 7. Chromium 640×360, 667×375 y 852×393 |
+| H3 | Pantalla estrecha en vertical | deuda 1 (iPhone) | OK (emulado) | Chromium 360×640 vertical (no es Safari real): sin scroll dentro de `initial-sound`, `trace`, `say-it`, `build`, `listen-tap` ni en el fin; ningún botón fuera de la pantalla; en el mapa el compañero y el 🎁 no se pisan (captura). Falta iPhone real |
+| H4 | Arte legible en pantalla pequeña | arte (Plan 7) |  | el mapa a 360×640 se lee en captura, pero falta iPhone real |
+| H5 | Rastro y arrastre de `build` con el dedo | deuda 1 | | falta dispositivo real |
+| P1 | Instalación en pantalla de inicio | spec §10; Plan 6, punto 6 | | dispositivo real |
+| P2 | Icono sin recortes con máscara | arte (Plan 7); Ruling del icono (81 %) | | dispositivo real |
+| P3 | Color de la barra (`theme_color`) | arte (Plan 7); CO3 | | dispositivo real |
+| P4 | Comportamiento sin red (y arte precacheado) | spec §10; Plan 6, punto 7 |  | nota: J4 (sesión completa sin red) pasa en Chromium iPhone 13; no se marca OK |
 | P5 | Volver la red no recarga la sesión | Plan 6, punto 10 | | |
-| P6 | Actualización tras un segundo despliegue | Plan 6, punto 8 | | |
-| P7 | Service worker esperando y ▶ dos veces | Plan 6, punto 11 | | |
-| P8 | Voz en la PWA cae a botones del adulto | spec §11.2; deuda 1 | | |
-| P9 | Audio tras el primer toque, ya instalada | spec §10 | | |
-| C1 | Cursor del rastro con ratón (Chrome y Firefox) | arte (Plan 7); V11 | | |
-| C2 | Arte y fondos en Chrome y Firefox | arte (Plan 7); deuda 1 (Firefox) | | |
-| C3 | 360 × 640 y 640 × 360, franja de `trace` | deuda 1; Plan 6, añadido | | |
-| C4 | Arrastre de `build` en Firefox | deuda 1 | | |
-| C5 | Voz y trazo en escritorio | deuda 1 (adaptadores) | | |
+| P6 | Actualización tras un segundo despliegue | Plan 6, punto 8 |  | pide un segundo despliegue |
+| P7 | Service worker esperando y ▶ dos veces | Plan 6, punto 11 |  | pide un segundo despliegue |
+| P8 | Voz en la PWA cae a botones del adulto | spec §11.2; deuda 1 | | dispositivo real |
+| P9 | Audio tras el primer toque, ya instalada | spec §10 | | dispositivo real |
+| C1 | Cursor del rastro con ratón (Chrome y Firefox) | arte (Plan 7); V11 | OK parcial (emulado) | Chromium y Firefox de escritorio: `html[data-trail-cursor]` y `cursor: url(…cursor-estrellita.png) 16 16, auto` con `(pointer: fine)` verdadero; cambia en caliente a burbujas, «Sin rastro» vuelve a `auto`, persiste tras recargar; el PNG responde 200 y mide 32×32. El cursor no se ve en las capturas y el modo táctil no se probó |
+| C2 | Arte y fondos en Chrome y Firefox | arte (Plan 7); deuda 1 (Firefox) | OK parcial (emulado) | Chromium y Firefox: con los 4 fondos, 17/17 imágenes cargadas, 0 respuestas ≥ 400, consola sin errores ni avisos. Partículas con ratón no verificadas a la vista |
+| C3 | 360 × 640 y 640 × 360, franja de `trace` | deuda 1; Plan 6, añadido | **Falla** (640×360); OK (360×640) | ⚠️ ver defecto B del registro del Plan 7. 360×640 (Chromium): `trace` con la franja en fila (Oír 80×80, Borrar y Listo 72×72, y=104-184), lienzo 317×416 sin scroll |
+| C4 | Arrastre de `build` en Firefox | deuda 1 | OK (emulado, Firefox) | Firefox de Playwright, ratón, sin rastro y con estrellitas: las piezas siguen al puntero y encajan (casillas `[1,0]` y luego `[1,1]`). En Chromium la segunda soltada dio `[0,0]`: ambas casillas se llenaron y la respuesta errónea las vació (es el comportamiento esperado). Táctil sin probar |
+| C5 | Voz y trazo en escritorio | deuda 1 (adaptadores) | OK parcial (emulado) | Trazo con ratón: sesión completa en Chromium y Firefox con el mismo resultado. Micrófono denegado: «Lo dijo bien»/«Otra vez» en ≤ 1 s (Firefox con `permissions.default.microphone=2`, Chromium sin permiso). Firefox con micrófono falso (`media.navigator.streams.fake`): botones de adulto en ≤ 3 s. **Sin probar:** voz en español y acento (`speechSynthesis.getVoices()` sale vacío en headless en ambos), «se pide una vez por carga» |
 | C6 | Instalar la PWA desde Chrome | Plan 6, punto 6; arte | | |
+
+> **Pasada automatizada sobre el preview del commit `10d8b40` (2026-10-02).** Rellenada con un
+> arnés de Playwright y con lo que el autor probó a mano en el iPad. Cada nota dice el método:
+> «(emulado)» es WebKit, Chromium o Firefox de Playwright con ratón y **no cierra la deuda 1**
+> (hardware real); «(autor)» es el iPad real. Los dos fallos (I9 y C3/H2) y el método completo
+> están en `docs/superpowers/2026-09-29-plan-7-registro.md`, «Pasada de verificación sobre el
+> preview». Los puntos en blanco siguen sin probar.
 
 ### Al terminar
 

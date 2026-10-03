@@ -286,3 +286,75 @@ desde `optimizar-arte.py`.
 - Final review: minor (deferred): BP1 (`Mouth.test.tsx`) compara con `BOCAS_PUBLICADAS ? 6 : 0` y no fija el valor actual; lo cubren FI2 y BP2-BP4
 - Estado (2026-09-29): revisión final cerrada (`Final review clean` salvo lo parked). Falta: el autor despliega en Vercel y pasa `docs/checklist-ipad.md`; después push y PR (los pide el autor).
 - Final review: parked cerrado — commit 9a5cf0d corrige `docs/diseno-visual.md` (viñeta de las bocas: `BOCAS_PUBLICADAS` y FI2 estricto en vez del `onError`); implementador sonnet, `pnpm lint` y `typecheck` en verde; diff de 10 líneas leído por el coordinador contra `Mouth.tsx` y `art-files.test.ts` (sin subagente revisor, por ser solo docs de una viñeta). Ya no queda nada parked.
+
+## Pasada de verificación sobre el preview (2026-10-02)
+
+**Método y alcance.** Arnés fuera del repo (`~/qa-silabin`, Playwright con los navegadores del
+repo) contra el preview del commit `10d8b40`, más lo que el autor probó a mano en el iPad real.
+Cada resultado lleva su método; **nada emulado cierra la deuda 1** (hardware real). Métodos:
+«emulado WebKit iPad Pro 11» (ratón sobre WebKit; sin táctil real); «Chromium con viewport iPad
+Pro 11» (el helper de trazo del repo solo funciona en Chromium); «Chromium iPhone 13», «Chromium
+360×640», «Chromium 640×360», 667×375 y 852×393; «Firefox de Playwright, 1280×800, ratón» y
+«Chromium de escritorio 1280×800». Los documentos se sembraron en IndexedDB con las recompensas
+de la receta de «Antes de empezar» de la checklist, salvo el I5 (exportado del propio navegador,
+editado a mano e importado por la UI).
+
+**Sesión anterior (mismo preview).** Smoke en WebKit iPad Pro 11 sin errores. e2e J1, J2 y J4
+pasan en Chromium iPhone 13 contra el preview. J2 (minúsculas con trazo) va como nota en I7 y J4
+(sesión completa sin red) como nota en P4, **sin marcarlos OK**. En WebKit el helper de trazo no
+funciona (limitación del helper, no de la app) y el `reload` offline da error interno de
+Playwright.
+
+**Hecho a mano por el autor (iPad real).** I10 con gorra OK (sin gorra no lo probó a mano); I11
+OK; I14 OK; I15 OK con nota: la boca esquemática no se anima (deuda 5, `minor (deferred)`). I12 e
+I13: no reportados.
+
+| ID | Resultado | Método |
+|---|---|---|
+| I4 | OK | emulado WebKit iPad Pro 11 |
+| I5 | OK parcial | emulado WebKit iPad Pro 11; exportación del mismo navegador, no «de otro dispositivo»; el `<input type="file">` con el dedo sin probar (deuda 4) |
+| I9 | **Falla** (defecto A) | WebKit iPad Pro 11, síntesis real y simulada |
+| I10 | OK | autor (con gorra); emulado (sin gorra, documento sembrado) |
+| I11, I14 | OK | autor (I11 además emulado: los 4 fondos cargan) |
+| I15 | OK con nota | autor; falta la prueba con niño |
+| H2 | **Falla** (defecto B) | Chromium 640×360, 667×375 y 852×393 |
+| H3 | OK | emulado Chromium 360×640; falta iPhone real |
+| C1, C2 | OK parcial | emulado Chromium y Firefox de escritorio |
+| C3 | **Falla** (640×360); OK (360×640) | Chromium (defecto B) |
+| C4 | OK | emulado Firefox, ratón; táctil sin probar |
+| C5 | OK parcial | emulado Chromium y Firefox; voz en español y acento sin probar (`getVoices()` vacío en headless) |
+| I1-I3, I6-I8, I12, I13, H1, H4, H5, P1-P9, C6 | en blanco | dispositivo real, o sin probar (notas en la tabla de la checklist) |
+
+**Descartado (no es defecto):** «Invalid Date» en el resumen del I5 (fechas inventadas mal en la
+primera corrida; con fechas válidas sale «30/9/2026») y «Oír otra vez» fuera de pantalla en
+360×640 (transitorio de la entrada; la medida estable es y=104).
+
+- ⚠️ ABIERTO, defecto A (I9): **tras cambiar el acento en el panel, la voz queda muda hasta
+  recargar y pulsar «Empezar».** Evidencia, WebKit iPad Pro 11 con síntesis simulada: 9
+  elocuciones (es-US) antes; 0 tras elegir Dominicano; 0 tras Mexicano, sin recargar la página
+  (marca intacta). Tras recargar y pulsar «Empezar» con Mexicano: 9 elocuciones en es-MX. Con la
+  síntesis real de WebKit: 3, 1 y 0 elocuciones. Causa leída en el código:
+  `src/features/App.tsx:136-143` crea un reproductor nuevo con `factory(accent)` al cambiar el
+  acento; nace con `unlocked = false` (`src/audio/speech-player.ts:155`) y `play` sale sin sonar
+  (`:341`); `unlock()` solo se llama desde `src/features/start/StartScreen.tsx:53`. Los tests no
+  lo ven: `src/features/App.test.tsx:252` (N8) usa una fábrica de reproductores falsos y solo
+  afirma que se llama a la fábrica y a `stop()` del anterior. Toca el audio (sonido como
+  principio, spec §2). El arreglo es una tarea con implementador, revisión y mutaciones,
+  `Effort: high`, y debe traer un test con reproductor real (o su `unlocked`) que falle sin el
+  arreglo.
+- ⚠️ ABIERTO, defecto B (C3/H2): **en apaisado y pantallas bajas, `trace` y `build` desbordan;
+  el fin de sesión también.** `trace` (Chromium, sin barra del navegador, así que es lo
+  optimista): a 640×360, «Oír otra vez» (80×80), «Borrar» y «Listo» (72×72) quedan en columna a
+  la izquierda (y=121-201, 217-289, 305-377); «Listo» acaba en y=377 (17 px fuera), el lienzo
+  acaba en y=402, scroll de 58 px y en la captura el pie de la A queda cortado. A 667×375,
+  «Listo» acaba en y=383 (> 375), scroll de 56 px. A 852×393 los botones caben (y=391) pero el
+  lienzo acaba en y=430, scroll de 53 px. `build` a 640×360: scroll de 49 px y las 6 piezas por
+  debajo del borde (la bandeja). Fin de sesión a 640×360: scroll de 48 px; en la captura no se
+  ve «Continuar». A 360×640 vertical está bien en todo. La franja de `trace` está en
+  `src/features/session/trace/Evaluation.tsx` (~l. 244-272) y la bandeja de `build` en
+  `src/features/session/build/Evaluation.tsx` (~l. 262-300). Contradice la hipótesis «cabe» de
+  `docs/checklist-ipad.md` (C3: «hasta ahora solo se razonó por aritmética»): la aritmética era
+  optimista. Toca el trazo, el ejercicio central de la pedagogía.
+- Estado (2026-10-02): la deuda 1 **sigue abierta** (hardware real pendiente). Decisión del autor
+  pendiente sobre A y B antes del PR: arreglarlos antes o aplazarlos.
+- La tabla de resultados de `docs/checklist-ipad.md` se rellenó con esta pasada.
