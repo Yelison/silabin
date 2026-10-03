@@ -282,9 +282,13 @@ export function Evaluation(props: EvaluationProps) {
 			 * igual con uno o con tres botones: el ancho de la franja no consume alto) + el
 			 * hueco no empujen la página a hacer scroll en 360×640, sin que la letra pierda nada
 			 * (sigue limitada por el ancho). En horizontal (`landscape:`) la franja se pone al
-			 * lado, ahora de tres botones en columna (3×72 + 2×16 = 248 px, dentro de los ~328 px
-			 * que quedan libres de los 360 px de alto en apaisado 640×360) para no comerle alto
+			 * lado, ahora de tres botones en columna (3×72 + 2×16 = 248 px), para no comerle alto
 			 * al lienzo, que ahí sí es quien decide el 60 % del lado corto pedido por el spec.
+			 * En apaisado bajo (`apaisado-bajo:`) el alto del lienzo es `100svh - 5rem`: esos 80 px
+			 * son lo que `SessionScreen` gasta alrededor, la cabecera (botones de 48 px + 2×8 px de
+			 * relleno `p-2` = 64 px) y el relleno vertical `p-2` del contenedor (2×8 = 16 px). Quedan
+			 * 280 px en 640×360, y la franja de 248 px cabe en ellos con 32 px de sobra, así que ni
+			 * la franja ni el lienzo (280 px) empujan la página a hacer scroll.
 			 */}
 			<div className="flex h-[65vh] w-[88vw] items-center justify-center landscape:h-[85vh] landscape:w-[78vw] apaisado-bajo:h-[calc(100svh-5rem)]">
 				<TraceCanvas

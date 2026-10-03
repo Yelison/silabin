@@ -94,13 +94,6 @@ for (const vp of VIEWPORTS) {
 					Math.min(lienzo.w, lienzo.h),
 					`lienzo ${momento}`,
 				).toBeGreaterThanOrEqual(0.6 * Math.min(vw, vh) - 0.5);
-				const [listo] = await cajas(page, '[aria-label="Listo"]');
-				console.log(
-					"MEDIDA",
-					etiqueta,
-					momento,
-					`scroll=${scroll} lienzo=${Math.round(lienzo.h)}x${Math.round(lienzo.w)} listo.b=${listo ? Math.round(listo.b) : "-"}`,
-				);
 				if (vp.width === 1194)
 					expect(lienzo.h, "lienzo iPad").toBeGreaterThanOrEqual(
 						LIENZO_IPAD_ANTES - 0.5,
