@@ -65,72 +65,61 @@ function LevelNode({
 			? `${HQ}/level-house-completed.webp`
 			: `${HQ}/level-house-locked.webp`;
 
-	const nodeSize = current ? 172 : 118;
+	const nodeSize = current ? 150 : 94;
 
 	return (
 		<div
 			data-world-node={state}
 			className="absolute z-30 -translate-x-1/2 -translate-y-1/2"
 			style={{ left, top }}
+			title={label}
+			aria-label={`Nivel ${number}: ${label}`}
 		>
 			<div
 				className="relative"
-				style={{ width: nodeSize, height: current ? 190 : 136 }}
+				style={{ width: nodeSize, height: current ? 176 : 108 }}
 			>
 				{current && (
 					<div
 						aria-hidden="true"
-						className="absolute left-1/2 top-[42%] -z-10 h-[72%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFE178]/35 blur-xl"
+						className="absolute left-1/2 top-[40%] -z-10 h-[74%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FFE178]/32 blur-xl"
 					/>
 				)}
 
 				<HqImage
 					src={houseSrc}
 					fallback={`${SHARED}/house-01.svg`}
-					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_10px_12px_rgba(52,61,72,0.18)]"
-					style={{
-						width: nodeSize,
-						height: nodeSize,
-						filter: locked ? "saturate(.72) brightness(1.03)" : undefined,
-					}}
+					className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 object-contain drop-shadow-[0_8px_10px_rgba(52,61,72,0.16)]"
+					style={{ width: nodeSize, height: nodeSize }}
 				/>
 
 				<span
 					className={
 						current
 							? "absolute left-1/2 top-[67%] flex size-7 -translate-x-1/2 items-center justify-center rounded-full bg-action text-[12px] font-extrabold text-action-ink shadow-[0_3px_8px_rgba(124,86,0,0.20)]"
-							: "absolute left-1/2 top-[66%] flex size-6 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[10px] font-extrabold text-[#234A91] shadow-[0_3px_7px_rgba(45,57,78,0.18)]"
+							: "absolute left-1/2 top-[66%] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-white/96 text-[9px] font-extrabold text-[#234A91] shadow-[0_2px_5px_rgba(45,57,78,0.16)]"
 					}
 				>
 					{number}
 				</span>
 
-				<div
-					className={
-						current
-							? "absolute left-1/2 top-[77%] w-[148px] -translate-x-1/2 rounded-[0.9rem] bg-[#FFF8E9]/96 px-2.5 py-1.5 text-center shadow-[0_4px_10px_rgba(90,67,29,0.12)]"
-							: "absolute left-1/2 top-[78%] w-[104px] -translate-x-1/2 rounded-[0.75rem] bg-[#FFF9EF]/94 px-1.5 py-1 text-center shadow-[0_3px_8px_rgba(63,67,75,0.10)]"
-					}
-				>
-					<span
-						className={
-							locked
-								? "block text-[9px] font-bold leading-[1.1] text-[#85818B]"
-								: `block font-extrabold leading-[1.1] text-[#173B6C] ${current ? "text-[11px]" : "text-[9px]"}`
-						}
-					>
-						{label}
-					</span>
-				</div>
+				{current && (
+					<>
+						<div className="absolute left-1/2 top-[77%] w-[142px] -translate-x-1/2 rounded-[1rem] border border-[#F5D98B]/45 bg-[#FFF8E9]/97 px-3 py-2 text-center shadow-[0_5px_12px_rgba(90,67,29,0.12)]">
+							<span className="block text-[11px] font-extrabold leading-[1.12] text-[#173B6C]">
+								{label}
+							</span>
+							<div className="mt-1 whitespace-nowrap text-[15px] font-extrabold tracking-[0.07em] text-celebrate drop-shadow-[0_1px_0_white]">
+								{[0, 1, 2].map((i) => (
+									<span key={i}>{i < stars ? "★" : "☆"}</span>
+								))}
+							</div>
+						</div>
+					</>
+				)}
 
-				{(completed || current) && (
-					<div
-						className={
-							current
-								? "absolute left-1/2 top-[91%] -translate-x-1/2 whitespace-nowrap text-[15px] font-extrabold tracking-[0.06em] text-celebrate drop-shadow-[0_1px_0_white]"
-								: "absolute left-1/2 top-[91%] -translate-x-1/2 whitespace-nowrap text-[11px] font-extrabold tracking-[0.05em] text-celebrate"
-						}
-					>
+				{completed && !current && (
+					<div className="absolute left-1/2 top-[86%] -translate-x-1/2 whitespace-nowrap text-[11px] font-extrabold tracking-[0.05em] text-celebrate">
 						{[0, 1, 2].map((i) => (
 							<span key={i}>{i < stars ? "★" : "☆"}</span>
 						))}
@@ -140,7 +129,7 @@ function LevelNode({
 				{locked && (
 					<span
 						aria-hidden="true"
-						className="absolute left-1/2 top-[91%] flex size-[18px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E6E2DC]/95 text-[9px] shadow-sm"
+						className="absolute left-1/2 top-[82%] flex size-[16px] -translate-x-1/2 items-center justify-center rounded-full bg-[#E6E2DC]/96 text-[8px] shadow-sm"
 					>
 						🔒
 					</span>
@@ -180,34 +169,6 @@ function StateSample({
 	);
 }
 
-function ProgressPath() {
-	return (
-		<svg
-			aria-hidden="true"
-			viewBox="0 0 1180 738"
-			preserveAspectRatio="none"
-			className="pointer-events-none absolute inset-0 z-[18] h-full w-full"
-		>
-			<path
-				d="M 188 423 C 255 342, 320 322, 382 347 S 474 414, 576 348 S 705 289, 814 323 S 977 366, 1012 443 C 1042 509, 980 553, 900 563 S 770 548, 680 510 S 585 483, 492 522 S 373 558, 282 521"
-				fill="none"
-				stroke="rgba(173,126,66,0.16)"
-				strokeWidth="28"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			/>
-			<path
-				d="M 188 423 C 255 342, 320 322, 382 347 S 474 414, 576 348 S 705 289, 814 323 S 977 366, 1012 443 C 1042 509, 980 553, 900 563 S 770 548, 680 510 S 585 483, 492 522 S 373 558, 282 521"
-				fill="none"
-				stroke="rgba(255,241,202,0.84)"
-				strokeWidth="18"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				strokeDasharray="2 19"
-			/>
-		</svg>
-	);
-}
 
 export function WorldExploration() {
 	const levels: LevelNodeProps[] = [
@@ -217,70 +178,70 @@ export function WorldExploration() {
 			state: "current",
 			stars: 2,
 			left: "17%",
-			top: "55%",
+			top: "48%",
 		},
 		{
 			number: 2,
 			label: "Rimas saltarinas",
 			state: "locked",
-			left: "31%",
-			top: "43%",
+			left: "34%",
+			top: "41%",
 		},
 		{
 			number: 3,
 			label: "Detectives de sonidos",
 			state: "locked",
-			left: "45%",
-			top: "49%",
+			left: "48%",
+			top: "45%",
 		},
 		{
 			number: 4,
 			label: "¿Lo oyes?",
 			state: "locked",
-			left: "58%",
-			top: "40%",
+			left: "61%",
+			top: "39%",
 		},
 		{
 			number: 5,
 			label: "La vocal a",
 			state: "locked",
-			left: "71%",
-			top: "44%",
+			left: "75%",
+			top: "42%",
 		},
 		{
 			number: 6,
 			label: "La vocal e",
 			state: "locked",
-			left: "84%",
+			left: "87%",
 			top: "50%",
 		},
 		{
 			number: 7,
 			label: "La vocal o",
 			state: "locked",
-			left: "80%",
-			top: "68%",
+			left: "82%",
+			top: "69%",
 		},
 		{
 			number: 8,
 			label: "La vocal i",
 			state: "locked",
-			left: "66%",
-			top: "72%",
+			left: "68%",
+			top: "75%",
 		},
 		{
 			number: 9,
 			label: "La vocal u",
 			state: "locked",
-			left: "51%",
-			top: "68%",
+			left: "52%",
+			top: "72%",
 		},
 		{
 			number: 10,
 			label: "La m y sus sílabas",
 			state: "locked",
-			left: "34%",
-			top: "70%",
+			left: "36%",
+			top: "73%",
 		},
 	];
 
@@ -310,9 +271,9 @@ export function WorldExploration() {
 							src={`${HQ}/bg-world-01.webp`}
 							fallback="/images/arte/bg-pradera.webp"
 							className="absolute inset-0 -z-20 h-full w-full object-cover"
-							style={{ filter: "saturate(.84) brightness(1.04) contrast(.95)" }}
+							style={{ filter: "saturate(.76) brightness(1.06) contrast(.92)" }}
 						/>
-						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,250,239,0.10)_0%,rgba(255,255,255,0.08)_42%,rgba(255,249,235,0.05)_100%)]" />
+						<div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,251,241,0.12)_0%,rgba(255,255,255,0.10)_44%,rgba(255,249,235,0.08)_100%)]" />
 
 						<HqImage
 							src={`${HQ}/cloud-01.webp`}
@@ -325,16 +286,12 @@ export function WorldExploration() {
 							className="world-cloud-b pointer-events-none absolute right-[10%] top-[6%] z-[2] w-[13%] opacity-[0.42]"
 						/>
 
-						<ProgressPath />
-
 						<div className="absolute left-[2.4%] top-[2.5%] z-40 flex items-center gap-2 rounded-[1rem] border border-white/80 bg-white/95 px-3 py-2 shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
-							<div className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-[#FFF2C8]">
-								<img
-									src="/images/arte/companion-1.webp"
-									alt=""
-									aria-hidden="true"
-									className="size-8 object-contain"
-								/>
+							<div
+								aria-hidden="true"
+								className="flex size-9 items-center justify-center rounded-full bg-[#E7F3FF] text-[23px] shadow-inner"
+							>
+								👦🏽
 							</div>
 							<div className="leading-tight">
 								<div className="text-[11px] font-extrabold text-[#173B6C]">Mateo</div>
@@ -351,17 +308,20 @@ export function WorldExploration() {
 							aria-label="Configuración"
 							className="absolute right-[2.5%] top-[2.7%] z-40 flex size-10 items-center justify-center rounded-full border border-white/90 bg-white/96 text-[18px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]"
 						>
-							⚙️
+							<svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 fill-none stroke-[#234A91] stroke-[2.2]">
+								<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+								<path d="M19 13.1v-2.2l-2-.6a7.5 7.5 0 0 0-.8-1.8l1-1.8-1.6-1.6-1.8 1a7.5 7.5 0 0 0-1.8-.8l-.6-2H9.2l-.6 2a7.5 7.5 0 0 0-1.8.8L5 5.1 3.4 6.7l1 1.8a7.5 7.5 0 0 0-.8 1.8l-2 .6v2.2l2 .6a7.5 7.5 0 0 0 .8 1.8l-1 1.8L5 18.9l1.8-1a7.5 7.5 0 0 0 1.8.8l.6 2h2.2l.6-2a7.5 7.5 0 0 0 1.8-.8l1.8 1 1.6-1.6-1-1.8a7.5 7.5 0 0 0 .8-1.8l2-.6Z" />
+							</svg>
 						</button>
 
-						<div className="absolute left-[24%] top-[8%] z-[35] flex items-center gap-2">
+						<div className="absolute left-[24%] top-[9%] z-[35] flex items-center gap-2">
 							<img
 								src="/images/arte/companion-1.webp"
 								alt=""
 								aria-hidden="true"
-								className="world-mascot w-[78px] object-contain drop-shadow-[0_9px_9px_rgba(23,59,108,0.18)]"
+								className="world-mascot w-[82px] object-contain drop-shadow-[0_9px_9px_rgba(23,59,108,0.18)]"
 							/>
-							<div className="relative rounded-[1.25rem] border border-white/80 bg-white/96 px-3.5 py-2.5 text-[12px] font-extrabold text-[#234A91] shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
+							<div className="relative rounded-[1.25rem] border border-white/80 bg-white/96 px-3.5 py-2 text-[12px] font-extrabold text-[#234A91] shadow-[0_7px_18px_rgba(35,74,145,0.14)]">
 								¡Vamos a
 								<br />
 								leer juntos!
@@ -373,14 +333,18 @@ export function WorldExploration() {
 							<LevelNode key={level.number} {...level} />
 						))}
 
-						<div className="absolute bottom-[3.4%] left-[3.4%] z-40 rounded-[0.8rem] border border-[#7D4928]/20 bg-[#98613A]/95 px-4 py-2.5 text-[12px] font-extrabold leading-tight text-white shadow-[0_7px_16px_rgba(85,53,34,0.24)]">
+						<div className="absolute bottom-[8%] left-[3.4%] z-40 rounded-[0.8rem] border border-[#7D4928]/20 bg-[#98613A]/95 px-4 py-2.5 text-[12px] font-extrabold leading-tight text-white shadow-[0_7px_16px_rgba(85,53,34,0.24)]">
 							Palabras
 							<br />
 							con palmas
 						</div>
 
 						<div className="absolute bottom-[3%] right-[2.8%] z-40 flex size-[52px] items-center justify-center rounded-[1rem] border border-white/90 bg-white/96 text-[22px] shadow-[0_6px_16px_rgba(35,74,145,0.14)]">
-							🗺️
+							<svg aria-hidden="true" viewBox="0 0 32 32" className="size-7">
+								<path d="M4 7.5 11 5l10 3 7-2.5v19L21 27l-10-3-7 2.5Z" fill="#F8D760" stroke="#2E6DB4" strokeWidth="1.7" strokeLinejoin="round" />
+								<path d="M11 5v19M21 8v19" fill="none" stroke="#2E6DB4" strokeWidth="1.7" />
+								<path d="M5.5 10 9.5 8.5v12.5L5.5 22.5ZM12.5 8l7 2v13l-7-2ZM22.5 10l4-1.5v12.5l-4 1.5Z" fill="#78CFF2" opacity=".9" />
+							</svg>
 						</div>
 					</div>
 				</div>
