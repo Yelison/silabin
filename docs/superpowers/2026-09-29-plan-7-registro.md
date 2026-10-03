@@ -472,7 +472,7 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
   Con `medium`.
 - Task 8: complete (commits ceec097..b291fc4, review clean, 4 minors deferred). Puertas del
   coordinador: `pnpm test` 1403 pasan y 1 omitido, typecheck y lint en verde; e2e `apaisado` 15/15
-  (implementador). `fase1` y `offline` no se repasaron tras la ronda 1: van en el despliegue final (V22).
+  (implementador). `fase1` y `offline` no se repasaron tras la ronda 1; los pasó la revisión final (4/4 con `CI=1`).
 - Task 8: minor (deferred): scroll «antes» sin cifras en el informe; el test solo afirma `<= 0`.
   Los 48 px del fin de sesión a 640×360 siguen sin confirmar.
 - Task 8: minor (deferred): `waitForTimeout` fijos de 1,2-1,5 s en `apaisado.spec.ts`.
@@ -480,3 +480,22 @@ Se ejecuta en Sonnet, con un corte de sesión entre T7 y T8.
   `apaisado-bajo`; en iPad Safari con barra de URL el alto será algo menor.
 - Task 8: minor (deferred): `documentos.ts` repite el patrón `count()` + `getAttribute` sin timeout
   (carrera de desmontaje) fuera del `try` de `avanzarHasta`.
+
+### Revisión final de T7+T8 (Opus, high) — c0c0cdb..959c309
+
+- Veredicto: **Ready to merge: Yes**, sin Critical ni Important. Sostiene los Rulings de la
+  ejecución (M2, `apaisado-bajo`, `solve.ts`) y V17-V22. Corrió `speech-player`+`App` (69/69) y
+  `fase1`+`offline` (4/4) en un worktree aparte.
+- Triaje: T7-1, T7-2, T7-3, T8-1, T8-2 y T8-4 siguen diferidos (no se dan en la práctica o fallan
+  en rojo, nunca en falso verde). T8-3 se cierra: `min-h-svh` lo pide el plan.
+- Arreglados antes del merge en `33009ec` (Sonnet): el comentario de `trace/Evaluation.tsx`
+  conservaba la aritmética falsa de C3 y no explicaba el `5rem`; se quita un `console.log` del e2e.
+- **Ruling:** la re-revisión de `33009ec` la hizo el coordinador y no un subagente: el diff solo
+  toca un comentario y borra un log, y la cuenta de 80 px se comprobó contra
+  `SessionScreen.tsx:45,306,310`. Si fuera un error, cuesta un comentario impreciso.
+- Final: minor (deferred): con 4 logros o más hay ~24 px de scroll en el fin a 640×360 (3 en 360×640).
+- Final: minor (deferred): `apaisado.spec.ts` no cubre 390×844 ni 834×1194.
+- Final: minor (deferred): fuera de `apaisado-bajo` el lienzo de `trace` sigue en `vh`, no en `svh`;
+  va a la checklist del iPad.
+- Final: minor (deferred), anterior al rango: la bandeja de `build` separa las piezas 12 px, por
+  debajo de los 16 px exigidos (`build/Evaluation.tsx:291`).
