@@ -10,8 +10,8 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > (PR #7) y la identidad visual del Plan 7 (PR #8: arte del loro y el elefantito, fondos,
 > pegatinas, iconos y paleta final) están fusionados en `main`. Hoy son jugables las tres fases.
 > El **Plan 8** (el mapa como camino en serpiente) está **ejecutado en su rama**
-> `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 hechas; **faltan** la revisión final de la
-> rama (Opus), el despliegue del preview con su pasada visual y el PR (que incluye el #10).
+> `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 y la revisión final (corregida) hechas;
+> **faltan** el despliegue del preview con su pasada visual y el PR (que incluye el #10).
 > Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
 > esquemática**. 1443 tests, y `typecheck` y `lint` en verde.
 
@@ -592,7 +592,7 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 8 construidos.
 | ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** | Las Fases 1 y 2 son jugables |
 | ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | ~~7~~ | ~~Identidad visual (D24): el arte del loro y el elefantito, fondos, pegatinas, trofeo, rastros, iconos, paleta final y `docs/checklist-ipad.md`~~ **hecho** (PR #8). **Sin hacer:** la boca (aplazada) y la prueba del autor con la lista | La versión con cara propia; falta probarla en dispositivo real |
-| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. **Sin hacer:** la revisión final (Opus), el preview con su pasada visual y el PR (incluye el #10) | Un mapa que se lee como un viaje |
+| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. **Sin hacer:** el preview con su pasada visual (MP12 y ☆ de MP4, del autor) y el PR (incluye el #10) | Un mapa que se lee como un viaje |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 | Idea aparcada | **Refactor de diseño del resto de pantallas** con el plugin `frontend-design`, en un plan aparte (el mapa ya lo hizo el Plan 8). Quedan la composición completa de la referencia (cabecera, pie y tarjetas de capítulo, D39) y los colores de mundo (D43) | Pantallas con más personalidad |
 | Idea aparcada | **Objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa), como capas transparentes ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor y un punto de anclaje por compañero; ver el ledger del Plan 7 | Personalización del compañero |
