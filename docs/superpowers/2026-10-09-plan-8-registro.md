@@ -1,0 +1,117 @@
+# Plan 8: registro de ejecución
+
+Rama: `feat/plan-8-mapa-camino`, creada el 2026-10-09 sobre `docs/refactor-visual-claude`
+(PR #10: `main` en `ec34ffe` más el commit de docs `82705ad`). Ver D44.
+Plan: `docs/superpowers/plans/2026-10-09-silabin-mapa-camino.md` (4 tareas).
+Referencia de diseño: `docs/visual-refactor/` (PR #10), sobre todo `CLAUDE-HANDOFF.md` e
+`icons/demo.html`.
+
+Este registro es la memoria del plan. Al retomar, léelo primero con `grep -n` y el tramo final.
+
+## Estado
+
+| Fase | Estado |
+|---|---|
+| Decisiones con el autor (D37-D45) | **hechas** (2026-10-09, abajo) |
+| Rulings de planificación (MP1-MP15) | **fijados** (abajo) |
+| Redacción del plan | **hecha** (2026-10-09, Opus). Pendiente de la revisión del autor |
+| Ejecución | Sin empezar. Siguiente: T1 en Sonnet, `/effort medium` |
+
+## Decisiones tomadas con el autor (2026-10-09)
+
+| # | Decisión |
+|---|---|
+| D37 | **Unidad terminada: insignia y estrellas.** El nodo azul lleva su insignia de completado y, debajo, las estrellas ganadas (ver MP4 sobre ☆) |
+| D38 | **Activa pero no jugable: como bloqueada, sin aro**, con símbolo visible e insignia propia (un reloj, no el candado). Tocarla no inicia nada y su etiqueta sigue siendo «Llega en una próxima versión» |
+| D39 | **Solo camino y nodos.** La cabecera actual (puerta de padres, compañero, «Mis premios», `StarCounter`, `UnitDots`, `SavedMark`) se queda con su función y su aspecto. La composición completa de la referencia (cabecera, pie y tarjetas de capítulo) queda para otro plan |
+| D40 | **El PR #9 (`feat/world-map-exploration`) se aparca.** Nada de sus fondos ni nodos `.webp` entra aquí. Sus puertas están en rojo y se deja así por decisión del autor |
+| D41 | **Serpiente por columnas (la skill), no el zigzag de una columna del PR #10:** 2 columnas en teléfono, 3 en iPad vertical y 5 en iPad apaisado |
+| D42 | **Sin título visible bajo los nodos.** El nombre va solo en `aria-label` |
+| D43 | **Los colores de mundo no entran.** El camino y los separadores de fase son neutros, con tokens; los colores de mundo siguen como decisión abierta de la skill |
+| D44 | **Rama desde el PR #10**, no desde `main`, para que `docs/visual-refactor/` viaje con el plan. El PR del Plan 8 incluye el #10, que se cierra como incluido |
+| D45 | **Se versionan `.claude/skills/silabin-design/` y `docs/diseno/`** en esta rama (no `.claude/scheduled_tasks.lock`). `docs/diseno/mapa/exploracion-mundo.md` es la propuesta del PR #9 y queda como antecedente |
+
+## Rulings de planificación (prefijo MP)
+
+Cada uno con su porqué y lo que costaría si fuera equivocado.
+
+- **MP1 · `aria-disabled`, nunca `disabled`.** El componente de referencia pone `disabled` en
+  bloqueado. Con `disabled`, el nodo sale del orden del foco, el lector no anuncia «bloqueada»
+  al recorrer el mapa, el toque en «soon» no llega y se rompen U7 y el e2e. Coste si fuera
+  equivocado: cambiar un atributo en `MapNode`.
+- **MP2 · Sin estado `neutral` ni iconos de ejercicio.** El motor no tiene un estado neutro, y
+  el mapa solo pinta unidades: se portan las 21 formas de unidad (líneas 172-422 de
+  `ChallengeNode.tsx`) y las tres insignias (check, candado y reloj). Las 9 de ejercicio se
+  quedan en `docs/visual-refactor/`. Coste: portarlas después es copiar datos.
+- **MP3 · Completado en azul saturado, como el PR #10**, aunque la skill decía «base clara y
+  neutra». El PR #10 es posterior y el autor lo aprobó. Cara `calm-border` (#5187c7) con el
+  símbolo en blanco (`card`): 3,72 : 1. Coste: si el autor lo quiere más suave, se cambian dos
+  clases (cara `calm`, símbolo `calm-border`) y una línea de la skill. La T4 actualiza la skill.
+- **MP4 · Las ☆ se mantienen como hoy** (2 estrellas = ★★☆). La opción elegida en D37 decía a la
+  vez «las 3 estrellas» y «nunca huecos»; ante la ambigüedad, no se cambia el comportamiento
+  actual ni su test. **Se pregunta al autor en la revisión del plan.** Coste: quitar las ☆ es
+  borrar un `map` y un aserto.
+- **MP5 · Bloqueado en tema claro, con el símbolo a 3 : 1.** `challenge-node.css` trae los
+  valores del tema oscuro de la demo (#343b47); la app solo tiene tema claro, así que se usan
+  los claros de `map-preview` (cara #edeef2, fondo #d9dce4). El símbolo de la referencia
+  (#a7adba) da 2,0 : 1; se oscurece a #757a88 (3,70 : 1) para que «el símbolo se vea» de
+  verdad. Coste: un token.
+- **MP6 · Hex de la referencia → tokens.** Se reutilizan `action` y `action-ink` (disponible),
+  `mark` (el aro), `surface` y `calm` (los bordes interiores), `calm-border` y `card`
+  (completado) y `trace-ink` (el foco: es el mismo #6a4cff de la referencia). Son nuevos
+  `action-depth` #dda016, `calm-depth` #286091, `node-locked` #edeef2, `node-locked-depth`
+  #d9dce4 y `node-locked-ink` #757a88. Coste: tokens de más o de menos, sin efecto en la lógica.
+- **MP7 · Conectores sin medir el DOM.** Un SVG por fase y por número de columnas, en unidades
+  de celda (`viewBox="0 0 cols filas"`, `preserveAspectRatio="none"` y
+  `vector-effect="non-scaling-stroke"`). Se adapta solo al tamaño; no hace falta
+  `ResizeObserver` (que no existe en jsdom) ni estilos en px (E4). La posición de cada nodo va
+  en propiedades CSS sin unidades (`--c2`, `--r2`…). Coste: si las curvas se deforman a la
+  vista, se pasa a medir, con el riesgo que eso trae.
+- **MP8 · Una serpiente por fase, cortada entre fases** (como las secciones de Duolingo). Cada
+  fase empieza de izquierda a derecha y el camino no cruza el separador. Así se mantienen las
+  regiones `Fase N`, que pide el test 1. Coste: un camino continuo entre fases exigiría una
+  rejilla global con `display: contents` en las secciones, que en Safari ha roto su semántica.
+- **MP9 · Puntos de corte:** < 768 px → 2 columnas; 768-1023 → 3; ≥ 1024 → 5 (`md:` y `lg:`
+  por defecto de Tailwind). El panel del camino se ensancha (`md:max-w-2xl lg:max-w-4xl`) y la
+  cabecera se queda en `max-w-xl` (D39). A 320 px: 2 celdas de unos 128 px para un nodo de
+  88 px con aro de 116. Coste: ajustar dos clases.
+- **MP10 · El camino va en un panel opaco `bg-surface`** (V13), como la cabecera. El nodo
+  bloqueado queda a 1,1 : 1 de la superficie, y se reconoce por su símbolo (3,7 : 1) y su
+  insignia, no por el borde. Con el fondo Espacio, el camino no flota sobre el cielo oscuro.
+  Coste: si el autor quiere ver el fondo equipado entre los nodos, hay que revisar LE1 y el
+  contraste del camino.
+- **MP11 · Objetivos ≥ 72 px** (spec §9 y skill), no los 44 del handoff. El nodo mide 88 px.
+- **MP12 · Centrar la unidad activa una vez, al montar y sin animación**
+  (`scrollIntoView?.({ block: "center" })`). Sin `smooth`, no hay movimiento que respetar con
+  reduced-motion. jsdom no lo implementa: de ahí el `?.`. Coste: ninguno.
+- **MP13 · El icono de cada unidad vive en `features/map`**, no en el esquema de `content/`. Un
+  test de exhaustividad sobre `curriculum.unitOrder` hace fallar una unidad nueva sin icono.
+  Coste: si mañana el contenido trae su icono, se mueve el mapa de datos.
+- **MP14 · `aria-current="step"` sigue en toda unidad `active`**, también en «soon», como
+  hoy (U2). Coste: ninguno; es el contrato actual.
+- **MP15 · Tocar una unidad terminada no hace nada**, como hoy. El «Volver a jugar» del preview
+  no se porta (lo prohíbe el handoff: cambiaría el motor). Sigue como decisión abierta de la
+  skill.
+
+## Reparto de tareas
+
+| Tarea | Contenido | Riesgo | Effort | Revisión |
+|---|---|---|---|---|
+| T1 | Iconos de unidad, tokens de nodo y sus pares de contraste | datos y tokens | `medium` | cumplimiento, sin mutación |
+| T2 | `nodeLook` y `MapNode`: del estado del motor al nodo | contrato motor-interfaz | `high` | completa, 3-5 mutaciones |
+| T3 | Serpiente por columnas, conectores e integración en `MapScreen` | lógica nueva y contrato del mapa | `high` | completa, 3-5 mutaciones |
+| T4 | Skill, `diseno-visual.md`, checklist del iPad, README y poda | docs | `medium` | cumplimiento |
+
+Después: revisión final de la rama en Opus (`high`), despliegue del preview y pasada visual
+con `~/qa-silabin`.
+
+## Progreso de ejecución
+
+| Tarea | Estado | Rondas | Mutaciones que sobreviven |
+|---|---|---|---|
+| T1 | pendiente | | |
+| T2 | pendiente | | |
+| T3 | pendiente | | |
+| T4 | pendiente | | |
+
+## Ejecución
