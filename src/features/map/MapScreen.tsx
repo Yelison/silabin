@@ -86,7 +86,7 @@ function SavedMark({
 			role="img"
 			aria-label={etiqueta}
 			title={etiqueta}
-			className="fixed top-2 left-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card text-2xl text-ink-soft"
+			className="fixed top-2 left-2 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-card text-2xl text-ink-soft"
 		>
 			✓
 		</span>

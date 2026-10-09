@@ -1,5 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
+import { curriculum } from "@/engine";
+import { emptyPersistedState, persistedStateSchema } from "@/store/schema";
 import { empezar } from "./helpers/documentos";
+import { sembrar } from "./helpers/seed";
 
 // Plan 8, T3: el camino en serpiente. Proyecto `iphone` (Chromium), progreso nuevo.
 // Columnas esperadas: < 768 px → 2, 768-1023 → 3, ≥ 1024 → 5 (MP9).
@@ -9,6 +12,25 @@ const VIEWPORTS = [
 	{ width: 834, height: 1194, columnas: 3 },
 	{ width: 1194, height: 834, columnas: 5 },
 ] as const;
+
+/** Solo `phase0:clap` terminada (con una estrella de menos, para que salga la pastilla ★★☆). */
+function docClapHecha() {
+	const doc = emptyPersistedState();
+	const clap = curriculum.units.get("phase0:clap");
+	if (!clap) throw new Error("sin phase0:clap");
+	for (const id of clap.introduces)
+		doc.items[id] = {
+			box: 3,
+			presented: true,
+			firstTryCorrect: 3,
+			assisted: 0,
+			lastSessionIndex: 0,
+			lastCreditSession: null,
+			masteredAt: "2026-09-30T10:00:00.000Z",
+		};
+	doc.units["phase0:clap"] = { status: "done", bestStars: 2 };
+	return persistedStateSchema.parse(doc);
+}
 
 type Caja = { l: number; t: number; r: number; b: number };
 
@@ -39,6 +61,43 @@ for (const vp of VIEWPORTS) {
 			await page.goto("/");
 			await empezar(page);
 			await expect(page.locator("[data-unit]").first()).toBeVisible();
+		});
+
+		test(`de los tres caminos de la Fase 1 solo se ve el de ${vp.columnas} columnas`, async ({
+			page,
+		}) => {
+			const visibles = page.locator(
+				"section[aria-label='Fase 1'] svg[data-columns]:visible",
+			);
+			await expect(visibles).toHaveCount(1);
+			await expect(visibles).toHaveAttribute(
+				"data-columns",
+				String(vp.columnas),
+			);
+		});
+
+		test("una unidad terminada (con su pastilla de estrellas) tiene la ficha a la altura de su vecina", async ({
+			page,
+		}) => {
+			await sembrar(page, docClapHecha());
+			await empezar(page);
+			const centro = (id: string) =>
+				page
+					.locator(`[data-unit="${id}"] > span`)
+					.first()
+					.evaluate((e) => {
+						const r = e.getBoundingClientRect();
+						return { y: r.top + r.height / 2, h: r.height };
+					});
+			await expect(page.locator('[data-unit="phase0:clap"]')).toHaveAttribute(
+				"data-look",
+				"completed",
+			);
+			const clap = await centro("phase0:clap");
+			const rhyme = await centro("phase0:rhyme");
+			expect(clap.h, "alto de la ficha de clap").toBeCloseTo(88, 0);
+			expect(rhyme.h, "alto de la ficha de rhyme").toBeCloseTo(88, 0);
+			expect(Math.abs(clap.y - rhyme.y)).toBeLessThanOrEqual(1);
 		});
 
 		test("sin scroll horizontal", async ({ page }) => {

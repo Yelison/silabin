@@ -145,6 +145,25 @@ describe("nodo del mapa (Plan 8, T2)", () => {
 	);
 
 	it.each(ASPECTOS)(
+		"N7b (%s): el aro de «te toca» y el hundimiento al pulsar son solo del aspecto available",
+		(look, progress, playable) => {
+			const { boton } = pintar(CLAP, progress, playable);
+			const clases = [boton, ...boton.querySelectorAll("*")].flatMap((el) =>
+				(el.getAttribute("class") ?? "").split(/\s+/),
+			);
+			const esperado = look === "available";
+			expect(
+				clases.some((c) => c.includes("before:border-mark")),
+				"aro",
+			).toBe(esperado);
+			expect(
+				clases.some((c) => c.includes("active:translate-y-0.5")),
+				"hundimiento",
+			).toBe(esperado);
+		},
+	);
+
+	it.each(ASPECTOS)(
 		"N8 (%s): nunca hay barras de avance dentro del nodo",
 		(_look, progress, playable) => {
 			const { boton } = pintar(CLAP, progress, playable);

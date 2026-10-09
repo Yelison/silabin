@@ -276,6 +276,8 @@ describe("MapScreen", () => {
 		const mm = String(fecha.getMinutes()).padStart(2, "0");
 		const marca = screen.getByLabelText(`Guardado a las ${hh}:${mm}`);
 		expect(marca.getAttribute("title")).toBe(`Guardado a las ${hh}:${mm}`);
+		// Por encima de los nodos (`relative z-10`) al desplazar el mapa por debajo.
+		expect(marca.className.split(/\s+/)).toContain("z-20");
 	});
 
 	it("E3: con lastSavedAt null o saveFailed no sale la marca de guardado", async () => {
@@ -437,10 +439,18 @@ describe("MapScreen", () => {
 				expect(svg.getAttribute("class")).toContain("pointer-events-none");
 				const trazo = svg.querySelector("path");
 				if (n < 2) expect(trazo).toBeNull();
-				else
+				else {
 					expect(trazo?.getAttribute("d")).toBe(
 						serpentinePath(serpentine(n, cols), cols),
 					);
+					expect(trazo?.getAttribute("fill")).toBe("none");
+					expect(trazo?.getAttribute("vector-effect")).toBe(
+						"non-scaling-stroke",
+					);
+					expect(trazo?.getAttribute("class")?.split(/\s+/)).toContain(
+						"stroke-node-locked-depth",
+					);
+				}
 			}
 		}
 	});

@@ -13,7 +13,7 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 hechas; **faltan** la revisión final de la
 > rama (Opus), el despliegue del preview con su pasada visual y el PR (que incluye el #10).
 > Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
-> esquemática**. 1439 tests, y `typecheck` y `lint` en verde.
+> esquemática**. 1443 tests, y `typecheck` y `lint` en verde.
 
 ---
 
@@ -45,7 +45,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1439 tests (1 omitido: el de ficheros de audio)
+pnpm test        # Vitest: 1443 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
@@ -556,7 +556,7 @@ plan en `docs/superpowers/plans/2026-10-09-silabin-mapa-camino.md`, ledger en
 `docs/superpowers/2026-10-09-plan-8-registro.md`, con las decisiones D37-D45 [en la
 tabla](#decisiones-tomadas) y los rulings MP1-MP15). La rama sale del PR #10 (D44), así que
 `docs/visual-refactor/` viaja con ella; el PR del Plan 8 lo incluye y lo cierra. **Sin PR todavía**:
-faltan la revisión final y la pasada visual del preview (ver «Siguientes pasos»).
+falta la pasada visual del preview (ver «Siguientes pasos»).
 
 - **T1, iconos y tokens (`e603ff9`):** las 21 formas de unidad y las insignias del PR #10 pasan a
   datos TypeScript (`features/map/unit-icons.ts`, pintadas por `UnitIcon` con `currentColor`) y
@@ -619,10 +619,10 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 **Plan 8 ejecutado en su rama (T1-T4, 2026-10-09).** Queda, en este orden:
 
-1. **Revisión final de la rama contra `main` en Opus (`high`)**, que incluye el commit del PR #10.
-   Antes del PR debe arreglar dos minors del ledger: `z-20` en `SavedMark` (hoy los nodos pasan
-   por encima de «Guardado») y una aserción e2e de cuál de los tres SVG se ve en cada punto de
-   corte.
+1. **Revisión final de la rama contra `main` en Opus (`high`): hecha y corregida (2026-10-09).** Los
+   arreglos (`z-20` en `SavedMark`, e2e del SVG visible, aserciones de S2 y N7, y la pastilla de
+   estrellas fuera del flujo, que descentraba 16 px los nodos terminados) están en la rama, cada
+   uno con su test o e2e.
 2. **Desplegar el preview y hacer la pasada visual** con `~/qa-silabin`, en webkit y chromium:
    aro y foco sin pisar al vecino, y la **decisión de producto de MP12** (el centrado de la activa
    deja el logo del panel de padres fuera de vista al abrir; opciones `block: "nearest"` o centrar
@@ -755,8 +755,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
-8. **Minors y decisiones del Plan 8** (ledger y archivo): mutaciones de clases vivas y dos de producto
-   para el autor en el preview, MP12 (logo de padres fuera de vista) y las ☆ (MP4). Gusto, no test.
+8. **Minors y decisiones del Plan 8** (ledger y archivo): dos de producto para el autor en el preview,
+   MP12 (logo de padres fuera de vista) y las ☆ (MP4). Gusto, no test.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo

@@ -96,7 +96,7 @@ export function MapNode(props: {
 			onClick={() => {
 				if (disponible) onStart();
 			}}
-			className={`flex min-h-18 min-w-18 flex-col items-center rounded-3xl focus-visible:outline-3 focus-visible:outline-offset-18 focus-visible:outline-trace-ink ${prensable}`}
+			className={`relative flex min-h-18 min-w-18 flex-col items-center rounded-3xl focus-visible:outline-3 focus-visible:outline-offset-18 focus-visible:outline-trace-ink ${prensable}`}
 		>
 			{/* La ficha es opaca (V13): el estado se marca con color, insignia y aro, no con opacidad. */}
 			<span
@@ -121,10 +121,11 @@ export function MapNode(props: {
 					</span>
 				)}
 			</span>
+			{/* Fuera del flujo: el botón mide lo que la ficha y la celda centra la ficha, no ficha + estrellas. */}
 			{look === "completed" && (
 				<span
 					aria-hidden="true"
-					className="mt-1 rounded-full bg-card px-2 text-lg"
+					className="absolute top-full left-1/2 mt-1 -translate-x-1/2 rounded-full bg-card px-2 text-lg whitespace-nowrap"
 				>
 					<Estrellas n={stars} />
 				</span>
