@@ -47,6 +47,10 @@ MP1-MP15, cada uno con su porqué y su coste. **Léelo antes de la tarea:** el p
 - Movimiento solo con `motion-safe:`. Nada de `smooth` ni de animaciones nuevas.
 - Biome reformatea el código de referencia (tabuladores y comillas dobles). Las `key` por
   índice valen solo en listas estáticas de formas, con su comentario.
+- **Clases de Tailwind siempre literales.** Tailwind solo genera las clases que aparecen
+  escritas enteras en el código: `col-start-(--c2)`, `md:hidden`, etc. van en una tabla
+  literal por número de columnas, nunca montadas con plantillas a partir de `COLUMNAS`.
+- `docs/visual-refactor/` es una referencia: no se edita ni se mueve.
 - Conventional Commits en español, con el porqué en el asunto. Terminan con
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - Antes de tocar código de React o CSS, lee las guías locales de Next que apliquen
@@ -83,15 +87,15 @@ mutaciones. Skill útil: `silabin-design` (sección «Color»).
 **Interfaces (produce):**
 ```ts
 // unit-icons.ts: solo datos; sin React.
-export type IconShape = readonly [tag: "path" | "circle", attrs: Readonly<Record<string, string | number>>];
+export type IconShape = readonly [tag: "path" | "circle" | "rect", attrs: Readonly<Record<string, string | number>>];
 export const UNIT_ICONS: Readonly<Record<string, readonly IconShape[]>>; // 21 ids de unidad
 export type BadgeId = "check" | "lock" | "soon";
 export const BADGE_ICONS: Readonly<Record<BadgeId, readonly IconShape[]>>;
 export function isLetterIcon(unitId: string): boolean; // phase1:, phase2:, phase3:
 
 // UnitIcon.tsx
-export function UnitIcon(props: { unitId: string; className?: string }): JSX.Element;
-export function BadgeIcon(props: { badge: BadgeId; className?: string }): JSX.Element;
+export function UnitIcon(props: { unitId: string; className?: string }); // sin tipo de retorno escrito, como el resto de componentes del repo
+export function BadgeIcon(props: { badge: BadgeId; className?: string });
 ```
 
 **Contenido:**
@@ -105,7 +109,7 @@ export function BadgeIcon(props: { badge: BadgeId; className?: string }): JSX.El
     trazo 2,5 (línea 442);
   - `soon` (D38): el reloj de Lucide, `circle cx=12 cy=12 r=10` y `path d="M12 6v6l4 2"`.
 
-  Con esto, `IconShape` admite también `rect`.
+  Por eso `IconShape` admite `rect` (ya está en el tipo de arriba).
 - Al principio de `unit-icons.ts`, un comentario con la procedencia y las licencias:
   `docs/visual-refactor/icons/LICENSE-lucide.txt` (ISC) y `OFL-Andika.txt`.
 - `UnitIcon` pinta un `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -175,7 +179,7 @@ export function MapNode(props: {
 	progress: UnitProgress | undefined;
 	playable: boolean;
 	onStart: () => void;
-}): JSX.Element;
+});
 ```
 
 **Contrato que se conserva, copiado de `UnitButton` (`MapScreen.tsx:148-200`):**
@@ -292,6 +296,10 @@ Los números se escriben con `String(n)`, sin ceros sobrantes. Ejemplo:
     `col-start-(--c2) row-start-(--r2) md:col-start-(--c3) md:row-start-(--r3)
     lg:col-start-(--c5) lg:row-start-(--r5)`. Si la sintaxis `(--x)` no compila con la
     versión instalada, usa `col-start-[var(--c2)]`.
+  - **El camino va detrás de los nodos** (lo pide el handoff). Los SVG son los primeros hijos
+    de la sección y cada celda lleva `relative z-10` (de todos modos la necesita el `before:`
+    del aro). Un SVG absoluto se pinta encima de lo que no está posicionado, aunque vaya antes
+    en el DOM. Ningún test de jsdom lo ve: lo comprueba la captura.
   - **Tres `<svg aria-hidden="true">` absolutos `inset-0 pointer-events-none`,** uno por número
     de columnas. Cada uno lleva `data-columns`, `viewBox="0 0 {cols} {filas}"` y
     `preserveAspectRatio="none"`, y se ve solo en su punto de corte (`md:hidden`,
@@ -375,7 +383,10 @@ Si alguna sobrevive, repórtalo.
 - Todo en verde: tests de contrato intactos, presentación reescrita según la lista, S1-S4,
   `serpentine` y LE1 sin tocar.
 - `pnpm e2e` en verde, con los specs que ya existían.
-- El reporte incluye capturas en 390×844 y 1194×834 con el arnés de `~/qa-silabin`.
+- El reporte incluye capturas en 390×844 y 1194×834 con el arnés de `~/qa-silabin`. En ellas
+  se ve **una sola línea por fase, detrás de los nodos y sin cruzar sus caras**.
+- LE1 no se toca: el panel `bg-surface` es el ancestro opaco de todo el mapa
+  (`legibility.test.tsx:33`). Las caras nuevas no tienen que entrar en `SUPERFICIE`.
 
 - [ ] Paso 1: `serpentine.test.ts` en rojo y luego `serpentine.ts` hasta el verde.
 - [ ] Paso 2: reescribir y añadir los tests del mapa (rojo).
