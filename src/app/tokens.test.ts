@@ -112,6 +112,10 @@ const PARES_BORDE: [string, string][] = [
 	["mark-border", "surface"],
 	["mark-border", "card"],
 	["mark-border", "mark"],
+	// Plan 8: el símbolo del mapa (gráfico y letra de 44 px: 3 : 1).
+	["card", "calm-border"],
+	["node-locked-ink", "node-locked"],
+	["node-locked-ink", "card"],
 ];
 
 describe("tokens de color (V14)", () => {

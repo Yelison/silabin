@@ -25,6 +25,13 @@
 	/* Tinta del trazo (Plan 4): un morado vivo, distinto del azul de la guía y del ámbar de
 	   `action`, para que el niño distinga sin duda lo que ha dibujado él de la guía. */
 	--color-trace-ink: #6a4cff;
+	/* Plan 8 (MP5, MP6): el camino del mapa. Las «depth» son la sombra sólida de cada nodo; el
+	   bloqueado se lee por forma y por contraste del símbolo (3 : 1), no solo por el tono. */
+	--color-action-depth: #dda016;
+	--color-calm-depth: #286091;
+	--color-node-locked: #edeef2;
+	--color-node-locked-depth: #d9dce4;
+	--color-node-locked-ink: #757a88;
 	--radius-card: 1.5rem;
 	--spacing-target: 8rem;
 	--font-reading: var(--font-andika);

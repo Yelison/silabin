@@ -42,6 +42,11 @@ La primera propuesta (Plan 3) se conserva en los valores «antes».
 | `--color-action-ink` | contenido sobre `action` | `#3A2A00` |
 | `--color-calm` | fondo de opciones en reposo | `#DCEBFA` |
 | `--color-calm-border` | borde de opciones en reposo | `#5187C7` |
+| `--color-action-depth` | sombra sólida del nodo activo del mapa (Plan 8, MP5) | `#DDA016` |
+| `--color-calm-depth` | sombra sólida del nodo completado del mapa (MP5) | `#286091` |
+| `--color-node-locked` | fondo del nodo bloqueado o «próximamente» (MP6) | `#EDEEF2` |
+| `--color-node-locked-depth` | sombra sólida del nodo bloqueado (MP6) | `#D9DCE4` |
+| `--color-node-locked-ink` | símbolo y candado del nodo bloqueado; la referencia traía `#A7ADBA` (1,94 : 1), que no llega a 3 : 1 (MP6) | `#757A88` |
 | `--color-mark` | fondo de la opción marcada por el modelo | `#FFE27A` |
 | `--color-mark-border` | borde de la opción marcada por el modelo | `#AC7600` |
 | `--color-celebrate` | solo celebraciones y estrellas | `#E99810` |
@@ -75,6 +80,9 @@ Calculado con la fórmula de contraste relativo de WCAG 2.x sobre los valores de
 | `mark-border` sobre `surface` | 3.72 : 1 | Sí |
 | `mark-border` sobre `card` | 3.93 : 1 | Sí |
 | `mark-border` sobre `mark` | 3.07 : 1 | Sí |
+| `card` sobre `calm-border` | 3.72 : 1 | Sí (símbolo blanco sobre el nodo completado, ≥ 3 : 1) |
+| `node-locked-ink` sobre `node-locked` | 3.70 : 1 | Sí (símbolo bloqueado, ≥ 3 : 1) |
+| `node-locked-ink` sobre `card` | 4.29 : 1 | Sí (candado sobre su insignia, ≥ 3 : 1) |
 
 Todos estos pares los recalcula `src/app/tokens.test.ts` (CO1) leyendo `globals.css`; la página
 de desarrollo `/dev/arte` los enseña con el color que pinta el navegador. Fuera de la tabla:
