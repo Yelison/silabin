@@ -109,9 +109,17 @@ con `~/qa-silabin`.
 
 | Tarea | Estado | Rondas | Mutaciones que sobreviven |
 |---|---|---|---|
-| T1 | pendiente | | |
+| T1 | completa (e603ff9) | 0 | n/a (sin mutación) |
 | T2 | pendiente | | |
 | T3 | pendiente | | |
 | T4 | pendiente | | |
 
 ## Ejecución
+
+### T1 · iconos de unidad, tokens de nodo y pares de contraste (sonnet, medium)
+
+- Commit `e603ff9` (base `07d4ce3`). Revisión de cumplimiento (sonnet): ✅ y *Approved*, sin Critical ni Important. Rondas de corrección: 0.
+- Ruling: el contraste de `node-locked-ink` (#757a88) sobre `card` (#fff) es **4,29 : 1**, no los 3,74 que decían el plan y el brief — el implementador y el revisor lo calcularon por separado con la fórmula WCAG 2.x. `docs/diseno-visual.md` documenta 4,29 y el test exige ≥ 3. Coste si fuera equivocado: una cifra en la documentación; el par sigue pasando 3 : 1.
+- T1: minor (deferred): UI3 solo prueba `phase0:clap` como caso sin `data-letter`.
+- T1: minor (deferred): UI4 es condicional (`if (valor !== undefined)`) y no detectaría una clave mal escrita (`Fill`).
+- T1: minor (deferred): la línea 51 del plan dice 3,74; debería decir 4,29 (el plan no se reescribe; vale este Ruling).
