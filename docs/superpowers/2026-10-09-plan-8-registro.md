@@ -112,7 +112,7 @@ con `~/qa-silabin`.
 | T1 | completa (e603ff9) | 0 | n/a (sin mutación) |
 | T2 | completa (ca3e547) | 0 | 4 de 16 sobreviven (j, m, o, p), todas de clases o aria-hidden; las 5 obligatorias mueren |
 | T3 | completa (55975b2) | 0 | 4 de 7 propias del revisor sobreviven (visibilidad de los SVG, `fill`, clase del trazo, `z-10` de la celda); las 5 obligatorias mueren |
-| T4 | pendiente | | |
+| T4 | completa (ea79ecf) | 1 | n/a (docs) |
 
 ## Ejecución
 
@@ -146,3 +146,11 @@ con `~/qa-silabin`.
 - T3: minor (deferred): S2 no comprueba `fill="none"`, la clase `stroke-node-locked-depth` ni `vector-effect="non-scaling-stroke"` (mutaciones que sobreviven), ni `z-10` de la celda (redundante en la práctica, lo exige el `before:` del aro).
 - T3: minor (deferred): no se midió en navegador que el aro (−14 px) y el foco (offset 18) quepan sin pisar al vecino (las celdas son 9 rem de alto y ≥136 px de ancho frente a 88 px); el e2e mide solo las cajas de los botones (≥ 15,5 px). Va a la pasada visual del preview.
 - T3: minor (deferred): `apaisado › build` es inestable ya en la base (fallos distintos según la corrida, atascado en `piezas.nth(n-2).click()`); no es del plan.
+
+### T4 · autoridad de diseño, docs y poda (sonnet, medium)
+
+- Commits `ef31d71` y `ea79ecf` (base `8a46e5f`). Revisión de cumplimiento (sonnet): *Needs fixes* en la primera pasada, un Important (`README.md:48` decía 1394 tests y eran 1439) y un minor que sí entró (deudas 4 y 10 pasaban de dos líneas). Ronda de corrección 1 de 2 y re-revisión acotada: todo resuelto. Sin mutación (docs).
+- Poda del README: 0 trampas vivas (tope 8) y 10 deudas (tope 10); el texto completo está en `docs/archivo-trampas-y-deuda.md`, sección «Plan 8».
+- Ruling: MP12, las ☆ (MP4) y los minors del Plan 8 van en una sola deuda (la 8 del README). Los dos arreglos de la revisión final (`z-20` en `SavedMark` y la aserción e2e del SVG visible por punto de corte) están en «Siguientes pasos». Coste si fuera equivocado: separar una entrada.
+- Ruling: `docs/diseno/mapa/exploracion-mundo.md` (antecedente del PR #9, aparcado) conserva `UnitButton`, `LevelNode` y `WorldMap` con una nota de antecedente en la cabecera; no se reescribe. Coste: ninguno.
+- T4: minor (deferred): la viñeta T4 del README dice «Poda: ninguna trampa viva y 10 deudas»; las deudas 4 y 10 se acortaron pero no se podaron.
