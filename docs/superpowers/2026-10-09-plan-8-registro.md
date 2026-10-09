@@ -110,7 +110,7 @@ con `~/qa-silabin`.
 | Tarea | Estado | Rondas | Mutaciones que sobreviven |
 |---|---|---|---|
 | T1 | completa (e603ff9) | 0 | n/a (sin mutación) |
-| T2 | pendiente | | |
+| T2 | completa (ca3e547) | 0 | 4 de 16 sobreviven (j, m, o, p), todas de clases o aria-hidden; las 5 obligatorias mueren |
 | T3 | pendiente | | |
 | T4 | pendiente | | |
 
@@ -123,3 +123,12 @@ con `~/qa-silabin`.
 - T1: minor (deferred): UI3 solo prueba `phase0:clap` como caso sin `data-letter`.
 - T1: minor (deferred): UI4 es condicional (`if (valor !== undefined)`) y no detectaría una clave mal escrita (`Fill`).
 - T1: minor (deferred): la línea 51 del plan dice 3,74; debería decir 4,29 (el plan no se reescribe; vale este Ruling).
+
+### T2 · `nodeLook` y `MapNode` (sonnet, high)
+
+- Commit `ca3e547` (base `4ddfa59`). Revisión completa (sonnet) con 16 mutaciones: *Approved*, sin Critical ni Important. Rondas de corrección: 0. Las 5 mutaciones obligatorias mueren (a-e) y otras 7 propias también.
+- T2: minor (deferred): sobreviven 4 mutaciones, ninguna cubierta por test: quitar `aria-hidden` de la pastilla de estrellas, quitar `bg-card` de la pastilla, `translate-y-0.5` en los cuatro aspectos y el aro `before:` también en `locked`. Cubrirlas es un `className.toContain/not.toContain` por aspecto en `MapNode.test.tsx`; la revisión final debe triar si entra antes del merge (el aro solo en «available» es la señal visual del nodo jugable).
+- T2: minor (deferred): `MapNode.tsx:300` usa `-right-1` (−4 px) y la referencia −5 px.
+- T2: minor (deferred): el aro (−14 px) y el foco (offset 18) desbordan el botón de 88 px y el foco rodea círculo y estrellas. **La T3 debe dejar separación en la rejilla.**
+- T2: minor (deferred): `LLEGA_DESPUES` está duplicada (`MapScreen.tsx:24` y `MapNode.tsx:188`); **la T3 deja una sola** al sustituir `UnitButton`.
+- Ruling: `src/engine/planner.test.ts` ("30 semillas por 3 estados") agota los 5000 ms en la suite completa (5,8 s con carga ~18) y pasa solo (47/47 en 4 s). No es de esta tarea (planner no se tocó) y T1 pasó la suite completa. Se deja sin tocar; la puerta de la T3 se corre con `pnpm vitest run` de planner aparte si vuelve a fallar. Coste si fuera equivocado: un timeout que subir.
