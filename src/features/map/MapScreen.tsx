@@ -1,5 +1,6 @@
 "use client";
 
+import { type CSSProperties, Fragment, useEffect, useRef } from "react";
 import { BigButton } from "@/components/BigButton";
 import { Icon } from "@/components/Icon";
 import {
@@ -10,20 +11,32 @@ import {
 	type TemplateId,
 	totalStars,
 	type Unit,
-	type UnitProgress,
 	unitProgress,
 } from "@/engine";
 import { AdultDoor } from "@/features/adult/AdultDoor";
 import { useApp } from "@/features/app-context";
+import { LLEGA_DESPUES, MapNode } from "@/features/map/MapNode";
+import {
+	type Cell,
+	COLUMNAS,
+	type Columnas,
+	serpentine,
+	serpentinePath,
+} from "@/features/map/serpentine";
 import { Companion } from "@/features/rewards/Companion";
 import {
 	IMPLEMENTED_TEMPLATES,
 	isSessionPlayable,
 } from "@/features/session/registry";
 
-const LLEGA_DESPUES = "Llega en una próxima versión";
+type Fase = {
+	phase: number;
+	units: Unit[];
+	/** Dónde va cada unidad en la rejilla de cada número de columnas. */
+	celdas: Record<Columnas, Cell[]>;
+};
 
-function unidadesPorFase(): { phase: number; units: Unit[] }[] {
+function unidadesPorFase(): Fase[] {
 	const grupos = new Map<number, Unit[]>();
 	for (const id of curriculum.unitOrder) {
 		const unit = curriculum.units.get(id);
@@ -34,7 +47,15 @@ function unidadesPorFase(): { phase: number; units: Unit[] }[] {
 	}
 	return [...grupos.entries()]
 		.sort(([a], [b]) => a - b)
-		.map(([phase, units]) => ({ phase, units }));
+		.map(([phase, units]) => ({
+			phase,
+			units,
+			celdas: {
+				2: serpentine(units.length, 2),
+				3: serpentine(units.length, 3),
+				5: serpentine(units.length, 5),
+			},
+		}));
 }
 
 const FASES = unidadesPorFase();
@@ -136,68 +157,66 @@ function UnitDots({ mastered }: { mastered: number }) {
 	);
 }
 
-function Estrellas({ n }: { n: number }) {
-	return (
-		<span aria-hidden="true" className="text-celebrate">
-			{[0, 1, 2].map((i) => (
-				<span key={i}>{i < n ? "★" : "☆"}</span>
-			))}
-		</span>
-	);
+/**
+ * Una tabla literal por número de columnas: Tailwind solo genera las clases que aparecen
+ * escritas enteras, así que nada de montarlas con plantillas a partir de `COLUMNAS`.
+ */
+const CAMINO: Record<Columnas, string> = {
+	2: "md:hidden",
+	3: "hidden md:block lg:hidden",
+	5: "hidden lg:block",
+};
+
+/** La celda de cada nodo: su columna y su fila (base 1) en cada rejilla, sin unidades. */
+const CELDA =
+	"relative z-10 grid place-items-center col-start-(--c2) row-start-(--r2) md:col-start-(--c3) md:row-start-(--r3) lg:col-start-(--c5) lg:row-start-(--r5)";
+
+function posicion(celdas: Record<Columnas, Cell[]>, i: number): CSSProperties {
+	const [c2, c3, c5] = COLUMNAS.map((cols) => celdas[cols][i]);
+	return {
+		"--c2": (c2?.col ?? 0) + 1,
+		"--r2": (c2?.row ?? 0) + 1,
+		"--c3": (c3?.col ?? 0) + 1,
+		"--r3": (c3?.row ?? 0) + 1,
+		"--c5": (c5?.col ?? 0) + 1,
+		"--r5": (c5?.row ?? 0) + 1,
+	} as CSSProperties;
 }
 
-function UnitButton(props: {
-	unit: Unit;
-	progress: UnitProgress | undefined;
-	playable: boolean;
-	onStart: () => void;
+/**
+ * El camino de una fase, en unidades de celda (MP7): `viewBox` y `preserveAspectRatio="none"`
+ * lo estiran a la rejilla sin medir el DOM. Va detrás de los nodos (sus celdas son `z-10`) y no
+ * recibe toques.
+ */
+function Camino({
+	cols,
+	count,
+	cells,
+}: {
+	cols: Columnas;
+	count: number;
+	cells: readonly Cell[];
 }) {
-	const { unit, progress, playable, onStart } = props;
-	// Lo que no consta como terminado ni activo se trata como bloqueado.
-	const status = progress?.status ?? "locked";
-	const stars = progress?.bestStars ?? 0;
-	const aparte = status === "active" && !playable;
-	const jugable = status === "active" && playable;
-	const atenuada = status === "locked" || aparte;
-
-	let label: string;
-	if (aparte) label = LLEGA_DESPUES;
-	else if (status === "done") label = `${unit.title}, ${stars} de 3 estrellas`;
-	else if (status === "locked") label = `${unit.title}, bloqueada`;
-	else label = unit.title;
-
-	const estilo = {
-		done: "bg-calm",
-		locked: "bg-card text-ink-soft",
-		active: "bg-action ring-4 ring-action font-semibold",
-	}[status];
-
 	return (
-		<button
-			type="button"
-			data-unit={unit.id}
-			data-status={status}
-			aria-label={label}
-			aria-current={status === "active" ? "step" : undefined}
-			aria-disabled={jugable || status === "done" ? undefined : true}
-			onClick={() => {
-				if (jugable) onStart();
-			}}
-			className={`flex min-h-18 w-full rounded-2xl p-4 text-left text-xl ${estilo}`}
+		<svg
+			aria-hidden="true"
+			data-columns={cols}
+			viewBox={`0 0 ${cols} ${Math.ceil(count / cols)}`}
+			preserveAspectRatio="none"
+			className={`pointer-events-none absolute inset-0 size-full ${CAMINO[cols]}`}
 		>
-			{/* Lo atenuado (bloqueada, o activa pero «llega después») baja la opacidad del
-			    contenido y no de la ficha: el fondo de la ficha sigue opaco (V13) y no deja ver
-			    el fondo equipado a través. */}
-			<span
-				data-dim={atenuada}
-				className={`flex w-full items-center justify-between gap-3 ${atenuada ? (aparte ? "opacity-50" : "opacity-60") : ""}`}
-			>
-				<span>{unit.title}</span>
-				{status === "done" && <Estrellas n={stars} />}
-				{status === "locked" && <Icon name="lock" size={32} />}
-				{status === "active" && <span aria-hidden="true">▶</span>}
-			</span>
-		</button>
+			{cells.length >= 2 && (
+				<path
+					d={serpentinePath(cells, cols)}
+					fill="none"
+					className="stroke-node-locked-depth"
+					strokeWidth={8}
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					vectorEffect="non-scaling-stroke"
+				/>
+			)}
+		</svg>
 	);
 }
 
@@ -229,13 +248,18 @@ export function MapScreen(props: {
 		idActivo === null ? null : unitProgress(curriculum, progress, idActivo);
 	const estrellas = totalStars(progress);
 	const hito = nextMilestone(estrellas);
+	// MP12: la celda de la unidad activa se centra una vez, al montar y sin animación.
+	const celdaActiva = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		celdaActiva.current?.scrollIntoView?.({ block: "center" });
+	}, []);
 
 	return (
-		<main className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4">
+		<main className="mx-auto flex w-full flex-col gap-6 p-4">
 			<SavedMark lastSavedAt={lastSavedAt} saveFailed={saveFailed} />
 			{/* Todo lo que se pinta suelto (título, compañero, estrellas, avance) va sobre una
 			    superficie opaca (V13): el fondo equipado puede ser un cielo de noche. */}
-			<div className="flex flex-col gap-6 rounded-card bg-surface p-4">
+			<div className="mx-auto flex w-full max-w-xl flex-col gap-6 rounded-card bg-surface p-4">
 				<AdultDoor onOpen={onOpenPanel}>
 					<h1 className="text-center text-3xl font-bold">Silabín</h1>
 				</AdultDoor>
@@ -255,25 +279,50 @@ export function MapScreen(props: {
 					<UnitDots mastered={avanceActivo.mastered} />
 				)}
 			</div>
-			{FASES.map(({ phase, units }) => (
-				<section
-					key={phase}
-					aria-label={`Fase ${phase}`}
-					className="flex flex-col gap-3"
-				>
-					{units.map((unit) => (
-						<UnitButton
-							key={unit.id}
-							unit={unit}
-							progress={progress.units[unit.id]}
-							playable={playable}
-							onStart={onStart}
-						/>
-					))}
-				</section>
-			))}
+			{/* El camino va en un panel opaco (MP10, V13): ensancha con la pantalla, la cabecera no. */}
+			<div className="mx-auto flex w-full max-w-xl flex-col gap-4 rounded-card bg-surface p-2 md:max-w-2xl md:p-4 lg:max-w-4xl">
+				{FASES.map(({ phase, units, celdas }, f) => (
+					<Fragment key={phase}>
+						{f > 0 && (
+							<div
+								aria-hidden="true"
+								className="border-t-4 border-dashed border-node-locked-depth"
+							/>
+						)}
+						<section
+							aria-label={`Fase ${phase}`}
+							className="relative grid grid-cols-2 auto-rows-[9rem] md:grid-cols-3 lg:grid-cols-5"
+						>
+							{COLUMNAS.map((cols) => (
+								<Camino
+									key={cols}
+									cols={cols}
+									count={units.length}
+									cells={celdas[cols]}
+								/>
+							))}
+							{units.map((unit, i) => (
+								<div
+									key={unit.id}
+									ref={unit.id === idActivo ? celdaActiva : undefined}
+									className={CELDA}
+									style={posicion(celdas, i)}
+								>
+									<MapNode
+										unit={unit}
+										progress={progress.units[unit.id]}
+										playable={playable}
+										onStart={onStart}
+									/>
+								</div>
+							))}
+						</section>
+					</Fragment>
+				))}
+			</div>
 			{sinActiva && (
 				<BigButton
+					className="mx-auto w-full max-w-xl"
 					aria-label={playable ? "Repasar" : LLEGA_DESPUES}
 					aria-disabled={playable ? undefined : true}
 					onClick={() => {

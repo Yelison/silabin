@@ -16,6 +16,11 @@ import {
 	type TemplateId,
 } from "@/engine";
 import { MapScreen } from "@/features/map/MapScreen";
+import {
+	COLUMNAS,
+	serpentine,
+	serpentinePath,
+} from "@/features/map/serpentine";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 import { createMemoryAdapter } from "@/store";
 
@@ -114,7 +119,7 @@ describe("MapScreen", () => {
 		}
 	});
 
-	it("M1: los botones de unidad miden al menos 72 px de alto (objetivo táctil)", async () => {
+	it("M1: los nodos de unidad miden al menos 72 px de alto (objetivo táctil)", async () => {
 		const { container } = montar(await storeConDisco(() => {}));
 		const botones = [...container.querySelectorAll<HTMLElement>("[data-unit]")];
 		expect(botones.length).toBeGreaterThan(0);
@@ -157,9 +162,13 @@ describe("MapScreen", () => {
 	it("una unidad bloqueada lleva candado y no arranca nada al tocarla", async () => {
 		const { unidad, onStart } = montar(await storeConDisco(() => {}));
 		const rhyme = unidad("phase0:rhyme");
-		const candado = rhyme.querySelector('img[src="/icons/ui-lock.png"]');
-		expect(candado?.getAttribute("aria-hidden")).toBe("true");
-		expect(candado?.getAttribute("width")).toBe("32");
+		const candado = rhyme.querySelector('[data-badge="lock"]');
+		expect(candado).not.toBeNull();
+		expect(candado?.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+			"true",
+		);
+		// El símbolo de la unidad sigue a la vista; el candado es la insignia, no sustituye al icono.
+		expect(rhyme.querySelector("[data-symbol] svg")).not.toBeNull();
 		expect(rhyme.textContent).not.toContain("🔒");
 		await userEvent.click(rhyme);
 		expect(onStart).not.toHaveBeenCalled();
@@ -299,10 +308,14 @@ describe("MapScreen", () => {
 				};
 		});
 		const { container } = montar(store);
-		expect(container.querySelector("main")?.className).toContain("max-w-xl");
+		const cabecera = screen
+			.getByRole("heading", { name: "Silabín" })
+			.closest("[class*='max-w-xl']");
+		expect(cabecera).not.toBeNull();
 		const puntos = screen.getByLabelText(/letras aprendidas/);
 		expect(puntos.className).toContain("flex-wrap");
 		expect(container.querySelector("[style*='px']")).toBeNull();
+		expect(container.innerHTML).not.toMatch(/\bw-\[[^\]]*px\]/);
 	});
 
 	it("tocar la unidad activa jugable inicia la sesión", async () => {
@@ -314,34 +327,33 @@ describe("MapScreen", () => {
 		expect(onStart).toHaveBeenCalledTimes(1);
 	});
 
-	it("U7: la unidad activa no jugable se ve atenuada y tocarla no hace nada", async () => {
+	it("U7: la unidad activa no jugable se ve como «soon» y tocarla no hace nada", async () => {
 		const { unidad, onStart } = montar(await storeConDisco(() => {}), {
 			implemented: new Set(),
 		});
 		const clap = unidad("phase0:clap");
 		expect(clap.getAttribute("aria-label")).toBe(LLEGA_DESPUES);
 		expect(clap.getAttribute("aria-disabled")).toBe("true");
-		// La ficha sigue opaca (V13): lo que baja de opacidad es su contenido.
+		expect(clap.getAttribute("data-look")).toBe("soon");
+		expect(clap.querySelector('[data-badge="soon"]')).not.toBeNull();
+		expect(clap.querySelector('[data-badge="lock"]')).toBeNull();
+		// La ficha sigue opaca (V13): el estado no se marca con opacidad.
 		expect(clap.className).not.toMatch(/opacity/);
-		expect(clap.querySelector('[data-dim="true"]')?.className ?? "").toMatch(
-			/opacity-50/,
-		);
 		await userEvent.click(clap);
 		expect(onStart).not.toHaveBeenCalled();
 	});
 
-	it("U7b: una unidad bloqueada atenúa su contenido (opacity-60), no la ficha, que sigue opaca", async () => {
+	it("U7b: una unidad bloqueada se ve «locked» y su botón no lleva opacidad", async () => {
 		const { unidad } = montar(await storeConDisco(() => {}));
 		const rimas = unidad("phase0:rhyme");
 		expect(rimas.getAttribute("data-status")).toBe("locked");
-		expect(rimas.className).toContain("bg-card");
+		expect(rimas.getAttribute("data-look")).toBe("locked");
+		expect(rimas.getAttribute("aria-disabled")).toBe("true");
 		expect(rimas.className).not.toMatch(/opacity/);
-		const contenido = rimas.querySelector('[data-dim="true"]');
-		expect(contenido?.className ?? "").toMatch(/\bopacity-60\b/);
-		// La activa jugable no se atenúa.
+		// La activa jugable no se atenúa ni lleva insignia.
 		const clap = unidad("phase0:clap");
-		expect(clap.querySelector('[data-dim="true"]')).toBeNull();
-		expect(clap.querySelector('[data-dim="false"]')).not.toBeNull();
+		expect(clap.getAttribute("data-look")).toBe("available");
+		expect(clap.querySelector("[data-badge]")).toBeNull();
 	});
 
 	it("sin unidad activa ofrece el repaso, sujeto a la misma comprobación", async () => {
@@ -378,6 +390,103 @@ describe("MapScreen", () => {
 		expect(container.innerHTML.toLowerCase()).not.toMatch(
 			/error|fallo|incorrect|mal\b|perdiste|otra vez/,
 		);
+	});
+
+	it("S1: cada nodo declara su celda en las tres rejillas (base 1): la séptima de la Fase 3 es (4, 2) en cinco columnas", async () => {
+		const { unidad } = montar(await storeConDisco(() => {}));
+		const ids = curriculum.unitOrder.filter(
+			(id) => curriculum.units.get(id)?.phase === 3,
+		);
+		expect(ids).toHaveLength(8);
+		for (const cols of COLUMNAS) {
+			const celdas = serpentine(ids.length, cols);
+			ids.forEach((id, i) => {
+				const estilo = unidad(id).parentElement?.style;
+				expect(estilo?.getPropertyValue(`--c${cols}`), `${id} c${cols}`).toBe(
+					String((celdas[i]?.col ?? -2) + 1),
+				);
+				expect(estilo?.getPropertyValue(`--r${cols}`), `${id} r${cols}`).toBe(
+					String((celdas[i]?.row ?? -2) + 1),
+				);
+			});
+		}
+		const septima = unidad(ids[6] ?? "").parentElement?.style;
+		expect(septima?.getPropertyValue("--c5")).toBe("4");
+		expect(septima?.getPropertyValue("--r5")).toBe("2");
+	});
+
+	it("S2: cada fase trae tres caminos (2, 3 y 5 columnas) con el viewBox y el trazo de su rejilla", async () => {
+		montar(await storeConDisco(() => {}));
+		for (const fase of [0, 1, 2, 3]) {
+			const seccion = screen.getByRole("region", { name: `Fase ${fase}` });
+			const n = curriculum.unitOrder.filter(
+				(id) => curriculum.units.get(id)?.phase === fase,
+			).length;
+			const svgs = [...seccion.querySelectorAll("svg[data-columns]")];
+			expect(
+				svgs.map((e) => e.getAttribute("data-columns")),
+				`Fase ${fase}`,
+			).toEqual(["2", "3", "5"]);
+			for (const svg of svgs) {
+				const cols = Number(svg.getAttribute("data-columns"));
+				expect(svg.getAttribute("aria-hidden")).toBe("true");
+				expect(svg.getAttribute("viewBox")).toBe(
+					`0 0 ${cols} ${Math.ceil(n / cols)}`,
+				);
+				expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
+				expect(svg.getAttribute("class")).toContain("pointer-events-none");
+				const trazo = svg.querySelector("path");
+				if (n < 2) expect(trazo).toBeNull();
+				else
+					expect(trazo?.getAttribute("d")).toBe(
+						serpentinePath(serpentine(n, cols), cols),
+					);
+			}
+		}
+	});
+
+	it("S3: al montar centra la celda de la unidad activa, una sola vez aunque se vuelva a pintar", async () => {
+		const original = Element.prototype.scrollIntoView;
+		const espia = vi.fn();
+		Element.prototype.scrollIntoView = espia;
+		try {
+			const store = await storeConDisco(() => {});
+			const { unidad } = montar(store);
+			expect(espia).toHaveBeenCalledTimes(1);
+			expect(espia).toHaveBeenCalledWith({ block: "center" });
+			const celda = espia.mock.contexts[0] as HTMLElement;
+			expect(celda).not.toBe(unidad("phase0:clap"));
+			expect(celda).toBe(unidad("phase0:clap").parentElement);
+			// Otro pintado del mapa (la marca de guardado cambia) no vuelve a mover la vista.
+			act(() => {
+				store.setState({
+					lastSavedAt: "2026-09-28T14:05:00.000Z",
+					saveFailed: false,
+				});
+			});
+			expect(screen.getByLabelText(/Guardado a las/)).toBeDefined();
+			expect(espia).toHaveBeenCalledTimes(1);
+		} finally {
+			Element.prototype.scrollIntoView = original;
+		}
+	});
+
+	it("S4: sin unidad activa no se centra nada y sale el repaso", async () => {
+		const original = Element.prototype.scrollIntoView;
+		const espia = vi.fn();
+		Element.prototype.scrollIntoView = espia;
+		try {
+			const store = await storeConDisco((doc) => {
+				todoHechoSalvoFase3(doc);
+				for (const id of curriculum.units.get("phase0:clap")?.introduces ?? [])
+					doc.items[id] = { ...emptyItemProgress(), presented: true };
+			});
+			montar(store);
+			expect(espia).not.toHaveBeenCalled();
+			expect(screen.getByRole("button", { name: "Repasar" })).toBeDefined();
+		} finally {
+			Element.prototype.scrollIntoView = original;
+		}
 	});
 
 	it("N9: mantener el logo 3 s llama a onOpenPanel", async () => {
