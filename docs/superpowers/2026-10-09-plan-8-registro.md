@@ -111,7 +111,7 @@ con `~/qa-silabin`.
 |---|---|---|---|
 | T1 | completa (e603ff9) | 0 | n/a (sin mutación) |
 | T2 | completa (ca3e547) | 0 | 4 de 16 sobreviven (j, m, o, p), todas de clases o aria-hidden; las 5 obligatorias mueren |
-| T3 | pendiente | | |
+| T3 | completa (55975b2) | 0 | 4 de 7 propias del revisor sobreviven (visibilidad de los SVG, `fill`, clase del trazo, `z-10` de la celda); las 5 obligatorias mueren |
 | T4 | pendiente | | |
 
 ## Ejecución
@@ -132,3 +132,17 @@ con `~/qa-silabin`.
 - T2: minor (deferred): el aro (−14 px) y el foco (offset 18) desbordan el botón de 88 px y el foco rodea círculo y estrellas. **La T3 debe dejar separación en la rejilla.**
 - T2: minor (deferred): `LLEGA_DESPUES` está duplicada (`MapScreen.tsx:24` y `MapNode.tsx:188`); **la T3 deja una sola** al sustituir `UnitButton`.
 - Ruling: `src/engine/planner.test.ts` ("30 semillas por 3 estados") agota los 5000 ms en la suite completa (5,8 s con carga ~18) y pasa solo (47/47 en 4 s). No es de esta tarea (planner no se tocó) y T1 pasó la suite completa. Se deja sin tocar; la puerta de la T3 se corre con `pnpm vitest run` de planner aparte si vuelve a fallar. Coste si fuera equivocado: un timeout que subir.
+
+### T3 · serpiente por columnas, conectores e integración en `MapScreen` (sonnet, high)
+
+- Commit `55975b2` (base `750c6cc`). Revisión completa (sonnet): *Approved*, sin Critical ni Important. Rondas de corrección: 0. Puertas del implementador: `pnpm test` 1439 pasan, typecheck y lint limpios, `e2e/mapa.spec.ts` 16/16. Las 5 mutaciones del brief mueren (la 4 solo la cazan S2 y `toHaveCSS`; un clic real no puede, porque las celdas `z-10` quedan sobre el SVG). El revisor probó 7 más: 3 mueren (`--r5` en base 0, `ref` en todas las celdas, `md:col-start` con `--c2`) y 4 sobreviven (ver minors).
+- Incidente de procedimiento: la sesión se cortó con el revisor a medias y dejó `MapScreen.tsx` vaciado en el árbol sin commitear. Se revirtió con `git checkout` (HEAD intacto) y el revisor se reanudó y terminó con el árbol limpio.
+- Ruling: **MP12 se mantiene tal cual** aunque el centrado de la activa deja el logo (puerta del panel de padres, pulsación larga) fuera de vista al abrir el mapa; el adulto tiene que subir hasta él. `e2e/offline.spec.ts` (J3) añade `logo.scrollIntoViewIfNeeded()`. Es lo que manda el plan (MP12) y no toca la ergonomía del niño. Coste si fuera equivocado: cambiar `{ block: "center" }` por `"nearest"` o centrar solo si la activa queda fuera de la primera pantalla (una línea y su test S3). **Decisión de producto para el autor**, a confirmar en la pasada visual del preview.
+- Ruling: `main` pierde `max-w-xl` y lo lleva la cabecera (E4 reescrito con `closest()` desde el h1); el `BigButton` de repaso lleva `mx-auto w-full max-w-xl` para verse como antes. Coste si fuera equivocado: dos clases.
+- Ruling: `serpentinePath` conserva `_columns` sin usar (la firma la fija el brief; el giro se decide por `col === 0`, correcto para 2, 3 y 5). Coste: borrar un parámetro.
+- Ruling: la sintaxis `col-start-(--c2)` compila (lo prueba el e2e: 2, 3 y 5 columnas distintas). Sin `col-start-[var(--c2)]`.
+- T3: minor (deferred): **la insignia «Guardado» queda tapada por los nodos.** `SavedMark` (`fixed top-2 left-2 z-10`, primera en el DOM) y `CELDA` (`relative z-10`, después): mismo z-index, gana el último del DOM, así que al desplazarse un nodo pasa por encima del ✓. Arreglo: `z-20` en `SavedMark`. Deducción del orden de apilado, sin probar en navegador. **La revisión final debe arreglarlo antes del PR.**
+- T3: minor (deferred): el e2e no comprueba cuál de los tres SVG se ve en cada punto de corte; intercambiar las clases de 3 y 5 columnas pasa 60/60 y 16/16 (Review Focus 5 sin protección real). Arreglo: en el e2e, `section[aria-label='Fase 1'] svg[data-columns]:visible` tiene un solo elemento y su `data-columns` es el del viewport. **La revisión final debe cubrirlo antes del PR.**
+- T3: minor (deferred): S2 no comprueba `fill="none"`, la clase `stroke-node-locked-depth` ni `vector-effect="non-scaling-stroke"` (mutaciones que sobreviven), ni `z-10` de la celda (redundante en la práctica, lo exige el `before:` del aro).
+- T3: minor (deferred): no se midió en navegador que el aro (−14 px) y el foco (offset 18) quepan sin pisar al vecino (las celdas son 9 rem de alto y ≥136 px de ancho frente a 88 px); el e2e mide solo las cajas de los botones (≥ 15,5 px). Va a la pasada visual del preview.
+- T3: minor (deferred): `apaisado › build` es inestable ya en la base (fallos distintos según la corrida, atascado en `piezas.nth(n-2).click()`); no es del plan.
