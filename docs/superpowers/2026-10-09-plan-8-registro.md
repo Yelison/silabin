@@ -168,3 +168,11 @@ con `~/qa-silabin`.
 - Medido en navegador: el Δ de centro clap–rhyme era −16 px en 320, 390, 834 y 1194; con la pastilla `absolute top-full` pasa a 0,00. Mutaciones que mueren: z-20, SVG visible (834 y 1194; en 320 y 390 manda el camino de 2 columnas y el intercambio no cambia nada), `fill`, `vectorEffect`, clase del trazo, aro y hundimiento fuera de `available`, pastilla de vuelta al flujo (4 viewports).
 - Revisión final: **cerrada**. Falta: despliegue del preview, pasada visual con `~/qa-silabin` (webkit y chromium; aro/foco contra el vecino, conector `#d9dce4` a 1,3 : 1), decisión del autor sobre MP12 (`block: "nearest"`) y MP4 (☆), y el PR.
 - Final: minor (deferred): con foco de teclado en un nodo terminado, la pastilla (`bg-card`) corta el tramo inferior del aro de foco (cosmético, no recorta). A la pasada visual.
+
+### Pasada visual local y cierre (2026-10-09)
+
+- Método: build de producción local (`pnpm build` + `start`, sin desplegar; D29), estado sembrado «clap terminada con 2 ★», WebKit iPad Pro 11 y Chromium de escritorio a 320, 390, 834 y 1194 px. Capturas en `~/qa-silabin/out/mapa/`.
+- Aro de foco contra el vecino: no se pisan (≈13 px de aire a 320). Conector `#d9dce4`: visible y sin competir con los nodos. Círculos alineados sobre el trazo.
+- Confirmado: la pastilla ★★☆ tapa el tramo inferior del aro de foco del nodo terminado (cosmético, ya en minor (deferred)).
+- Ruling: el autor pidió «dale con tus recomendaciones» sin que yo hubiera marcado ninguna; elijo **mantener MP12 en `block: "center"` y las ☆ de MP4**, sin cambios de código. Coste si fuera equivocado: una línea y el test S3 (MP12); las ☆ se cambian en `MapNode`. Siguen en la deuda 8 hasta verlo en dispositivo real.
+- Puertas finales: `pnpm test` 1443 pasan y 1 omitido, typecheck y lint limpios. Push y PR contra `main` autorizados por el autor.

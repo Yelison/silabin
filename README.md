@@ -11,7 +11,8 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > pegatinas, iconos y paleta final) están fusionados en `main`. Hoy son jugables las tres fases.
 > El **Plan 8** (el mapa como camino en serpiente) está **ejecutado en su rama**
 > `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 y la revisión final (corregida) hechas;
-> **faltan** el despliegue del preview con su pasada visual y el PR (que incluye el #10).
+> pasada visual local hecha (2026-10-09); **falta** que el autor despliegue el preview (D29). El PR
+> contra `main` incluye el #10.
 > Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
 > esquemática**. 1443 tests, y `typecheck` y `lint` en verde.
 
@@ -592,7 +593,7 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 8 construidos.
 | ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** | Las Fases 1 y 2 son jugables |
 | ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | ~~7~~ | ~~Identidad visual (D24): el arte del loro y el elefantito, fondos, pegatinas, trofeo, rastros, iconos, paleta final y `docs/checklist-ipad.md`~~ **hecho** (PR #8). **Sin hacer:** la boca (aplazada) y la prueba del autor con la lista | La versión con cara propia; falta probarla en dispositivo real |
-| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. **Sin hacer:** el preview con su pasada visual (MP12 y ☆ de MP4, del autor) y el PR (incluye el #10) | Un mapa que se lee como un viaje |
+| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. Pasada visual local hecha; MP12 y ☆ de MP4 se mantienen por decisión del autor. **Sin hacer:** el preview desplegado por el autor. PR abierto contra `main` (incluye el #10) | Un mapa que se lee como un viaje |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 | Idea aparcada | **Refactor de diseño del resto de pantallas** con el plugin `frontend-design`, en un plan aparte (el mapa ya lo hizo el Plan 8). Quedan la composición completa de la referencia (cabecera, pie y tarjetas de capítulo, D39) y los colores de mundo (D43) | Pantallas con más personalidad |
 | Idea aparcada | **Objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa), como capas transparentes ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor y un punto de anclaje por compañero; ver el ledger del Plan 7 | Personalización del compañero |
@@ -755,8 +756,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
-8. **Minors y decisiones del Plan 8** (ledger y archivo): dos de producto para el autor en el preview,
-   MP12 (logo de padres fuera de vista) y las ☆ (MP4). Gusto, no test.
+8. **Minors y decisiones del Plan 8** (ledger y archivo): dos de producto, MP12 (logo de padres fuera de vista;
+   se mantiene `center`) y las ☆ (MP4, se mantienen): el autor las confirma con dispositivo real. Gusto, no test.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo
