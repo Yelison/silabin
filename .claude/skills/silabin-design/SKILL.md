@@ -151,26 +151,41 @@ scroll, un solo ejercicio.
 
 ## Progreso: el mapa como viaje
 
-El mapa no es una lista vertical de curso (hoy aún lo es: el Plan 8 lo rehace). Dirección
-acordada con el autor en `docs/diseno/mapa/notas-maquetas.md`:
+El mapa es un **camino en serpiente de nodos redondos con icono** (Plan 8; ledger
+`docs/superpowers/2026-10-09-plan-8-registro.md`, D37-D45 y MP1-MP15). Lo pinta
+`features/map/MapScreen` con un `MapNode` por unidad; la referencia visual es
+`docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), con las excepciones del ledger.
 
-- Rejilla en serpiente generada por código desde `content/` (5 columnas en iPad apaisado, 2-3 en
-  vertical o teléfono, con scroll y la activa centrada al abrir), unida por un camino
-  discontinuo.
-- Fichas reconocibles sin leer: color y un elemento grande (la letra en las unidades de letra, un
-  icono en la fase 0), con el título pequeño para el adulto.
-- **Color por mundo** como identidad ambiental (ver «Colores de mundo»): Fase 0 «Oído de
-  explorador», Fase 1 «Las vocales», Fase 2 «Las sílabas»; las fases futuras, sin ítems, en beis.
-- **Tres estados, iguales en todos los mundos, que se distinguen sin depender del color:**
-  - **Activa** (`current`): amarillo `action`, un brillo muy sutil, más contraste, el compañero
-    equipado junto a la ficha y `aria-current="step"`. Se reconoce al instante.
-  - **Terminada** (`completed`): base clara y neutra, ★ ganadas (y `aria-label` con ellas) y
-    detalles del color del mundo. No compite con la activa.
-  - **Bloqueada** (`locked`): desaturada, con menos contraste, `lock` si hace falta, el contenido
-    atenuado y la ficha opaca. Sin rojo. Legible pero secundaria; evita la «pared de candados».
-- Se conservan el contador de estrellas con su barra al próximo hito, los puntos de avance de la
-  unidad activa (sin huecos vacíos), la marca de «guardado» y «Mis premios» (≥ 72 px).
-- El mapa pinta `progress.units` del motor; no decide qué unidad se juega.
+- **Serpiente por fase** (MP8, MP9): una rejilla de **2 columnas en teléfono (< 768 px), 3 de 768 a
+  1023 px y 5 desde 1024 px** (`md:` y `lg:` de Tailwind), generada por código desde `content/`
+  (`serpentine.ts`). Cada fase empieza de izquierda a derecha y el camino no cruza el separador
+  de fase. Los conectores son un SVG por número de columnas, en unidades de celda y sin medir el
+  DOM (MP7); `pointer-events-none`. Al abrir se centra la unidad activa, una vez y sin animación
+  (MP12).
+- **Nodo de 88 px** (`size-22`; objetivo ≥ 72 px, MP11), con el símbolo de la unidad (la letra en
+  las unidades de letra, un icono de línea en la fase 0). **Sin título visible** (D42): el nombre
+  va solo en `aria-label`. Los estados son iguales en todos los mundos y **no dependen solo del
+  color** (aro, insignia, estrellas):
+  - **Disponible** (`available`, la activa con sesión): cara `action` con sombra `action-depth`,
+    símbolo `action-ink` y **aro `mark`** alrededor. Es la única con aro. Lleva
+    `aria-current="step"`.
+  - **Completado** (`completed`): cara **azul saturada** `calm-border` con sombra `calm-depth` y
+    símbolo blanco (`card`, 3,72 : 1) (MP3, que sustituye a la «base clara y neutra» anterior),
+    insignia ✓ y, debajo, las estrellas ganadas (☆ las que faltan, MP4). Tocarlo no hace nada
+    (MP15).
+  - **Bloqueado** (`locked`): cara `node-locked` casi igual que la superficie (1,1 : 1), símbolo
+    `node-locked-ink` (3,70 : 1) e insignia de candado (4,29 : 1 sobre su fondo). Sin rojo y sin
+    opacidad: la ficha es opaca (V13).
+  - **«Soon»** (D38): la activa sin plantilla todavía. Se ve como bloqueada, sin aro y con la
+    insignia de reloj, no la del candado. Tocarla no inicia nada y se anuncia «Llega en una
+    próxima versión».
+  - Bloqueado y «soon» llevan `aria-disabled="true"`, nunca `disabled` (MP1).
+- **Colores de mundo:** no entran (D43). El camino y los separadores de fase son neutros, sobre un
+  panel opaco `bg-surface` (MP10).
+- **Cabecera sin cambios** (D39): puerta de padres (el logo), el compañero equipado, «Mis
+  premios», el contador de estrellas con su barra al próximo hito, los puntos de avance de la
+  unidad activa y la marca de «guardado». El compañero va en la cabecera, no junto al nodo.
+- El mapa pinta `progress.units` del motor y `isSessionPlayable`; no decide qué unidad se juega.
 
 ## Dispositivo y tamaños
 
@@ -207,7 +222,7 @@ Reutiliza, luego amplía con variantes, y crea solo si no hay otra salida.
 | Imagen de palabra | `components/Picture` (`img:<palabra>`, emoji de respaldo) |
 | Arte decorativo | `features/rewards/visuals.ts` → `components/ArtImage` (emoji de respaldo) |
 | MascotMessage | No existe: `Companion` más una locución |
-| LevelNode, WorldMap | `features/map/MapScreen` (lo reescribe el Plan 8) |
+| Nodo del camino, mapa | `features/map/MapNode` (un nodo; `nodeLook` decide su aspecto) y `features/map/MapScreen` (cabecera y camino; `serpentine.ts` coloca los nodos) |
 | SuccessFeedback | rebote `celebrating` en `SessionScreen` y `EndScreen` |
 | Icono | `components/Icon`, solo los de `ICON_NAMES` (uno nuevo pide su PNG en `public/icons/`) |
 
@@ -233,6 +248,11 @@ nunca deciden pedagogía.
   los fondos equipables (Pradera, Espacio, Bosque), que también pintan el entorno.
 - **Texto en azul marino:** el autor lo menciona, pero hoy `ink` es un casi negro cálido. Cambiarlo
   es un token nuevo que debe pasar CO1.
-- **Mapa** (`notas-maquetas.md`): qué hace una ficha terminada al tocarla (cambia el motor), el
-  icono de cada unidad de la fase 0 y si las fases futuras se ven enteras.
+- **Mapa:** qué hace una unidad terminada al tocarla (cambiaría el motor; hoy no hace nada, MP15),
+  si las fases futuras se ven enteras, **la continuidad del camino entre fases** (hoy cada fase
+  tiene su serpiente y se corta en el separador, MP8) y las **☆ de las estrellas que faltan**
+  (MP4: hoy 2 estrellas se ven ★★☆; la opción D37 decía a la vez «las 3» y «nunca huecos» y está
+  sin confirmar con el autor). Y **el centrado de la activa al abrir** (MP12), que deja el logo
+  del panel de padres fuera de vista: ¿`block: "nearest"`, o centrar solo si la activa queda fuera
+  de la primera pantalla? Se confirma con el autor en la pasada visual del preview.
 - Arte pendiente: la boca esquemática (deuda 5) y los glifos sin arte (🔁, ✓, ✕, ★/☆; V10).

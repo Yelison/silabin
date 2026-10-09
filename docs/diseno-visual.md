@@ -149,6 +149,34 @@ Los fondos son 3:4 y se pintan con `object-cover` a pantalla completa: revisados
 no dejan franjas y en apaisado recortan arriba y abajo (el planeta y la luna de Espacio quedan
 en los bordes; nada importante se tapa porque el contenido va en las bandas).
 
+## El mapa en serpiente (Plan 8)
+
+El mapa es un camino de nodos redondos con icono, no una lista vertical. Lo dibuja
+`src/features/map/` (`MapScreen`, `MapNode`, `nodeLook`, `serpentine`, `UnitIcon`); la referencia
+visual es `docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), que no se edita, y las
+decisiones D37-D45 y MP1-MP15 están en `docs/superpowers/2026-10-09-plan-8-registro.md`.
+
+- **Disposición:** una serpiente por fase, de **2 columnas** (< 768 px), **3** (768-1023 px) o
+  **5** (≥ 1024 px); las filas pares van de izquierda a derecha y las impares al revés. Los
+  conectores son un SVG por número de columnas en unidades de celda: no se mide nada en el DOM.
+  El camino va en un panel opaco `bg-surface`; la cabecera no cambia (D39) y los colores de mundo
+  no entran (D43).
+- **Nodo:** 88 px (`size-22`), objetivo ≥ 72 px con ≥ 16 px entre vecinos (la deuda 4 no crece).
+  Sin título visible (D42): el nombre va en `aria-label`.
+- **Cuatro aspectos** (`nodeLook`), todos sobre superficie opaca y marcados con algo más que el
+  color:
+
+| Aspecto | Cara y sombra | Símbolo | Marca |
+|---|---|---|---|
+| `available` | `action` y `action-depth` | `action-ink` (8,22 : 1) | aro `mark` |
+| `completed` | `calm-border` y `calm-depth` | `card` (3,72 : 1) | insignia ✓ y estrellas |
+| `locked` | `node-locked` y `node-locked-depth` | `node-locked-ink` (3,70 : 1) | insignia de candado (4,29 : 1) |
+| `soon` | como `locked` | como `locked` | insignia de reloj, sin aro |
+
+- **Bloqueado:** su cara queda a 1,1 : 1 de la superficie, así que se reconoce por el símbolo y
+  la insignia, no por el borde (MP10). Solo lleva `aria-disabled`, nunca `disabled` (MP1).
+- Los pares de contraste nuevos están en la tabla de arriba y los vigila `tokens.test.ts`.
+
 ## Reglas
 
 - **Sin rojo ni verde de «bien o mal» en ninguna parte.** El fallo es neutro (spec §2); ningún
@@ -168,8 +196,8 @@ en los bordes; nada importante se tapa porque el contenido va en las bandas).
   obligaría a un ocre oscuro (~`#C47A00`, 3,4 : 1 sobre `card`) que ya no se lee como
   celebración. Los ★ van siempre con un número, la pegatina o la forma (★ llenas y vacías), y
   la unidad lleva `aria-label` con las estrellas: el color no es lo único que las dice.
-- El ★ también se pinta sobre `calm` en las unidades hechas del mapa (`Estrellas`, en
-  `MapScreen.tsx`); entra en la misma decisión (1,93 : 1; antes, con `#FF9F1C`, 1,69).
+- El ★ también se pinta en las unidades hechas del mapa (`Estrellas`, en `features/map/MapNode.tsx`),
+  ahora sobre una pastilla `bg-card` bajo el nodo (2,34 : 1); entra en la misma decisión.
 
 ## Abierto para el autor
 

@@ -1,9 +1,13 @@
 # Exploración del mapa-mundo: análisis, arquitectura, assets y animación (2026-10-03)
 
+> **Antecedente histórico (PR #9, aparcado por D40).** Describe el mapa de antes del Plan 8
+> (`UnitButton`, lista vertical); el mapa vigente es el camino en serpiente de `features/map/`
+> (ver `docs/superpowers/2026-10-09-plan-8-registro.md`). `notas-maquetas.md` no existe.
+
 Propuesta para revisar **antes** de construir el mapa de producción (Plan 8). La autoridad visual
 es la skill `silabin-design` (`.claude/skills/silabin-design/SKILL.md`). Las maquetas y su
-análisis están en `notas-maquetas.md`, y la imagen de dirección visual es concept art: no se
-copia.
+análisis estaban en `notas-maquetas.md` (no está en el repo), y la imagen de dirección visual es
+concept art: no se copia.
 
 ## 1. Análisis
 

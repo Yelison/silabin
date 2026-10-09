@@ -1,3 +1,5 @@
+Integrado en el Plan 8 (ledger `docs/superpowers/2026-10-09-plan-8-registro.md`).
+
 # Refactor visual de Silabín: entrega para Claude
 
 Esta carpeta conserva el diseño acordado y los recursos reutilizables antes de aplicarlos a la aplicación. No cambia `src/`, el motor, el progreso ni las dependencias. El componente en `icons/` es código de referencia para adaptar y verificar durante la integración.
