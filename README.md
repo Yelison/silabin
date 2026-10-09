@@ -45,7 +45,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1394 tests (1 omitido: el de ficheros de audio)
+pnpm test        # Vitest: 1439 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
@@ -747,9 +747,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    `rhyme` no avanzan. Sin invariante posible: depende de cada reproductor real.
 3. **Tras un fallo de lectura de IndexedDB no se guarda nada** (I3): «Reintentar» solo
    desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
-4. **Accesibilidad y objetivos táctiles < 72 px:** modelo (56 px), `SaveWarning` (~36 px), tambor de
-   224 px fijos, el `<input type="file">` de importar (lo controla el navegador) y las piezas de la
-   bandeja de `build`, separadas 12 px en vez de 16. El mapa del Plan 8 no la amplía (nodo de 88 px, ≥ 16 px entre vecinos; lo mide `e2e/mapa.spec.ts`).
+4. **Accesibilidad y objetivos táctiles < 72 px:** modelo, `SaveWarning`, tambor, `<input type="file">` y
+   bandeja de `build` (12 px, no 16). El mapa del Plan 8 no la amplía; detalle en el archivo.
 5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
    (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
 6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
@@ -760,9 +759,8 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    para el autor en el preview, MP12 (logo de padres fuera de vista) y las ☆ (MP4). Gusto, no test.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
-10. **El e2e y algún test son frágiles:** semilla 7 (S22), solver limitado, espera fija de 3300 ms, WebKit
-    sin probar, `apaisado › build` inestable ya en la base y `planner.test.ts` que agota 5000 ms bajo
-    carga (pasa solo). No se automatiza más sin forzar el planificador.
+10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo
+    carga. No se automatiza sin forzar el planificador; detalle en el archivo.
 
 ---
 

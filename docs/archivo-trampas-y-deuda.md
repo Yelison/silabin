@@ -385,3 +385,10 @@ se fusionaron dos entradas. Cada una, con su destino:
 - **Trampas:** ninguna nueva. Las del Plan 8 son test: E4 (sin `px` en `style` ni anchos fijos), S2
   (los tres caminos con su `viewBox`), U7 y U7b (`aria-disabled`, «soon» y bloqueado sin opacidad) y
   el e2e `mapa.spec.ts` (2, 3 y 5 columnas con clases literales de Tailwind).
+- **Deuda 4 (texto completo, Plan 8):** círculos del modelo (56 px), `SaveWarning` (~36 px), tambor con
+  224 px fijos, el `<input type="file">` de importar (lo controla el navegador) y las piezas de la
+  bandeja de `build`, separadas 12 px en vez de 16. El mapa del Plan 8 no la amplía: nodo de 88 px y
+  ≥ 16 px entre vecinos (`e2e/mapa.spec.ts`).
+- **Deuda 10 (texto completo, Plan 8):** semilla 7 (S22), solver limitado, espera fija de 3300 ms,
+  WebKit sin probar, `apaisado › build` inestable en la base y `planner.test.ts` que agota 5000 ms
+  bajo carga.
