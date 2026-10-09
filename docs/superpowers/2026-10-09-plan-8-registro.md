@@ -154,3 +154,13 @@ con `~/qa-silabin`.
 - Ruling: MP12, las ☆ (MP4) y los minors del Plan 8 van en una sola deuda (la 8 del README). Los dos arreglos de la revisión final (`z-20` en `SavedMark` y la aserción e2e del SVG visible por punto de corte) están en «Siguientes pasos». Coste si fuera equivocado: separar una entrada.
 - Ruling: `docs/diseno/mapa/exploracion-mundo.md` (antecedente del PR #9, aparcado) conserva `UnitButton`, `LevelNode` y `WorldMap` con una nota de antecedente en la cabecera; no se reescribe. Coste: ninguno.
 - T4: minor (deferred): la viñeta T4 del README dice «Poda: ninguna trampa viva y 10 deudas»; las deudas 4 y 10 se acortaron pero no se podaron.
+
+### Revisión final de la rama (opus, ec34ffe..59c875e)
+
+- Veredicto: *listo con arreglos*, sin Critical. typecheck, lint y `vitest run src/features/map` en verde. Los Rulings de contraste 4,29, `main` sin `max-w-xl`, `_columns` y `col-start-(--c2)` los ve bien. `z-20` en `SavedMark` y la aserción del SVG visible: correctas y suficientes.
+- Important nuevo: el botón `completed` mide 120 px (círculo 88 + pastilla de estrellas) y la celda lo centra, así que el círculo queda ~16 px por encima del trazo y de la activa vecina. Deducido del CSS, sin medir en navegador. Arreglo: pastilla fuera del flujo, con e2e sembrado (clap terminada).
+- Important (antes opcional): S2 debe asertar `fill="none"`, `vector-effect="non-scaling-stroke"` y la clase del trazo (dos mutaciones visibles sobreviven).
+- Minor que entra: N7 del aro `before:border-mark` y `active:translate-y-0.5` solo en `available`; aserto de clase `z-20` en E3.
+- Minors que quedan: T1 UI3/UI4; T2 `aria-hidden` y `bg-card` de la pastilla, `-right-1`; T4 viñeta del README. A la pasada visual: aro/foco contra el vecino (foco ~162 px en fila de 144), conector `#d9dce4` a 1,3 : 1 (decorativo, `aria-hidden`).
+- Ruling: el `block: "nearest"` que recomienda el revisor (MP12) **no entra** en el despacho de corrección; es decisión de producto del autor y se confirma en la pasada visual. Coste si fuera equivocado: una línea y el test S3.
+- Ruling: se despacha UN solo arreglo (Sonnet) con los puntos 1-6 del revisor; el 5 (pastilla fuera del flujo) se verifica midiendo en navegador antes de tocar, y si el círculo ya está alineado se reporta y no se cambia. Coste si fuera equivocado: revertir un commit.
