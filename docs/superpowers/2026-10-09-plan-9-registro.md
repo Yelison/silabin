@@ -133,10 +133,16 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 
 | Tarea | Estado | Rondas | Mutaciones que sobreviven |
 |---|---|---|---|
-| T1 | sin empezar | | |
+| T1 | completa (f875024, revisión limpia) | 0 | n/a (sin mutación) |
 | T2 | sin empezar | | |
 | T3 | sin empezar | | |
 | T4 | sin empezar | | |
 | T5 | sin empezar | | |
 
 ## Ejecución
+
+### T1 (sesión 1)
+- Task 1: complete (commits 469a0f7..f875024, review clean).
+- Ruling: `--color-brand` = #a86300 (4,72 : 1 sobre card); #b86f13 da 3,95. Si es erróneo, cuesta cambiar un token.
+- Auditoría FN3: ningún texto de lectura sin `font-reading`; FN3 añadido sobre `OptionCard`.
+- Task 1: minor (deferred): regex del className en `layout.test.ts` frágil ante clsx; `tokens.test.ts:202` repite el id «CO1»; no se abrió `count-syllables/Evaluation.tsx:43` para confirmar que `silabas` no se pinta.
