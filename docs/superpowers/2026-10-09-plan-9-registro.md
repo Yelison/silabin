@@ -107,6 +107,14 @@ Cada uno con su porqué y lo que costaría si fuera equivocado.
   V13). El fondo equipado se ve en los márgenes, como hoy. Coste: si el autor quiere ver más el
   fondo, hay que revisar LE1.
 
+- **MC15 · Con una actualización esperando, el primer Jugar recarga y vuelve al mapa sin
+  sesión.** Antes la recarga salía de la pantalla de inicio, donde ya se esperaba un segundo
+  toque. Se acepta: pasa como mucho una vez por actualización. Va a I17. Coste si es
+  inaceptable: comprobar la actualización al montar el mapa, antes de cualquier toque.
+- **MC16 · Sin `font-weight: 600` en `body`.** Andika (400 y 700) heredaría un 600 y pasaría a
+  negrita en los nueve sitios de lectura. El suelo de 600 de Nunito sale solo, porque solo se
+  cargan sus caras 600-800. Coste: ninguno.
+
 ## Reparto de tareas (provisional; lo fija el plan)
 
 | Tarea | Contenido | Riesgo | Effort | Revisión |

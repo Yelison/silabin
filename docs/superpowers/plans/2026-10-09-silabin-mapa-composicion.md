@@ -74,7 +74,8 @@ export function worldName(phase: number): string;
 ```
 - Tokens: `--color-world-0` #d8ccff (lila), `--color-world-1` #cbeaff (cielo), `--color-world-2` #ffd8c2 (melocotón) y `--color-world-3` #e9e2d7 (beis).
 - `--color-brand`: un ámbar oscuro para el wordmark (MC8). El implementador elige el valor más cercano a #b86f13 que pase 4,5 : 1 sobre `card`; algo como #9a5b00. Se pide 4,5 y no 3 para no abrir una categoría de «texto grande» en el test. Lo registra como ruling.
-- Nunito con `variable: "--font-nunito"` y pesos `600`, `700` y `800`. `--font-sans` pasa a `var(--font-nunito), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`. `body` lleva `font-weight: 600` (skill: «nunca por debajo de 600»). `--font-reading` sigue siendo Andika.
+- Nunito con `subsets: ["latin"]`, `variable: "--font-nunito"` y pesos `600`, `700` y `800`. `--font-sans` pasa a `var(--font-nunito), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`. `--font-reading` sigue siendo Andika.
+- **No** se pone `font-weight: 600` en `body`. Los nueve sitios con `font-reading` heredan el peso, y Andika solo se carga en 400 y 700: un 600 heredado escogería la 700 y pondría en negrita todo el texto de aprendizaje. El suelo de 600 de la skill ya se cumple solo, porque, al cargar Nunito solo en 600-800, un 400 pedido cae en la cara 600.
 
 **Casos de test:**
 
@@ -86,7 +87,7 @@ export function worldName(phase: number): string;
 | CO1 (ampliado) | `ink` sobre `world-0` … `world-3`, y `brand` sobre `card` | ≥ 4,5 : 1. Además, `ink` sobre cada `world-*` ≥ 7 : 1, en un `it` propio como pide la skill |
 | CO2 | los tokens nuevos | ninguno es rojo ni verde intenso (ya lo cubre el bucle) |
 | FN1 | fuente de `layout.tsx` | importa `Nunito` con los pesos `600`, `700` y `800` y `variable: "--font-nunito"`; el `className` de `<html>` lleva `andika.variable` y `nunito.variable` |
-| FN2 | `globals.css` | `--font-sans` empieza por `var(--font-nunito)`, `--font-reading` sigue en `var(--font-andika)` y `body` lleva `font-weight: 600` |
+| FN2 | `globals.css` | `--font-sans` empieza por `var(--font-nunito)`, `--font-reading` sigue en `var(--font-andika)` y no hay ningún `font-weight` en `body` |
 
 - [ ] **Paso 1:** escribe MW1-MW3 y los pares de CO1 y FN1-FN2. Comprueba que fallan.
 - [ ] **Paso 2:** implementa `worlds.ts`, la reexportación, los tokens, Nunito y el peso base. Comprueba que pasan.
@@ -133,6 +134,9 @@ export function useArranque(
 ```
 - La lógica actual está en `StartScreen.tsx:7-80`: `contenedorReal`, `actualizacionReal` y el cuerpo del `onClick`. Se mueve tal cual, con su comentario.
 - Para no recrear la función en cada render, el estado (ya comprobado / pendiente) vive en `useRef`.
+- `useAudio()` funciona en `Screens` antes del `return null`: `App` solo monta `AppProviders` (y con él `Screens`) cuando el reproductor ya existe (`App.tsx:132-137`).
+- El gancho va en `Screens`, nunca dentro de la rama `"map"`. Esa rama se vuelve a montar tras cada sesión y repetiría la comprobación de S11, en contra de MC7.
+- **Ruling MC15 (anotar en el ledger):** si hay un Service Worker esperando, el primer toque en Jugar recarga la página y el niño vuelve al mapa sin sesión: parece un toque que no hizo nada. Antes la recarga salía de la pantalla de inicio, donde ya se esperaba un segundo toque. Se acepta: pasa como mucho una vez por actualización. Se añade a I17. Coste si es inaceptable: comprobar la actualización al montar el mapa, antes de cualquier toque.
 - En `App.tsx`, el estado inicial de `screen` pasa a `"map"` y desaparece `"start"` del tipo `Screen`.
 - `Screens` llama al gancho **antes** del `return null` de carga (regla de los hooks):
   ```ts
@@ -290,6 +294,10 @@ d += `C${x0} ${y0 + 0.5} ${x1} ${y1 - 0.5} ${x1} ${y1}`;
 - Modify: `src/features/map/MapScreen.test.tsx`: E1, E3, FI6, N9, el repaso (361-388) y S3/S4
 - Modify: `src/features/legibility.test.tsx` (LE6)
 - Modify: `e2e/offline.spec.ts:11-20` (J3 mantiene el candado) y `e2e/mapa.spec.ts` (LY3 y LY4)
+- Modify: `src/features/Panel.integration.test.tsx:28-36`: `mantenerLogo` mantiene el candado («Panel de padres») en vez del `heading`; renómbrala `mantenerCandado`.
+- Modify: `src/features/map/MapScreen.test.tsx:313-316`: E4 busca la cabecera por `heading` y `max-w-xl`. Reescríbelo sobre `MapHeader`, sin la clase `max-w-xl`, que deja de existir.
+- Modify: `src/features/adult/AdultDoor.tsx:6,9-12`: el JSDoc dice «mantener el logo»; pasa a «mantener el candado de la cabecera».
+- Comprueba con `grep -rn 'name: "Silabín"\|PANEL_HOLD_MS' src e2e` que no queda ningún otro sitio que abra el panel por el `heading`.
 
 **Interfaces:**
 ```ts
@@ -415,7 +423,8 @@ export function MapFooter(props: {
   - el candado se abre con 3 s y no con un toque;
   - Jugar suena a la primera (el audio se desbloquea en el gesto);
   - el pie no queda bajo el indicador de inicio del iPhone en la PWA instalada;
-  - la zona del camino se desplaza con inercia en Safari.
+  - la zona del camino se desplaza con inercia en Safari;
+  - con una actualización esperando, el primer Jugar recarga y vuelve al mapa (MC15): se acepta si solo pasa una vez.
 - README:
   - fila del Plan 9 en «Lo que falta» y su sección «Lo que ya está hecho»;
   - «Siguientes pasos»;
