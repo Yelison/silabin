@@ -14,4 +14,28 @@ describe("layout.tsx", () => {
 		// Por defecto `reloadOnOnline` vale `true` y hace `location.reload()` en cada evento `online`.
 		expect(FUENTE).toMatch(/reloadOnOnline=\{false\}/);
 	});
+
+	it("FN1: Nunito en 600, 700 y 800 con --font-nunito, y ambas variables en <html>", () => {
+		expect(FUENTE).toMatch(
+			/import \{[^}]*\bNunito\b[^}]*\} from "next\/font\/google"/,
+		);
+		const nunito = FUENTE.match(/Nunito\(\{[\s\S]*?\}\);/)?.[0] ?? "";
+		expect(nunito).toMatch(/weight:\s*\["600",\s*"700",\s*"800"\]/);
+		expect(nunito).toMatch(/variable:\s*"--font-nunito"/);
+		expect(FUENTE).toMatch(
+			/className=\{`[^`]*\$\{andika\.variable\}[^`]*\$\{nunito\.variable\}[^`]*`\}|className=\{`[^`]*\$\{nunito\.variable\}[^`]*\$\{andika\.variable\}[^`]*`\}/,
+		);
+	});
+
+	it("FN2: --font-sans empieza por Nunito, --font-reading sigue en Andika y body no fija font-weight (MC16)", () => {
+		const css = readFileSync(
+			join(process.cwd(), "src", "app", "globals.css"),
+			"utf8",
+		);
+		expect(css).toMatch(/--font-sans:\s*var\(--font-nunito\)/);
+		expect(css).toMatch(/--font-reading:\s*var\(--font-andika\);/);
+		const body = css.match(/\nbody\s*\{[^}]*\}/)?.[0] ?? "";
+		expect(body).not.toBe("");
+		expect(body).not.toMatch(/font-weight/);
+	});
 });

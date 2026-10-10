@@ -34,15 +34,21 @@ afterEach(() => {
 	templateViews["count-syllables"] = vistasReales;
 });
 
-const iniciar = () => screen.findByRole("button", { name: "Empezar" });
+/** Espera a que la app, ya cargada, enseñe el mapa con la unidad activa: no hay pantalla de inicio. */
+const alMapa = (container: HTMLElement) =>
+	waitFor(() => {
+		const activa = container.querySelector('[data-status="active"]');
+		expect(activa).not.toBeNull();
+		return activa as HTMLElement;
+	});
 
 describe("App", () => {
-	it("U1: se ve el botón de inicio, sin texto, y nada ha sonado", async () => {
+	it("AP1: tras cargar, sin ningún toque, se ve el mapa, no hay botón Empezar y nada ha sonado", async () => {
 		const audio = fakeAudio();
 		const { container } = render(<App store={crearStore()} audio={audio} />);
-		const boton = await iniciar();
-		expect(boton.textContent).toBe("▶");
-		expect(container.querySelector("[data-unit]")).toBeNull();
+		await alMapa(container);
+		expect(container.querySelector('[data-unit="phase0:clap"]')).not.toBeNull();
+		expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
 		expect(audio.play).not.toHaveBeenCalled();
 		expect(audio.beat).not.toHaveBeenCalled();
 		expect(audio.unlock).not.toHaveBeenCalled();
@@ -51,34 +57,33 @@ describe("App", () => {
 	it("no pinta nada hasta que el store ha cargado", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
-		// Antes de que la promesa de load() resuelva no hay nada que enseñar.
+		// Antes de que la promesa de load() resuelva no hay nada que enseñar: ni mapa.
 		expect(container.innerHTML).toBe("");
+		expect(container.querySelector("[data-unit]")).toBeNull();
 	});
 
-	it("U2: tocar el inicio llama a unlock dentro del gesto y enseña el mapa con phase0:clap activa", async () => {
+	it("U2: tocar la unidad activa llama a unlock dentro del gesto y abre la sesión", async () => {
 		const audio = fakeAudio();
 		const { container } = render(<App store={crearStore()} audio={audio} />);
-		fireEvent.click(await iniciar());
+		fireEvent.click(await alMapa(container));
 		// Síncrono, sin esperar: unlock debe ir dentro del gesto de toque.
 		expect(audio.unlock).toHaveBeenCalledTimes(1);
 		expect(audio.play).not.toHaveBeenCalled();
-		// El mapa aparece tras comprobar el Service Worker (S11): ya no es síncrono.
-		await waitFor(() => {
-			const clap = container.querySelector('[data-unit="phase0:clap"]');
-			expect(clap?.getAttribute("data-status")).toBe("active");
-		});
-		expect(screen.queryByRole("button", { name: "Empezar" })).toBeNull();
+		// La sesión aparece tras comprobar el Service Worker (S11): ya no es síncrono.
+		await waitFor(() =>
+			expect(container.querySelector('[data-screen="session"]')).not.toBeNull(),
+		);
 	});
 
 	it("tocar la unidad activa jugable abre la sesión y crea la corrida", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
-		expect(store.getState().run).not.toBeNull();
+		await waitFor(() => expect(store.getState().run).not.toBeNull());
 		expect(container.querySelector("[data-unit]")).toBeNull();
 		expect(container.querySelector('[data-screen="session"]')).not.toBeNull();
 	});
@@ -87,7 +92,7 @@ describe("App", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
@@ -105,15 +110,16 @@ describe("App", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
-		await waitFor(() =>
-			expect(
-				container.querySelector('[data-unit="phase0:clap"]'),
-			).not.toBeNull(),
-		);
+		// El arranque ya no es síncrono (comprueba el Service Worker): se deja pasar para que la
+		// sesión se haya intentado abrir antes de mirar que se volvió al mapa.
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+		});
+		expect(container.querySelector('[data-unit="phase0:clap"]')).not.toBeNull();
 		expect(store.getState().run).toBeNull();
 	});
 
@@ -121,7 +127,7 @@ describe("App", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
@@ -151,10 +157,10 @@ describe("App", () => {
 		expect(container.querySelector('[data-unit="phase0:clap"]')).not.toBeNull();
 	});
 
-	it("el aviso del adulto también se ve en la pantalla de inicio", async () => {
+	it("el aviso del adulto se ve en el mapa", async () => {
 		const store = crearStore();
-		render(<App store={store} audio={fakeAudio()} />);
-		await iniciar();
+		const { container } = render(<App store={store} audio={fakeAudio()} />);
+		await alMapa(container);
 		expect(
 			screen.queryByRole("button", { name: /progreso guardado/i }),
 		).toBeNull();
@@ -171,7 +177,7 @@ describe("App", () => {
 		const audio = fakeAudio();
 		const { container } = render(<App store={store} audio={audio} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		await user.click(
 			container.querySelector('[data-unit="phase0:clap"]') as HTMLElement,
 		);
@@ -212,14 +218,15 @@ describe("App", () => {
 		expect(audio.beat).toHaveBeenCalled();
 	});
 
-	it("N9: mantener el logo del mapa 3 s abre la puerta del panel, y Volver regresa al mapa", async () => {
+	it("N9: mantener el candado del mapa 3 s abre la puerta del panel, y Volver regresa al mapa", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
-		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		vi.useFakeTimers();
 		try {
-			fireEvent.pointerDown(screen.getByText("Silabín"));
+			fireEvent.pointerDown(
+				screen.getByRole("img", { name: "Panel de padres" }),
+			);
 			act(() => {
 				vi.advanceTimersByTime(3000);
 			});
@@ -250,10 +257,9 @@ describe("App", () => {
 				beat: vi.fn(),
 			}),
 		);
-		render(<App store={store} audioFactory={fabrica} />);
-		const user = userEvent.setup();
-		// Camino real del `unlock`: el toque de `StartScreen`.
-		await user.click(await iniciar());
+		const { container } = render(<App store={store} audioFactory={fabrica} />);
+		// Camino real del `unlock`: el toque que inicia la sesión.
+		fireEvent.click(await alMapa(container));
 		expect(fakeSynth.spoken.map((u) => u.text)).toEqual([""]);
 
 		await act(async () => {
@@ -267,11 +273,60 @@ describe("App", () => {
 		expect(fakeSynth.spoken[1]?.lang).toMatch(/^es-MX/);
 	});
 
+	describe("F4: la comprobación de actualización pendiente no inicia sesión fuera del mapa", () => {
+		/** Un Service Worker cuyo `getRegistration` no resuelve nunca: la espera de 1 s decide. */
+		function conComprobacionPendiente() {
+			Object.defineProperty(navigator, "serviceWorker", {
+				configurable: true,
+				value: {
+					getRegistration: () => new Promise<never>(() => {}),
+					addEventListener: () => {},
+				},
+			});
+		}
+		afterEach(() => {
+			Reflect.deleteProperty(navigator, "serviceWorker");
+		});
+
+		it("abrir Premios mientras se comprueba y agotarse la espera no abre la sesión", async () => {
+			conComprobacionPendiente();
+			const store = crearStore();
+			const { container } = render(<App store={store} audio={fakeAudio()} />);
+			const activa = await alMapa(container);
+			vi.useFakeTimers();
+			fireEvent.click(activa);
+			fireEvent.click(screen.getByRole("button", { name: "Mis premios" }));
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+			expect(container.querySelector('[data-screen="session"]')).toBeNull();
+			expect(store.getState().run).toBeNull();
+			expect(
+				screen.queryByRole("button", { name: "Volver al mapa" }),
+			).not.toBeNull();
+		});
+
+		it("el caso normal: sin salir del mapa, al agotarse la espera la sesión se abre", async () => {
+			conComprobacionPendiente();
+			const store = crearStore();
+			const { container } = render(<App store={store} audio={fakeAudio()} />);
+			const activa = await alMapa(container);
+			vi.useFakeTimers();
+			fireEvent.click(activa);
+			expect(container.querySelector('[data-screen="session"]')).toBeNull();
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+			expect(container.querySelector('[data-screen="session"]')).not.toBeNull();
+			expect(store.getState().run).not.toBeNull();
+		});
+	});
+
 	it("el fondo cosmético envuelve el mapa y la galería, pero nunca la sesión", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await iniciar());
+		await alMapa(container);
 		// En el mapa, el fondo cosmético está presente.
 		expect(
 			container.querySelector("[data-cosmetic-background]"),

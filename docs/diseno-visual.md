@@ -47,6 +47,9 @@ La primera propuesta (Plan 3) se conserva en los valores «antes».
 | `--color-node-locked` | fondo del nodo bloqueado o «próximamente» (MP6) | `#EDEEF2` |
 | `--color-node-locked-depth` | sombra sólida del nodo bloqueado (MP6) | `#D9DCE4` |
 | `--color-node-locked-ink` | símbolo y candado del nodo bloqueado; la referencia traía `#A7ADBA` (1,94 : 1), que no llega a 3 : 1 (MP6) | `#757A88` |
+| `--color-brand` | wordmark «Silabín» de la cabecera del mapa (Plan 9, MC8); 4.72 : 1 sobre `card` | `#A86300` |
+| `--color-world-0` … `--color-world-3` | base de la tarjeta de capítulo: lila, cielo, melocotón y beis (D48); **solo ahí** | `#D8CCFF`, `#CBEAFF`, `#FFD8C2`, `#E9E2D7` |
+| `--color-chapter-edge` | filo inferior de la tarjeta de capítulo (decoración); 1.4-2.0 : 1 sobre las bases y `surface` | `#B4AEBD` |
 | `--color-mark` | fondo de la opción marcada por el modelo | `#FFE27A` |
 | `--color-mark-border` | borde de la opción marcada por el modelo | `#AC7600` |
 | `--color-celebrate` | solo celebraciones y estrellas | `#E99810` |
@@ -54,7 +57,7 @@ La primera propuesta (Plan 3) se conserva en los valores «antes».
 | `--radius-card` | tarjetas y botones | `1.5rem` |
 | `--spacing-target` | lado mínimo de una opción | `8rem` (128 px) |
 | `--font-reading` | letras, sílabas y palabras que el niño lee | Andika (`next/font/google`, pesos 400 y 700) |
-| `--font-sans` | interfaz del adulto | fuente del sistema |
+| `--font-sans` | interfaz (cabecera, tarjetas, botones y paneles; Plan 9, D47) | Nunito (`next/font/google`, solo pesos 600, 700 y 800; sin `font-weight` en `body`, MC16) |
 
 `--color-mark` y `--color-calm` se dividieron en dos variables cada una (fondo y borde) porque
 Tailwind 4 genera una utilidad por variable de color (`bg-<nombre>`, `border-<nombre>`…); un
@@ -83,6 +86,9 @@ Calculado con la fórmula de contraste relativo de WCAG 2.x sobre los valores de
 | `card` sobre `calm-border` | 3.72 : 1 | Sí (símbolo blanco sobre el nodo completado, ≥ 3 : 1) |
 | `node-locked-ink` sobre `node-locked` | 3.70 : 1 | Sí (símbolo bloqueado, ≥ 3 : 1) |
 | `node-locked-ink` sobre `card` | 4.29 : 1 | Sí (candado sobre su insignia, ≥ 3 : 1) |
+| `brand` sobre `card` | 4.72 : 1 | Sí (wordmark; #b86f13 daba 3.95, Ruling de T1 del Plan 9) |
+| `ink` sobre `world-0` / `world-1` / `world-2` / `world-3` | 9.45 / 11.31 / 10.70 / 11.02 : 1 | Sí (≥ 7 : 1, texto de la tarjeta) |
+| `chapter-edge` sobre `world-0` / `world-1` / `world-2` / `world-3` / `surface` | 1.44 / 1.72 / 1.63 / 1.68 / 2.04 : 1 | Decoración: el test exige ≥ 1.4 : 1 y no hay texto |
 
 Todos estos pares los recalcula `src/app/tokens.test.ts` (CO1) leyendo `globals.css`; la página
 de desarrollo `/dev/arte` los enseña con el color que pinta el navegador. Fuera de la tabla:

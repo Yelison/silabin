@@ -17,7 +17,6 @@ const esDeMinuscula = (d: unknown) => coincide(LOWER_GLYPHS, d);
 const SEMILLA = 7;
 
 async function jugarDesdeElMapa(page: import("@playwright/test").Page) {
-	await page.getByRole("button", { name: "Empezar" }).click();
 	// La unidad activa (Fase 1) es la que se puede tocar.
 	const activa = page.locator('[data-status="active"]').first();
 	await expect(activa).toBeVisible();

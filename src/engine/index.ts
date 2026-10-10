@@ -14,6 +14,7 @@ export { mouthShapesFor } from "@/content/mouths";
 export type { HintStep, TemplateId } from "@/content/templates";
 export { templates } from "@/content/templates";
 export type { Item, Unit } from "@/content/types";
+export { worldName } from "@/content/worlds";
 export {
 	expectedAnswer,
 	expectedPieces,

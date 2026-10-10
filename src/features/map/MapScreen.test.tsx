@@ -15,11 +15,14 @@ import {
 	type ProgressState,
 	type TemplateId,
 } from "@/engine";
+import { SaveWarning } from "@/features/adult/SaveWarning";
 import { MapScreen } from "@/features/map/MapScreen";
 import {
 	COLUMNAS,
-	serpentine,
-	serpentinePath,
+	DISPOSICIONES,
+	layoutCells,
+	layoutPath,
+	layoutRows,
 } from "@/features/map/serpentine";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 import { createMemoryAdapter } from "@/store";
@@ -72,6 +75,16 @@ function montar(
 		return el;
 	};
 	return { onStart, container, unidad };
+}
+
+/** Todo hecho salvo la Fase 3 y con la fase 0 por repasar: no queda unidad activa. */
+function sinActivaConRepaso(doc: {
+	units: Record<string, unknown>;
+	items: Record<string, unknown>;
+}) {
+	todoHechoSalvoFase3(doc);
+	for (const id of curriculum.units.get("phase0:clap")?.introduces ?? [])
+		doc.items[id] = { ...emptyItemProgress(), presented: true };
 }
 
 function todoHechoSalvoFase3(doc: { units: Record<string, unknown> }) {
@@ -156,7 +169,7 @@ describe("MapScreen", () => {
 		expect(clap.getAttribute("data-status")).toBe("done");
 		expect(clap.getAttribute("aria-label")).toContain("2 de 3 estrellas");
 		expect(within(clap).getAllByText("★")).toHaveLength(2);
-		expect(within(clap).getAllByText("☆")).toHaveLength(1);
+		expect(within(clap).queryByText("☆")).toBeNull();
 	});
 
 	it("una unidad bloqueada lleva candado y no arranca nada al tocarla", async () => {
@@ -172,15 +185,6 @@ describe("MapScreen", () => {
 		expect(rhyme.textContent).not.toContain("🔒");
 		await userEvent.click(rhyme);
 		expect(onStart).not.toHaveBeenCalled();
-	});
-
-	it("FI6: «Mis premios» pinta el icono de galería, sin 🎁", async () => {
-		const { container } = montar(await storeConDisco(() => {}));
-		const premios = screen.getByRole("button", { name: "Mis premios" });
-		expect(
-			premios.querySelector('img[src="/icons/ui-gallery.png"]'),
-		).not.toBeNull();
-		expect(container.textContent).not.toContain("🎁");
 	});
 
 	it("trampa 4: no pinta ninguna barra de dominio dentro de las unidades", async () => {
@@ -212,16 +216,7 @@ describe("MapScreen", () => {
 		}
 	});
 
-	it("E1: el contador de estrellas se ve como número, con barra hasta el próximo hito", async () => {
-		montar(await storeConDisco(() => {}));
-		expect(screen.getByText("0")).toBeDefined();
-		const barra = screen.getByRole("progressbar");
-		expect(barra.getAttribute("aria-valuemin")).toBe("0");
-		expect(barra.getAttribute("aria-valuemax")).toBe("10");
-		expect(barra.getAttribute("aria-valuenow")).toBe("0");
-	});
-
-	it("E1: con 27 estrellas la barra va de 25 a 50 con valuenow 27", async () => {
+	it("E1: el mapa pasa a la cabecera las estrellas del store: con 27 la barra va de 25 a 50", async () => {
 		const store = await storeConDisco(() => {});
 		act(() => {
 			store.setState((s) => ({ progress: conEstrellas(s.progress, 27) }));
@@ -232,16 +227,6 @@ describe("MapScreen", () => {
 		expect(barra.getAttribute("aria-valuemin")).toBe("25");
 		expect(barra.getAttribute("aria-valuemax")).toBe("50");
 		expect(barra.getAttribute("aria-valuenow")).toBe("27");
-	});
-
-	it("E1: pasado el hito de 100 solo se ve el total, sin barra", async () => {
-		const store = await storeConDisco(() => {});
-		act(() => {
-			store.setState((s) => ({ progress: conEstrellas(s.progress, 120) }));
-		});
-		montar(store);
-		expect(screen.getByText("120")).toBeDefined();
-		expect(screen.queryByRole("progressbar")).toBeNull();
 	});
 
 	it("E2: la unidad activa muestra un punto por ítem dominado, con aria-label para el adulto", async () => {
@@ -264,7 +249,49 @@ describe("MapScreen", () => {
 		expect(screen.queryByLabelText(/letras aprendidas/)).toBeNull();
 	});
 
-	it("E3: la marca de guardado muestra la hora local de lastSavedAt", async () => {
+	it("CA4: los puntos de avance van en la tarjeta del mundo de la unidad activa, no en otra", async () => {
+		// Fase 0 entera terminada: la activa es la primera vocal (Fase 1), con 1 de 2 ítems dominado.
+		const store = await storeConDisco((doc) => {
+			for (const [id, unit] of curriculum.units)
+				if (unit.phase === 0 && unit.introduces.length > 0)
+					doc.units[id] = { status: "done", bestStars: 3 };
+			const id = curriculum.units.get("phase1:vowel-a")?.introduces[0] ?? "";
+			doc.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				firstTryCorrect: 3,
+			};
+		});
+		const { unidad } = montar(store);
+		expect(unidad("phase1:vowel-a").getAttribute("data-status")).toBe("active");
+		const puntos = screen.getAllByLabelText(/letras aprendidas/);
+		expect(puntos).toHaveLength(1);
+		const fase1 = screen.getByRole("region", { name: "Fase 1" });
+		expect(within(fase1).getByLabelText("1 letras aprendidas")).toBe(puntos[0]);
+		for (const otra of [0, 2, 3])
+			expect(
+				within(
+					screen.getByRole("region", { name: `Fase ${otra}` }),
+				).queryByLabelText(/letras aprendidas/),
+			).toBeNull();
+	});
+
+	it("CA5: cada fase abre con su tarjeta de mundo y no queda ningún separador discontinuo", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		expect(container.innerHTML).not.toContain("border-dashed");
+		for (const [fase, nombre] of [
+			[0, "Oído de explorador"],
+			[1, "Las vocales"],
+			[2, "Las sílabas"],
+			[3, "Más letras"],
+		] as const) {
+			const seccion = screen.getByRole("region", { name: `Fase ${fase}` });
+			expect(within(seccion).getByText(`MUNDO ${fase + 1}`)).toBeDefined();
+			expect(within(seccion).getByText(nombre)).toBeDefined();
+		}
+	});
+
+	it("E3: el mapa pasa a la cabecera la hora guardada del store", async () => {
 		const store = await storeConDisco(() => {});
 		const iso = "2026-09-28T14:05:00.000Z";
 		act(() => {
@@ -276,26 +303,49 @@ describe("MapScreen", () => {
 		const mm = String(fecha.getMinutes()).padStart(2, "0");
 		const marca = screen.getByLabelText(`Guardado a las ${hh}:${mm}`);
 		expect(marca.getAttribute("title")).toBe(`Guardado a las ${hh}:${mm}`);
-		// Por encima de los nodos (`relative z-10`) al desplazar el mapa por debajo.
-		expect(marca.className.split(/\s+/)).toContain("z-20");
 	});
 
-	it("E3: con lastSavedAt null o saveFailed no sale la marca de guardado", async () => {
-		const sinGuardar = await storeConDisco(() => {});
-		montar(sinGuardar);
-		expect(screen.queryByLabelText(/Guardado a las/)).toBeNull();
-		cleanup();
-
-		const conFallo = await storeConDisco(() => {});
+	it("E5: un aviso de guardado en el store hace que la cabecera deje libre el rincón del candado", async () => {
+		const store = await storeConDisco(() => {});
+		const { container } = montar(store);
+		const cabecera = container.querySelector("main > header");
+		expect(cabecera?.className).not.toContain("pr-12");
 		act(() => {
-			conFallo.setState({
-				lastSavedAt: "2026-09-28T14:05:00.000Z",
-				saveFailed: true,
-			});
+			store.setState({ recovered: true });
 		});
-		montar(conFallo);
-		expect(screen.queryByLabelText(/Guardado a las/)).toBeNull();
+		expect(cabecera?.className).toContain("pr-12");
 	});
+
+	it.each(["saveFailed", "recovered", "readFailed"] as const)(
+		"E5b: con solo %s, la cabecera reserva el rincón y SaveWarning se pinta",
+		async (flag) => {
+			const store = await storeConDisco(() => {});
+			const { container } = render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<>
+						<MapScreen
+							onStart={vi.fn()}
+							onOpenPanel={vi.fn()}
+							onOpenRewards={vi.fn()}
+						/>
+						<SaveWarning />
+					</>,
+				),
+			);
+			const cabecera = container.querySelector("main > header");
+			expect(cabecera?.className).not.toContain("pr-12");
+			expect(screen.queryByRole("button", { name: /progreso/i })).toBeNull();
+			act(() => {
+				store.setState({ [flag]: true });
+			});
+			expect(cabecera?.className).toContain("pr-12");
+			expect(
+				screen.queryByRole("button", { name: /progreso/i }),
+			).not.toBeNull();
+		},
+	);
 
 	it("E4: el mapa sigue sin scroll horizontal (sin anchos fijos en píxeles)", async () => {
 		const store = await storeConDisco((doc) => {
@@ -310,10 +360,13 @@ describe("MapScreen", () => {
 				};
 		});
 		const { container } = montar(store);
-		const cabecera = screen
-			.getByRole("heading", { name: "Silabín" })
-			.closest("[class*='max-w-xl']");
+		// La cabecera ya no es una columna estrecha (`max-w-xl`): ocupa todo el ancho de `main`.
+		const cabecera = container.querySelector("main > header");
 		expect(cabecera).not.toBeNull();
+		expect(
+			cabecera?.contains(screen.getByRole("heading", { name: "Silabín" })),
+		).toBe(true);
+		expect(cabecera?.className).not.toContain("max-w-xl");
 		const puntos = screen.getByLabelText(/letras aprendidas/);
 		expect(puntos.className).toContain("flex-wrap");
 		expect(container.querySelector("[style*='px']")).toBeNull();
@@ -358,33 +411,76 @@ describe("MapScreen", () => {
 		expect(clap.querySelector("[data-badge]")).toBeNull();
 	});
 
-	it("sin unidad activa ofrece el repaso, sujeto a la misma comprobación", async () => {
-		const store = await storeConDisco((doc) => {
-			todoHechoSalvoFase3(doc);
-			for (const id of curriculum.units.get("phase0:clap")?.introduces ?? [])
-				doc.items[id] = { ...emptyItemProgress(), presented: true };
-		});
-		const { onStart } = montar(store);
-		await userEvent.click(screen.getByRole("button", { name: "Repasar" }));
+	it("MS1: con la activa jugable, «Jugar» en el pie inicia, igual que el nodo activo", async () => {
+		const { unidad, onStart, container } = montar(
+			await storeConDisco(() => {}),
+		);
+		const pie = container.querySelector("footer") as HTMLElement;
+		await userEvent.click(within(pie).getByRole("button", { name: "Jugar" }));
+		expect(onStart).toHaveBeenCalledTimes(1);
+		await userEvent.click(unidad("phase0:clap"));
+		expect(onStart).toHaveBeenCalledTimes(2);
+		expect(within(pie).queryByRole("button", { name: "Repasar" })).toBeNull();
+	});
+
+	it("MS2: sin activa y jugable, el pie ofrece «Repasar» y un clic inicia", async () => {
+		const { onStart, container } = montar(
+			await storeConDisco(sinActivaConRepaso),
+		);
+		const pie = container.querySelector("footer") as HTMLElement;
+		expect(within(pie).queryByRole("button", { name: "Jugar" })).toBeNull();
+		await userEvent.click(within(pie).getByRole("button", { name: "Repasar" }));
 		expect(onStart).toHaveBeenCalledTimes(1);
 	});
 
-	it("el repaso no jugable se atenúa y no arranca", async () => {
-		const store = await storeConDisco((doc) => {
-			todoHechoSalvoFase3(doc);
-			for (const id of curriculum.units.get("phase0:clap")?.introduces ?? [])
-				doc.items[id] = { ...emptyItemProgress(), presented: true };
-		});
-		const { onStart } = montar(store, { implemented: new Set() });
-		const repaso = screen.getByLabelText(LLEGA_DESPUES);
-		expect(repaso.getAttribute("aria-disabled")).toBe("true");
-		await userEvent.click(repaso);
+	it("MS3: sin activa y sin plantilla jugable, el pie está en «soon» y no arranca", async () => {
+		const { onStart, container } = montar(
+			await storeConDisco(sinActivaConRepaso),
+			{
+				implemented: new Set(),
+			},
+		);
+		const pie = container.querySelector("footer") as HTMLElement;
+		const boton = within(pie).getByRole("button", { name: LLEGA_DESPUES });
+		expect(boton.getAttribute("aria-disabled")).toBe("true");
+		await userEvent.click(boton);
 		expect(onStart).not.toHaveBeenCalled();
 	});
 
-	it("con unidad activa no hay botón de repaso", async () => {
-		montar(await storeConDisco(() => {}));
-		expect(screen.queryByRole("button", { name: "Repasar" })).toBeNull();
+	it("MS4: con la activa sin plantilla (U7) el pie está en «soon» y el nodo también", async () => {
+		const { unidad, onStart, container } = montar(
+			await storeConDisco(() => {}),
+			{
+				implemented: new Set(),
+			},
+		);
+		const pie = container.querySelector("footer") as HTMLElement;
+		const boton = within(pie).getByRole("button", { name: LLEGA_DESPUES });
+		expect(boton.getAttribute("aria-disabled")).toBe("true");
+		expect(within(pie).queryByRole("button", { name: "Jugar" })).toBeNull();
+		expect(unidad("phase0:clap").getAttribute("data-look")).toBe("soon");
+		await userEvent.click(boton);
+		await userEvent.click(unidad("phase0:clap"));
+		expect(onStart).not.toHaveBeenCalled();
+	});
+
+	it("LY1: «main» es una pantalla de alto fijo en tres filas; solo la zona del camino se desplaza", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		const main = container.querySelector("main") as HTMLElement;
+		expect(main.className.split(/\s+/)).toEqual(
+			expect.arrayContaining(["h-dvh", "flex", "flex-col"]),
+		);
+		const hijos = [...main.children];
+		expect(hijos.map((e) => e.tagName)).toEqual(["HEADER", "DIV", "FOOTER"]);
+		const [cabecera, zona, pie] = hijos as HTMLElement[];
+		expect(cabecera?.className).toContain("shrink-0");
+		expect(pie?.className).toContain("shrink-0");
+		expect(zona?.className.split(/\s+/)).toEqual(
+			expect.arrayContaining(["min-h-0", "flex-1", "overflow-y-auto"]),
+		);
+		expect(zona?.contains(screen.getByRole("region", { name: "Fase 0" }))).toBe(
+			true,
+		);
 	});
 
 	it("nada de lo pintado usa lenguaje de castigo", async () => {
@@ -394,55 +490,66 @@ describe("MapScreen", () => {
 		);
 	});
 
-	it("S1: cada nodo declara su celda en las tres rejillas (base 1): la séptima de la Fase 3 es (4, 2) en cinco columnas", async () => {
+	it("S1: cada nodo declara su celda en las tres rejillas (base 1): la séptima de la Fase 3 es (3, 7) en base", async () => {
 		const { unidad } = montar(await storeConDisco(() => {}));
 		const ids = curriculum.unitOrder.filter(
 			(id) => curriculum.units.get(id)?.phase === 3,
 		);
 		expect(ids).toHaveLength(8);
-		for (const cols of COLUMNAS) {
-			const celdas = serpentine(ids.length, cols);
+		const celdas = layoutCells(ids.length);
+		// Las variables CSS: --cb/--rb en base y --c3/--r3 y --c5/--r5 en md y lg.
+		const sufijo = { base: "b", md: "3", lg: "5" } as const;
+		for (const d of DISPOSICIONES) {
 			ids.forEach((id, i) => {
 				const estilo = unidad(id).parentElement?.style;
-				expect(estilo?.getPropertyValue(`--c${cols}`), `${id} c${cols}`).toBe(
-					String((celdas[i]?.col ?? -2) + 1),
+				const s = sufijo[d];
+				expect(estilo?.getPropertyValue(`--c${s}`), `${id} ${d} col`).toBe(
+					String((celdas[d][i]?.col ?? -2) + 1),
 				);
-				expect(estilo?.getPropertyValue(`--r${cols}`), `${id} r${cols}`).toBe(
-					String((celdas[i]?.row ?? -2) + 1),
+				expect(estilo?.getPropertyValue(`--r${s}`), `${id} ${d} fila`).toBe(
+					String((celdas[d][i]?.row ?? -2) + 1),
 				);
 			});
 		}
 		const septima = unidad(ids[6] ?? "").parentElement?.style;
+		expect(septima?.getPropertyValue("--cb")).toBe("3");
+		expect(septima?.getPropertyValue("--rb")).toBe("7");
 		expect(septima?.getPropertyValue("--c5")).toBe("4");
 		expect(septima?.getPropertyValue("--r5")).toBe("2");
+		expect(septima?.getPropertyValue("--c2")).toBe("");
 	});
 
-	it("S2: cada fase trae tres caminos (2, 3 y 5 columnas) con el viewBox y el trazo de su rejilla", async () => {
+	it("S2: cada fase trae tres caminos (base, md y lg) con el viewBox y el trazo de su rejilla", async () => {
 		montar(await storeConDisco(() => {}));
 		for (const fase of [0, 1, 2, 3]) {
 			const seccion = screen.getByRole("region", { name: `Fase ${fase}` });
 			const n = curriculum.unitOrder.filter(
 				(id) => curriculum.units.get(id)?.phase === fase,
 			).length;
-			const svgs = [...seccion.querySelectorAll("svg[data-columns]")];
+			const celdas = layoutCells(n);
+			const svgs = [...seccion.querySelectorAll("svg[data-layout]")];
 			expect(
-				svgs.map((e) => e.getAttribute("data-columns")),
+				svgs.map((e) => e.getAttribute("data-layout")),
 				`Fase ${fase}`,
-			).toEqual(["2", "3", "5"]);
+			).toEqual(["base", "md", "lg"]);
+			const esperado = {
+				base: `0 0 5 ${n}`,
+				md: `0 0 3 ${Math.ceil(n / 3)}`,
+				lg: `0 0 5 ${Math.ceil(n / 5)}`,
+			};
 			for (const svg of svgs) {
-				const cols = Number(svg.getAttribute("data-columns"));
+				const d = svg.getAttribute("data-layout") as keyof typeof esperado;
 				expect(svg.getAttribute("aria-hidden")).toBe("true");
+				expect(svg.getAttribute("viewBox"), `${fase} ${d}`).toBe(esperado[d]);
 				expect(svg.getAttribute("viewBox")).toBe(
-					`0 0 ${cols} ${Math.ceil(n / cols)}`,
+					`0 0 ${COLUMNAS[d]} ${layoutRows(d, n)}`,
 				);
 				expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
 				expect(svg.getAttribute("class")).toContain("pointer-events-none");
 				const trazo = svg.querySelector("path");
 				if (n < 2) expect(trazo).toBeNull();
 				else {
-					expect(trazo?.getAttribute("d")).toBe(
-						serpentinePath(serpentine(n, cols), cols),
-					);
+					expect(trazo?.getAttribute("d")).toBe(layoutPath(d, celdas[d]));
 					expect(trazo?.getAttribute("fill")).toBe("none");
 					expect(trazo?.getAttribute("vector-effect")).toBe(
 						"non-scaling-stroke",
@@ -481,7 +588,7 @@ describe("MapScreen", () => {
 		}
 	});
 
-	it("S4: sin unidad activa no se centra nada y sale el repaso", async () => {
+	it("S4: sin unidad activa no se centra nada y el pie ofrece «Repasar»", async () => {
 		const original = Element.prototype.scrollIntoView;
 		const espia = vi.fn();
 		Element.prototype.scrollIntoView = espia;
@@ -491,15 +598,18 @@ describe("MapScreen", () => {
 				for (const id of curriculum.units.get("phase0:clap")?.introduces ?? [])
 					doc.items[id] = { ...emptyItemProgress(), presented: true };
 			});
-			montar(store);
+			const { container } = montar(store);
 			expect(espia).not.toHaveBeenCalled();
-			expect(screen.getByRole("button", { name: "Repasar" })).toBeDefined();
+			const pie = container.querySelector("footer") as HTMLElement;
+			expect(
+				within(pie).getByRole("button", { name: "Repasar" }),
+			).toBeDefined();
 		} finally {
 			Element.prototype.scrollIntoView = original;
 		}
 	});
 
-	it("N9: mantener el logo 3 s llama a onOpenPanel", async () => {
+	it("N9: mantener el candado «Panel de padres» 3 s llama a onOpenPanel; el título no", async () => {
 		const store = await storeConDisco(() => {});
 		vi.useFakeTimers();
 		try {
@@ -515,8 +625,14 @@ describe("MapScreen", () => {
 					/>,
 				),
 			);
-			const logo = screen.getByText("Silabín");
-			fireEvent.pointerDown(logo);
+			fireEvent.pointerDown(screen.getByRole("heading", { name: "Silabín" }));
+			act(() => {
+				vi.advanceTimersByTime(3000);
+			});
+			expect(onOpenPanel).not.toHaveBeenCalled();
+			fireEvent.pointerDown(
+				screen.getByRole("img", { name: "Panel de padres" }),
+			);
 			act(() => {
 				vi.advanceTimersByTime(3000);
 			});

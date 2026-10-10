@@ -4,7 +4,7 @@
  * lo necesario para conectarle un adaptador o restaurar una copia.
  */
 export type { AppState, AppStoreDeps, ImportPreview } from "@/store/app-store";
-export { createAppStore } from "@/store/app-store";
+export { createAppStore, hayAvisoAdulto } from "@/store/app-store";
 export type { ImportRejection, StorageAdapter } from "@/store/persist";
 export {
 	createIdbAdapter,

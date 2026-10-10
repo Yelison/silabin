@@ -18,7 +18,7 @@ import { RewardsScreen } from "@/features/rewards/RewardsScreen";
 import { TrailLayer } from "@/features/rewards/TrailLayer";
 import { EndScreen } from "@/features/session/EndScreen";
 import { SessionScreen } from "@/features/session/SessionScreen";
-import { StartScreen } from "@/features/start/StartScreen";
+import { useArranque } from "@/features/start/use-arranque";
 import {
 	type AppState,
 	createAppStore,
@@ -26,7 +26,7 @@ import {
 	type Settings,
 } from "@/store";
 
-type Screen = "start" | "map" | "session" | "end" | "panel" | "rewards";
+type Screen = "map" | "session" | "end" | "panel" | "rewards";
 
 function createStore(): StoreApi<AppState> {
 	return createAppStore({
@@ -47,7 +47,16 @@ function createAudio(accent: () => Settings["accent"]): AudioPlayer {
 function Screens() {
 	const status = useApp((s) => s.status);
 	const beginSession = useApp((s) => s.beginSession);
-	const [screen, setScreen] = useState<Screen>("start");
+	const [screen, setScreen] = useState<Screen>("map");
+	// Antes del `return null` (reglas de los hooks) y fuera de la rama del mapa, que se
+	// vuelve a montar tras cada sesión: la comprobación de actualización es solo la primera vez.
+	const arrancar = useArranque(() => {
+		// La comprobación de actualización puede resolverse (o agotar su espera de 1 s) cuando
+		// el adulto ya salió del mapa, a Premios o al panel: entonces no se abre una sesión.
+		if (screen !== "map") return;
+		beginSession();
+		setScreen("session");
+	});
 
 	if (status !== "ready") return null;
 
@@ -56,16 +65,12 @@ function Screens() {
 			<SaveWarning />
 			{/* Montada una sola vez, para toda la interfaz (S10): decide ella misma cuándo callarse. */}
 			<TrailLayer />
-			{screen === "start" && <StartScreen onStart={() => setScreen("map")} />}
 			{screen === "map" && (
 				<CosmeticBackground>
 					<MapScreen
 						onOpenPanel={() => setScreen("panel")}
 						onOpenRewards={() => setScreen("rewards")}
-						onStart={() => {
-							beginSession();
-							setScreen("session");
-						}}
+						onStart={arrancar}
 					/>
 				</CosmeticBackground>
 			)}

@@ -172,6 +172,42 @@ describe("legibilidad sobre el fondo (V13)", () => {
 		expect(sinSuperficie(container)).toEqual([]);
 	});
 
+	it("LE6: en el mapa con Espacio, la cabecera, el pie y las tarjetas de mundo van sobre una superficie opaca, también con «Jugar» atenuado", async () => {
+		for (const implemented of [undefined, new Set<never>()]) {
+			const store = await storeConEspacio();
+			const { container } = render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<CosmeticBackground>
+						<MapScreen
+							onStart={vi.fn()}
+							onOpenPanel={vi.fn()}
+							onOpenRewards={vi.fn()}
+							{...(implemented === undefined ? {} : { implemented })}
+						/>
+					</CosmeticBackground>,
+				),
+			);
+			const todo = revisar(container);
+			for (const texto of [
+				"Jugar",
+				"Mis premios",
+				"MUNDO 1",
+				"Oído de explorador",
+			]) {
+				const hallados = todo.filter((r) => r.que === `texto «${texto}»`);
+				expect(
+					hallados,
+					`${texto} (${implemented ? "soon" : "play"})`,
+				).toHaveLength(1);
+				expect(hallados[0]?.sobreSuperficie, texto).toBe(true);
+			}
+			expect(sinSuperficie(container)).toEqual([]);
+			cleanup();
+		}
+	});
+
 	it("LE2: en la galería, con Espacio equipado, todo texto e indicador va sobre una superficie", async () => {
 		const store = await storeConEspacio();
 		const { container } = render(

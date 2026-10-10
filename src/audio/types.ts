@@ -17,7 +17,7 @@ export type AudioRequest = {
 
 export interface AudioPlayer {
 	readonly unlocked: boolean;
-	/** Se llama dentro del gesto «Toca para empezar». */
+	/** Se llama dentro del gesto del primer toque que inicia una sesión (D52, `use-arranque`). */
 	unlock(): Promise<void>;
 	/** Resuelve al terminar de sonar. */
 	play(request: AudioRequest): Promise<void>;

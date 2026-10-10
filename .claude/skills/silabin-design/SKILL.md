@@ -1,6 +1,6 @@
 ---
 name: silabin-design
-description: Úsala al diseñar, maquetar, rediseñar o revisar cualquier pantalla, componente o elemento visual de Silabín (mapa, sesión, plantillas de ejercicio, fin de sesión, premios, inicio), y al decidir colores, tipografía, animación, feedback de acierto o fallo, el compañero, objetivos táctiles o el comportamiento en iPad, apaisado o teléfono. Use when designing or reviewing Silabín UI, screens, map, visual feedback, colors, fonts, mascot or animations.
+description: Úsala al diseñar, maquetar, rediseñar o revisar cualquier pantalla, componente o elemento visual de Silabín (mapa, sesión, plantillas de ejercicio, fin de sesión, premios), y al decidir colores, tipografía, animación, feedback de acierto o fallo, el compañero, objetivos táctiles o el comportamiento en iPad, apaisado o teléfono. Use when designing or reviewing Silabín UI, screens, map, visual feedback, colors, fonts, mascot or animations.
 ---
 
 # Silabín: lenguaje visual y de experiencia
@@ -40,7 +40,8 @@ o se registra como `Ruling:` en el ledger del plan.
 | El pájaro amarillo siempre | El **compañero equipado** (`Companion`): loro amarillo (`companion:first`, también icono de la app) o elefantito (`companion:second`), D36 | Es un cosmético que el niño elige. El pollito de las maquetas queda sustituido |
 | Azul marino oscuro para el texto | `ink`, un casi negro cálido, mientras el autor no decida otra cosa (ver «Decisiones abiertas») | Ya cumple AA con holgura. Cambiarlo es un token nuevo que debe pasar CO1 |
 | Vocales «A, E, I, O, U»; «La m y sus sílabas» | Orden **a, e, o, i, u**; par **A/a** siempre visible; la consonante se nombra por su sonido («mmm»), nunca «eme» | §2: orden de letras, par A/a, sonido y no nombre. Los títulos salen de `content/` (`title`), nunca del arte |
-| Botones pequeños prohibidos en todas partes | Al niño, ≥ 72 px. Los controles del adulto son **pequeños y ocultos a propósito**: `SalirAdulto` con pulsación larga y el logo mantenido 3 s (`AdultDoor`) | Si se agrandan, el niño los pulsa. Nunca pongas una flecha «atrás» en el mapa: es la pantalla de inicio |
+| Botones pequeños prohibidos en todas partes | Al niño, ≥ 72 px. Los controles del adulto son **pequeños y ocultos a propósito**: `SalirAdulto` con pulsación larga y el candado de la cabecera mantenido 3 s (`AdultDoor`, D51) | Si se agrandan, el niño los pulsa. Nunca pongas una flecha «atrás» en el mapa: es la pantalla de inicio de la app (la app abre en él, D52) |
+| «Ningún texto para el niño», sin excepciones | Excepción de MC11: «Jugar», «Repasar» y «Mis premios» llevan una palabra pequeña junto al icono, **para el adulto**. Coincide con el `aria-label`; el icono es lo que el niño entiende | Las demás pantallas siguen sin texto. No añadas más palabras por analogía |
 
 ## Color
 
@@ -60,15 +61,16 @@ y progreso de la sesión), `mark` y `mark-border` (la opción que marca el model
 
 ### Colores de mundo: identidad ambiental, nunca estado
 
-Dirección aprobada por el autor (2026-10-03). Los valores son aproximados y se fijan tras la
-prueba visual de `/dev/arte`; hasta entonces **no son tokens**, y no se usan fuera de esa prueba.
+Dirección aprobada por el autor (2026-10-03). Desde el Plan 9 (D48) las **bases** son los tokens
+`world-0`…`world-3` y se usan **solo en la tarjeta de capítulo** (MC13: clases literales
+`bg-world-N`). Los acentos y cualquier otro uso siguen pendientes de `/dev/arte`: no son tokens.
 
-| Mundo | Tono | Base aprox. | Acento aprox. |
+| Mundo | Tono | Base (token) | Acento aprox. |
 |---|---|---|---|
-| Fase 0, «Oído de explorador» | lila suave (casa con el elefantito) | `#D8CCFF` | `#A994F4` |
-| Fase 1, «Las vocales» | azul cielo | `#CBEAFF` | `#82C8F5` |
-| Fase 2, «Las sílabas» | melocotón suave | `#FFD8C2` | `#F3A77C` |
-| Fases futuras | beis neutro y desaturado | `#E9E2D7` | — |
+| Fase 0, «Oído de explorador» | lila suave (casa con el elefantito) | `world-0` `#D8CCFF` | `#A994F4` |
+| Fase 1, «Las vocales» | azul cielo | `world-1` `#CBEAFF` | `#82C8F5` |
+| Fase 2, «Las sílabas» | melocotón suave | `world-2` `#FFD8C2` | `#F3A77C` |
+| Fases futuras | beis neutro y desaturado | `world-3` `#E9E2D7` | — |
 
 - **El amarillo (`action`) es solo para la unidad activa, las acciones principales y lo
   claramente interactivo.** Ningún color de mundo compite con él. El melocotón es el que más
@@ -77,17 +79,17 @@ prueba visual de `/dev/arte`; hasta entonces **no son tokens**, y no se usan fue
   detalles decorativos, el borde de las fichas, los tramos secundarios del camino, el indicador
   del mundo y las ilustraciones pequeñas. Nunca una pantalla entera de un solo color.
 - Las fichas y el contenido de aprendizaje son iguales en todos los mundos, con el mismo
-  contraste. El texto va en `ink` (≥ 7 : 1 sobre las cuatro bases).
+  contraste. El texto va en `ink` (≥ 7 : 1 sobre las cuatro bases, `tokens.test.ts`).
 - Los acentos dan menos de 3 : 1 sobre `card` y apenas se distinguen del amarillo por
   luminancia: **son decoración**. Ningún estado depende de ellos. La activa destaca por su forma,
   su brillo y el compañero, no por el contraste con el acento.
 
 ## Tipografía
 
-**Nunito en toda la aplicación** (decisión del autor, 2026-10-03; sustituye a Andika, D8, y a la
-fuente del sistema). Hoy el código aún carga Andika (`layout.tsx`, `--font-reading`) y la fuente
-del sistema (`--font-sans`). El cambio se hace en un plan, con su test, y actualiza
-`docs/diseno-visual.md`.
+**Nunito en la interfaz** (decisión del autor, 2026-10-03; D47 la aplica en el Plan 9). Nunito es
+ya `--font-sans` (cabecera, tarjetas, botones, paneles) con solo los pesos 600, 700 y 800; **Andika
+sigue en `--font-reading`** (letras, sílabas y palabras) hasta que el autor vea la «a» de Nunito
+(D28, ver abajo). No pongas `font-weight: 600` en `body` (MC16): Andika solo tiene 400 y 700.
 
 | Peso | Uso |
 |---|---|
@@ -151,18 +153,34 @@ scroll, un solo ejercicio.
 
 ## Progreso: el mapa como viaje
 
-El mapa es un **camino en serpiente de nodos redondos con icono** (Plan 8; ledger
-`docs/superpowers/2026-10-09-plan-8-registro.md`, D37-D45 y MP1-MP15). Lo pinta
-`features/map/MapScreen` con un `MapNode` por unidad; la referencia visual es
-`docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), con las excepciones del ledger.
+El mapa es un **camino de nodos redondos con icono** entre una cabecera y un pie fijos (Plan 8, ledger
+`docs/superpowers/2026-10-09-plan-8-registro.md`; Plan 9, `docs/superpowers/2026-10-09-plan-9-registro.md`,
+D46-D60 y MC1-MC16). Lo pinta `features/map/MapScreen` en tres filas de alto fijo, `h-dvh` (MC4):
+`MapHeader`, la zona del camino y `MapFooter`. **Solo se desplaza el camino** (D60). La referencia
+visual es `docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), con las excepciones de los ledgers.
 
-- **Serpiente por fase** (MP8, MP9): una rejilla de **2 columnas en teléfono (< 768 px), 3 de 768 a
-  1023 px y 5 desde 1024 px** (`md:` y `lg:` de Tailwind), generada por código desde `content/`
-  (`serpentine.ts`). Cada fase empieza de izquierda a derecha y el camino no cruza el separador
-  de fase. Los conectores son un SVG por número de columnas, en unidades de celda y sin medir el
-  DOM (MP7); `pointer-events-none`. Al abrir se centra la unidad activa, una vez y sin animación
-  (MP12).
-- **Nodo de 88 px** (`size-22`; objetivo ≥ 72 px, MP11), con el símbolo de la unidad (la letra en
+- **Cabecera fija** (`MapHeader`, `bg-card` opaco, MC14): el wordmark «Silabín ✦» en `brand` (`#a86300`,
+  4,72 : 1 sobre `card`, MC8) con la marca ✓ de «guardado» **en su flujo, a su lado** (enmienda de MC10: ya no
+  flota); las estrellas «★ n» con la barra fina al próximo hito debajo (D56); y a la derecha el **candado**
+  de la puerta de padres (D51), un `role="img"` que se abre con 3 s de pulsación larga. El wordmark ya no es la
+  puerta. Con un aviso de guardado a la vista, el prop `avisoAdulto` deja libre el rincón del candado.
+- **Pie fijo** (`MapFooter`, `bg-card` opaco): «Mis premios» a la izquierda con el icono `gallery` (D55); en
+  el centro el botón grande (D53) con ▶ y «Jugar», que tiene tres estados: inicia la activa; 🔁 «Repasar» si
+  no queda activa; y «soon» (activa sin plantilla) con el contenido atenuado, `aria-disabled` y «Llega en una
+  próxima versión», nunca `disabled` (MC12); y a la derecha el compañero equipado (D54), de 72 px y 56 px en
+  `apaisado-bajo:` (MC9). Las palabras son la excepción de texto de MC11.
+- **Tarjeta de capítulo** (`ChapterCard`): abre cada mundo y **corta el camino** (D50; sustituye al separador
+  discontinuo). Lleva el antetítulo «MUNDO N» (fase + 1, MC5) y el nombre del mundo, que vive en `content/`
+  (D58, MC6): «Oído de explorador», «Las vocales», «Las sílabas» y «Más letras». Su color es el de su mundo
+  (`world-0`…`world-3`, D48) con el texto en `ink`; el borde inferior es el token `chapter-edge` (`#b4aebd`,
+  1,4-2,0 : 1). Es decoración: ningún estado depende de su color. Sin icono (MC2). En la del capítulo activo van
+  los **puntos de avance** (D57).
+- **Camino:** una **columna con ondas por debajo de 768 px** (D49, MC3: cuatro posiciones horizontales en
+  ciclo) y la **serpiente de 3 columnas en `md:` y 5 en `lg:`** desde 768 px (D41). Todo sale de
+  `serpentine.ts`, función pura y sin medir el DOM (MP7), con los conectores en un SVG en unidades de celda
+  y `pointer-events-none`. Una serpiente por fase (MP8). `scrollIntoView({ block: "center" })` centra la
+  activa dentro de la zona del camino, una vez y sin animación; ya no tapa nada fijo (D60).
+- **Nodo de 88 px** (`size-22`; objetivo ≥ 72 px, MP11, MC1), con el símbolo de la unidad (la letra en
   las unidades de letra, un icono de línea en la fase 0). **Sin título visible** (D42): el nombre
   va solo en `aria-label`. Los estados son iguales en todos los mundos y **no dependen solo del
   color** (aro, insignia, estrellas):
@@ -170,9 +188,8 @@ El mapa es un **camino en serpiente de nodos redondos con icono** (Plan 8; ledge
     símbolo `action-ink` y **aro `mark`** alrededor. Es la única con aro. Lleva
     `aria-current="step"`.
   - **Completado** (`completed`): cara **azul saturada** `calm-border` con sombra `calm-depth` y
-    símbolo blanco (`card`, 3,72 : 1) (MP3, que sustituye a la «base clara y neutra» anterior),
-    insignia ✓ y, debajo, las estrellas ganadas (☆ las que faltan, MP4). Tocarlo no hace nada
-    (MP15).
+    símbolo blanco (`card`, 3,72 : 1) (MP3), insignia ✓ y, debajo, **solo las estrellas ganadas**
+    (2 estrellas = ★★, sin ☆, D59). Tocarlo no hace nada (MP15).
   - **Bloqueado** (`locked`): cara `node-locked` casi igual que la superficie (1,1 : 1), símbolo
     `node-locked-ink` (3,70 : 1) e insignia de candado (4,29 : 1 sobre su fondo). Sin rojo y sin
     opacidad: la ficha es opaca (V13).
@@ -180,11 +197,10 @@ El mapa es un **camino en serpiente de nodos redondos con icono** (Plan 8; ledge
     insignia de reloj, no la del candado. Tocarla no inicia nada y se anuncia «Llega en una
     próxima versión».
   - Bloqueado y «soon» llevan `aria-disabled="true"`, nunca `disabled` (MP1).
-- **Colores de mundo:** no entran (D43). El camino y los separadores de fase son neutros, sobre un
-  panel opaco `bg-surface` (MP10).
-- **Cabecera sin cambios** (D39): puerta de padres (el logo), el compañero equipado, «Mis
-  premios», el contador de estrellas con su barra al próximo hito, los puntos de avance de la
-  unidad activa y la marca de «guardado». El compañero va en la cabecera, no junto al nodo.
+- **Sin pantalla de inicio** (D52): la app abre en el mapa. El primer toque que inicia una sesión (nodo o
+  Jugar) desbloquea el audio dentro del gesto y comprueba si hay una actualización esperando
+  (`features/start/use-arranque`, MC7). No pongas una pantalla previa ni «Toca para empezar».
+- El camino, los nodos y el fondo siguen neutros: el panel es `bg-surface` opaco (MP10, MC14).
 - El mapa pinta `progress.units` del motor y `isSessionPlayable`; no decide qué unidad se juega.
 
 ## Dispositivo y tamaños
@@ -222,7 +238,11 @@ Reutiliza, luego amplía con variantes, y crea solo si no hay otra salida.
 | Imagen de palabra | `components/Picture` (`img:<palabra>`, emoji de respaldo) |
 | Arte decorativo | `features/rewards/visuals.ts` → `components/ArtImage` (emoji de respaldo) |
 | MascotMessage | No existe: `Companion` más una locución |
-| Nodo del camino, mapa | `features/map/MapNode` (un nodo; `nodeLook` decide su aspecto) y `features/map/MapScreen` (cabecera y camino; `serpentine.ts` coloca los nodos) |
+| Nodo del camino, mapa | `features/map/MapNode` (un nodo; `nodeLook` decide su aspecto) y `features/map/MapScreen` (compone las tres filas; `serpentine.ts` coloca los nodos) |
+| Cabecera del mapa | `features/map/MapHeader` (wordmark, ✓ de guardado, estrellas con barra al hito y candado de `AdultDoor`) |
+| Pie del mapa | `features/map/MapFooter` («Mis premios», botón Jugar/Repasar/«soon» con `BigButton compact`, y `Companion`) |
+| Tarjeta de capítulo | `features/map/ChapterCard` (antetítulo, nombre de `worldName`, color `world-N` y puntos de avance) |
+| Arranque (audio y actualización) | `features/start/use-arranque` (gancho que usa `App`) |
 | SuccessFeedback | rebote `celebrating` en `SessionScreen` y `EndScreen` |
 | Icono | `components/Icon`, solo los de `ICON_NAMES` (uno nuevo pide su PNG en `public/icons/`) |
 
@@ -244,15 +264,12 @@ nunca deciden pedagogía.
 
 ## Decisiones abiertas (pregúntalas, no las decidas)
 
-- **Valores finales de los colores de mundo**, tras la prueba de `/dev/arte`, y cómo conviven con
-  los fondos equipables (Pradera, Espacio, Bosque), que también pintan el entorno.
+- **Colores de mundo fuera de la tarjeta:** los acentos y cómo conviven con los fondos equipables
+  (Pradera, Espacio, Bosque), tras la prueba de `/dev/arte`. Las bases ya son tokens (D48).
 - **Texto en azul marino:** el autor lo menciona, pero hoy `ink` es un casi negro cálido. Cambiarlo
   es un token nuevo que debe pasar CO1.
 - **Mapa:** qué hace una unidad terminada al tocarla (cambiaría el motor; hoy no hace nada, MP15),
-  si las fases futuras se ven enteras, **la continuidad del camino entre fases** (hoy cada fase
-  tiene su serpiente y se corta en el separador, MP8) y las **☆ de las estrellas que faltan**
-  (MP4: hoy 2 estrellas se ven ★★☆; la opción D37 decía a la vez «las 3» y «nunca huecos» y está
-  sin confirmar con el autor). Y **el centrado de la activa al abrir** (MP12), que deja el logo
-  del panel de padres fuera de vista: ¿`block: "nearest"`, o centrar solo si la activa queda fuera
-  de la primera pantalla? Se confirma con el autor en la pasada visual del preview.
+  si las fases futuras se ven enteras y **la continuidad del camino entre fases** (hoy cada fase
+  tiene su serpiente y la corta su tarjeta de capítulo, MP8, D50). MP4 y MP12 están cerradas (D59, D60).
+- **El color del wordmark y de las tarjetas**, a confirmar con el autor en la pasada visual del Plan 9.
 - Arte pendiente: la boca esquemática (deuda 5) y los glifos sin arte (🔁, ✓, ✕, ★/☆; V10).

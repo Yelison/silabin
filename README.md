@@ -12,9 +12,11 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > El **Plan 8** (el mapa como camino en serpiente) está **ejecutado en su rama**
 > `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 y la revisión final (corregida) hechas;
 > pasada visual local hecha (2026-10-09); **falta** que el autor despliegue el preview (D29). El PR
-> contra `main` incluye el #10.
+> contra `main` incluye el #10. El **Plan 9** (cabecera, tarjetas de capítulo y pie del mapa; la app
+> abre en el mapa) está **ejecutado en `feat/plan-9-mapa-composicion`**, que sale de la del Plan 8:
+> T1-T5 hechas, **falta** la revisión final de la rama y el PR.
 > Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
-> esquemática**. 1443 tests, y `typecheck` y `lint` en verde.
+> esquemática**. 1493 tests, y `typecheck` y `lint` en verde.
 
 ---
 
@@ -31,12 +33,13 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 9. [Lo que ya está hecho: Plan 6](#lo-que-ya-está-hecho-plan-6)
 10. [Lo que ya está hecho: Plan 7](#lo-que-ya-está-hecho-plan-7)
 11. [Lo que ya está hecho: Plan 8](#lo-que-ya-está-hecho-plan-8)
-12. [Lo que falta: después del Plan 8](#lo-que-falta-después-del-plan-8)
-13. [Siguientes pasos concretos](#siguientes-pasos-concretos)
-14. [Decisiones tomadas](#decisiones-tomadas)
-15. [Trampas conocidas](#trampas-conocidas)
-16. [Deuda menor aceptada](#deuda-menor-aceptada)
-17. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
+12. [Lo que ya está hecho: Plan 9](#lo-que-ya-está-hecho-plan-9)
+13. [Lo que falta: después del Plan 9](#lo-que-falta-después-del-plan-9)
+14. [Siguientes pasos concretos](#siguientes-pasos-concretos)
+15. [Decisiones tomadas](#decisiones-tomadas)
+16. [Trampas conocidas](#trampas-conocidas)
+17. [Deuda menor aceptada](#deuda-menor-aceptada)
+18. [Cómo se trabaja en este repo](#cómo-se-trabaja-en-este-repo)
 
 ---
 
@@ -46,7 +49,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1443 tests (1 omitido: el de ficheros de audio)
+pnpm test        # Vitest: 1493 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
@@ -151,9 +154,10 @@ ningún agente despliega).
   vez de fallar. Los audios (`speechSynthesis`) no se precachean: no son ficheros propios.
 - **Cómo se actualiza:** sin `skipWaiting` automático (S11 del Plan 6) — un service worker
   nuevo que tomara el control a mitad de una sesión rompería la carga de fragmentos ya en
-  curso. Cuando hay una versión nueva esperando, tocar «Toca para empezar» en la pantalla de
-  inicio (`src/features/pwa/update.ts` + `StartScreen`) le pide que tome el control y recarga
-  la página una vez, antes de empezar nada. Nunca pasa a mitad de una sesión.
+  curso. Cuando hay una versión nueva esperando, el primer toque que inicia una sesión (un nodo o
+  «Jugar»; `src/features/pwa/update.ts` + `src/features/start/use-arranque.ts`, D52, MC7) le pide
+  que tome el control y recarga la página una vez, y vuelve al mapa sin sesión (MC15). Nunca pasa
+  a mitad de una sesión.
 - Los iconos (`public/icons/app-192.png`, `app-512.png`, `apple-touch-icon.png`) son el **loro**
   del Plan 7, que sustituye a la «S» provisional (S13). `app-512.png` se declara también
   `maskable`, aunque el loro ocupa cerca del 81 % del cuadro (Ruling del icono en el ledger): una
@@ -169,6 +173,8 @@ ningún agente despliega).
 | 1b | `docs/superpowers/2026-09-28-plan-6-registro.md` | Registro del Plan 6 (padres, recompensas, PWA, e2e). Busca `Ruling` y `minor (deferred)`, y la **lista de la prueba manual del autor** |
 | 1b2 | `docs/superpowers/2026-09-29-plan-7-registro.md` | Registro del Plan 7 (identidad visual): D32-D36, rulings V1-V16 y de tarea, la tabla de progreso y el estado final. Busca `Ruling` y `minor (deferred)` |
 | 1b0 | `docs/superpowers/2026-10-09-plan-8-registro.md` | Registro del Plan 8 (el mapa como camino): D37-D45, rulings MP1-MP15, la tabla de progreso y los `minor (deferred)` de T1-T3. Busca `Ruling` y `minor (deferred)` |
+| 1b0a | `docs/superpowers/2026-10-09-plan-9-registro.md` | Registro del Plan 9 (cabecera, capítulos y pie del mapa): D46-D60, rulings MC1-MC16, la tabla de progreso y los `minor (deferred)` de T1-T4 |
+| 1b0c | `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md` | El Plan 9 (5 tareas): nombres de mundo y tokens, arranque sin pantalla de inicio, tarjetas y onda, cabecera y pie, y docs |
 | 1b0b | `docs/superpowers/plans/2026-10-09-silabin-mapa-camino.md` | El Plan 8 (4 tareas): iconos y tokens, `nodeLook` y `MapNode`, serpiente por columnas y docs |
 | 1b3 | `docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md` | El Plan 7 (6 tareas): arte, compañeros, paleta y checklist, con los rulings V1-V16 |
 | 1c | `docs/arte-plan-7-prompts.md` | Los prompts del arte del Plan 7 (compañeros, fondos, pegatinas, bocas, iconos). Integrado salvo la sección 5 (la boca), que queda por rehacer |
@@ -318,10 +324,10 @@ revisión final de rama (Opus) corrigió sus hallazgos (I1-I3, M1; ver el ledger
 - **`audio/`:** interfaz `AudioPlayer` (cola, `beat()` para el golpe del tambor), reproductor
   con `speechSynthesis` y reproductor silencioso.
 - **`images/`:** `imageFor` con emoji para las 65 claves `img:` del currículo.
-- **Interfaz:** `StartScreen` («Toca para empezar»), `MapScreen`, `SessionScreen`,
+- **Interfaz:** `MapScreen`, `SessionScreen`,
   `EndScreen`, y las vistas de `count-syllables` (presentación con luces por sílaba, tambor y
   pistas 1-2-3). `SaveWarning` avisa al adulto si no se guardó, y `ExportGesture` exporta el
-  progreso manteniendo pulsado el logo 3 s.
+  progreso manteniendo pulsado el logo 3 s (desde el Plan 9, el candado de la cabecera).
 - Al acabar el Plan 2 solo `phase0:clap` era jugable. El mapa atenúa las unidades cuyas
   plantillas aún no tienen vista (`isSessionPlayable`).
 
@@ -474,8 +480,8 @@ de este plan lo espera, y todo lo provisional pasa por `src/features/rewards/vis
   `setPin`/`checkPin`/`updateSettings` en el store. `importState` sigue el contrato de D27:
   solo un documento que **valida entero** se importa, con vista previa y confirmación; `{}`, una
   versión distinta o una clave corrupta se rechazan sin tocar nada.
-- **Panel de padres** (`features/adult/`): mantener el logo 3 s abre la puerta (`AdultDoor`,
-  D26); el PIN se crea la primera vez (`ParentGate`); si se olvida, una pregunta de adulto (una
+- **Panel de padres** (`features/adult/`): mantener el candado de la cabecera 3 s abre la puerta (`AdultDoor`,
+  D26, D51); el PIN se crea la primera vez (`ParentGate`); si se olvida, una pregunta de adulto (una
   multiplicación) deja poner otro **sin tocar el progreso**. Dentro (`ParentPanel`): acento,
   trazo de minúsculas, longitud de la sesión (5 o 6), evaluador de voz, micrófono, nombre del
   niño, cambiar el PIN, progreso, y `DataSection`: exportar, importar con resumen y reiniciar con
@@ -580,10 +586,33 @@ falta la pasada visual del preview (ver «Siguientes pasos»).
 
 ---
 
-## Lo que falta: después del Plan 8
+## Lo que ya está hecho: Plan 9
+
+Plan 9 = **el mapa con cabecera, tarjetas de capítulo y pie**, en la rama `feat/plan-9-mapa-composicion`
+(5 tareas; plan en `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md`, ledger en
+`docs/superpowers/2026-10-09-plan-9-registro.md`, con D46-D60 [en la tabla](#decisiones-tomadas) y los
+rulings MC1-MC16). Sale de la rama del Plan 8 (D46): si el #11 se fusiona antes, se rebasa sobre
+`main`. **Sin PR todavía**: faltan la revisión final de la rama y la pasada visual del cierre.
+
+- **T1, datos y tokens (`f875024`):** nombres de mundo en `content/`, tokens `brand`, `world-0`…`world-3`
+  y Nunito como `--font-sans` (Andika sigue en lectura).
+- **T2, arranque (`de5622a`):** sin pantalla de inicio; `features/start/use-arranque` desbloquea el audio y
+  busca la actualización en el primer toque de juego.
+- **T3, camino (`32a237d`):** una columna con ondas bajo 768 px, la serpiente de 3 y 5 columnas desde
+  768 px, y `ChapterCard` por mundo, que corta el camino. Solo estrellas ganadas (D59).
+- **T4, cabecera y pie (`b133042`):** `MapHeader` (wordmark, ✓, estrellas y candado de padres) y
+  `MapFooter` («Mis premios», Jugar/Repasar/«soon» y compañero), fijos; solo se desplaza el camino
+  (D60). Una ronda de corrección; el token `chapter-edge` y `SavedMark` en la cabecera son rulings.
+- **T5, documentación y poda:** la skill `silabin-design`, `docs/diseno-visual.md`, el punto I17 de
+  `docs/checklist-ipad.md` y este README. Poda: ninguna trampa viva y 10 deudas.
+- **Proceso:** T1-T3 salieron con 0 rondas y T4 con 1; los `minor (deferred)` están en el ledger.
+
+---
+
+## Lo que falta: después del Plan 9
 
 La hoja de ruta original está al final del Plan 1. Esta es la **versión revisada y
-confirmada con el autor** (D7 y D24), ya con los planes 2 a 8 construidos.
+confirmada con el autor** (D7 y D24), ya con los planes 2 a 9 construidos.
 
 | Plan | Contenido | Resultado visible |
 |---|---|---|
@@ -593,9 +622,10 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 8 construidos.
 | ~~5~~ | ~~Voz: `getUserMedia`, VAD, evaluador `parent` pulido, `say-it` y `read-word`~~ **hecho** | Las Fases 1 y 2 son jugables |
 | ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | ~~7~~ | ~~Identidad visual (D24): el arte del loro y el elefantito, fondos, pegatinas, trofeo, rastros, iconos, paleta final y `docs/checklist-ipad.md`~~ **hecho** (PR #8). **Sin hacer:** la boca (aplazada) y la prueba del autor con la lista | La versión con cara propia; falta probarla en dispositivo real |
-| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. Pasada visual local hecha; MP12 y ☆ de MP4 se mantienen por decisión del autor. **Sin hacer:** el preview desplegado por el autor. PR abierto contra `main` (incluye el #10) | Un mapa que se lee como un viaje |
+| 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. Pasada visual local hecha; MP12 y las ☆ de MP4 se cerraron en el Plan 9 (D59, D60). **Sin hacer:** el preview desplegado por el autor. PR abierto contra `main` (incluye el #10) | Un mapa que se lee como un viaje |
+| 9 | **El mapa con cabecera, capítulos y pie** (D46-D60): tarjeta de color por mundo, onda en teléfono, pie con Jugar, la app abre en el mapa y Nunito en la interfaz. **Ejecutado en su rama** `feat/plan-9-mapa-composicion`. **Sin hacer:** revisión final en Opus, pasada visual, confirmar con el autor el color del wordmark y las tarjetas, y el PR | La composición completa de la referencia |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
-| Idea aparcada | **Refactor de diseño del resto de pantallas** con el plugin `frontend-design`, en un plan aparte (el mapa ya lo hizo el Plan 8). Quedan la composición completa de la referencia (cabecera, pie y tarjetas de capítulo, D39) y los colores de mundo (D43) | Pantallas con más personalidad |
+| Idea aparcada | **Refactor de diseño del resto de pantallas** con el plugin `frontend-design`, en un plan aparte (el mapa ya lo hicieron los Planes 8 y 9). El mapa ya tiene la composición completa (Plan 9); quedan los colores de mundo fuera de la tarjeta | Pantallas con más personalidad |
 | Idea aparcada | **Objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa), como capas transparentes ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor y un punto de anclaje por compañero; ver el ledger del Plan 7 | Personalización del compañero |
 
 **Voz, en «Después».** Antes de generar el lote entero, una **prueba de Azure con unos 10
@@ -618,19 +648,18 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 8 ejecutado en su rama (T1-T4, 2026-10-09).** Queda, en este orden:
+**Plan 9 ejecutado en su rama (T1-T5, 2026-10-09); el Plan 8 sigue sin fusionar (#11).** Queda, en este orden:
 
-1. **Revisión final de la rama contra `main` en Opus (`high`): hecha y corregida (2026-10-09).** Los
-   arreglos (`z-20` en `SavedMark`, e2e del SVG visible, aserciones de S2 y N7, y la pastilla de
-   estrellas fuera del flujo, que descentraba 16 px los nodos terminados) están en la rama, cada
-   uno con su test o e2e.
-2. **Desplegar el preview y hacer la pasada visual** con `~/qa-silabin`, en webkit y chromium:
-   aro y foco sin pisar al vecino, y la **decisión de producto de MP12** (el centrado de la activa
-   deja el logo del panel de padres fuera de vista al abrir; opciones `block: "nearest"` o centrar
-   solo si la activa queda fuera de la primera pantalla). Confirmar también con el autor las ☆ (MP4).
-3. **Abrir el PR del Plan 8** contra `main`, que cierra el #10 como incluido (D44).
-4. **Cerrar la deuda 1 con dispositivo real** en `docs/checklist-ipad.md` (I1-I3, I6, H1, P1-P3,
-   P8, P9, I12-I13, I15 con niño, y el nuevo I16 del mapa). Nadie lo prueba por el autor.
+1. **Revisión final de la rama del Plan 9 en Opus (`high`)**, contra `feat/plan-8-mapa-camino` o contra
+   `main` si el #11 ya está fusionado (D46). Triaje de los `minor (deferred)` del ledger.
+2. **Pasada visual local** con `~/qa-silabin` (build de producción, webkit y chromium, a 320, 390, 834,
+   1194 y 844 × 390, contra `referencia-834.png`) y **confirmar con el autor el color del wordmark y de
+   las tarjetas**.
+3. **Abrir el PR del Plan 9** contra `main` cuando el autor lo autorice. Si el #11 sigue abierto, el
+   del Plan 8 va primero (D44, D46).
+4. **Desplegar el preview** (D29) y **cerrar la deuda 1 con dispositivo real** en
+   `docs/checklist-ipad.md` (I1-I3, I6, H1, P1-P3, P8, P9, I12-I13, I15 con niño, I16 y el nuevo I17).
+   Nadie lo prueba por el autor.
 5. **Después:** rehacer la boca (deuda 5) y, si procede, el refactor del resto de pantallas o los
    objetos de los compañeros.
 
@@ -651,7 +680,9 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 [Plan 7](docs/superpowers/plans/2026-09-29-silabin-identidad-visual.md) (texto completo en su
 [registro](docs/superpowers/2026-09-29-plan-7-registro.md)). D37-D45 son del
 [Plan 8](docs/superpowers/plans/2026-10-09-silabin-mapa-camino.md) (con los rulings MP1-MP15 en su
-[registro](docs/superpowers/2026-10-09-plan-8-registro.md)).
+[registro](docs/superpowers/2026-10-09-plan-8-registro.md)). D46-D60 son del
+[Plan 9](docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md) (una línea cada una aquí; el
+texto completo y los rulings MC1-MC16 en su [registro](docs/superpowers/2026-10-09-plan-9-registro.md)).
 
 | # | Decisión |
 |---|---|
@@ -662,7 +693,7 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D4 | Currículo agotado (`activeUnitId === null`): **sesión de solo repaso** planificada por el motor |
 | D5 | `saveState` → `{ saved: false }`: **aviso discreto para el adulto** y reintento en el siguiente guardado |
 | D6 | **Exportación mínima** con gesto oculto de adulto (mantener pulsado el logo 3 s) |
-| D7 | Hoja de ruta de los planes 3 a 6 **confirmada** (la de 4 a 6 sigue en pie; ver [arriba](#lo-que-falta-después-del-plan-8)) |
+| D7 | Hoja de ruta de los planes 3 a 6 **confirmada** (la de 4 a 6 sigue en pie; ver [arriba](#lo-que-falta-después-del-plan-9)) |
 | D8 | Estilo visual: **base mínima dentro del Plan 3**. Tokens de color, tipografía, radios y tamaño de objetivo en `globals.css` y componentes base. La identidad final (paleta definitiva, ilustraciones, compañero) llegará después y cambiará los tokens sin tocar las vistas. Detalle en [`docs/diseno-visual.md`](docs/diseno-visual.md) |
 | D9 | `importState` **va al Plan 6** con el contrato fijado: un import deliberado del adulto **sustituye `doc` entero y quita `readFailed`** (y `recovered`). **Hecho en el Plan 6**, precisado por D27 |
 | D10 | Las 5 plantillas de toque (`rhyme`, `initial-sound`, `hear-it`, `listen-tap`, `build`). Tras el Plan 3 **solo la Fase 0 es jugable**: las unidades de Fase 1 y 2 declaran `trace` y `say-it`, y el mapa las atenúa hasta los Planes 4 y 5. `listen-tap` y `build` se prueban con tests y con `/dev/plantillas` |
@@ -681,7 +712,7 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D23 | **«Ocultar micrófono» y `speechMode`:** entran en el store con su valor por defecto y se respetan con tests (`hideMic` lo leen las vistas, `speechMode` lo lee `speech/`; ninguno entra en `engine/`). La interfaz llegó con el panel de padres (Plan 6) |
 | D24 | **El trabajo se reparte en dos planes.** Plan 6, funcional (panel de padres, ajustes, importar, minúsculas, recompensas con marcadores, avance en el mapa, borrar y confirmar en `trace`, PWA y e2e). Plan 7, identidad visual (arte, compañero, boca, paleta) y la lista de verificación en iPad. Ninguna tarea del Plan 6 espera al arte |
 | D25 | **El arte lo genera el autor a partir de prompts** en el estilo de `docs/ilustraciones-prompts.md`; el Plan 6 los deja escritos en `docs/arte-plan-7-prompts.md` y el Plan 7 los integró con `scripts/optimizar-arte.py` (V2; `optimizar-ilustraciones.py` sigue siendo el de las 65 ilustraciones de palabras) |
-| D26 | **Panel de padres:** se entra manteniendo el logo 3 s, que abre el PIN; exportar pasa dentro del panel. PIN olvidado: pregunta de adulto y PIN nuevo **sin tocar el progreso**. El PIN se define la primera vez (`pinHash: null`) |
+| D26 | **Panel de padres:** se entra manteniendo 3 s el logo (el candado desde D51), que abre el PIN; exportar pasa dentro del panel. PIN olvidado: pregunta de adulto y PIN nuevo **sin tocar el progreso**. El PIN se define la primera vez (`pinHash: null`) |
 | D27 | **Contrato de importar** (precisa D9): solo se importa un documento que **valide entero** con `persistedStateSchema`, versión incluida; si no, se rechaza con mensaje y no se toca nada (nunca se rescata ni se importa un documento vacío). Si valida: vista previa, confirmación y sustitución de `doc` entero |
 | D28 | **Trazo en minúsculas** dentro del Plan 6: 9 glifos (la `a` de un solo piso), pares confundibles medidos, interruptor `lowercaseTracing`. Cierra D16 |
 | D29 | **HTTPS para la PWA: Vercel.** Desplegar es una acción del autor; ningún agente despliega. La URL es pública aunque nadie la conozca |
@@ -701,6 +732,21 @@ resolvieron con el autor el 2026-09-26. Están en la tabla D1-D7 del
 | D43 | **Los colores de mundo no entran:** camino y separadores neutros, con tokens |
 | D44 | **La rama sale del PR #10** para que `docs/visual-refactor/` viaje con el plan; el PR del Plan 8 lo incluye y lo cierra |
 | D45 | **Se versionan `.claude/skills/silabin-design/` y `docs/diseno/`.** `docs/diseno/mapa/exploracion-mundo.md` (la propuesta del PR #9) queda como antecedente |
+| D46 | Rama del Plan 9 desde `feat/plan-8-mapa-camino` (el #11 sigue abierto); se rebasa si el #11 se fusiona antes |
+| D47 | Nunito solo en la interfaz (`--font-sans`, pesos 600-800); Andika sigue en lectura hasta que el autor vea la «a» (D28) |
+| D48 | Colores de mundo solo en la tarjeta de capítulo, como tokens `world-0`…`world-3` (revisa D43 en parte); es decoración |
+| D49 | Camino de una columna con ondas bajo 768 px; desde 768 px sigue la serpiente de 3 y 5 columnas (reemplaza las 2 de D41) |
+| D50 | La tarjeta de capítulo sustituye al separador discontinuo y corta el camino |
+| D51 | La puerta de padres es un candado visible a la derecha de la cabecera, con los 3 s de siempre; el wordmark deja de serlo |
+| D52 | Sin pantalla de inicio: la app abre en el mapa; el primer toque de juego desbloquea el audio y busca la actualización (`use-arranque`) |
+| D53 | Pie con ▶ «Jugar»: inicia la activa, 🔁 «Repasar» sin activa, o inactivo «soon»; la palabra es para el adulto (MC11) |
+| D54 | El compañero va en el pie, junto a Jugar |
+| D55 | «Mis premios» va en el pie, a la izquierda, con el icono `gallery` |
+| D56 | Estrellas en la cabecera: «★ n» con la barra fina al próximo hito |
+| D57 | Los puntos de avance van en la tarjeta del capítulo activo |
+| D58 | Tarjeta con antetítulo «MUNDO N» y el nombre del spec («Oído de explorador», «Las vocales», «Las sílabas», «Más letras»), en `content/` |
+| D59 | Solo las estrellas ganadas, sin ☆; cierra MP4 |
+| D60 | Cabecera y pie fijos; solo se desplaza el camino; cierra MP12 |
 
 **Pares confundibles de `trace` (dato conocido, del prototipo de la Tarea 1 del Plan 4):** con
 las constantes de partida (`TOLERANCE`, `MIN_COVERAGE`, `MIN_PRECISION`) que trae hoy el
@@ -732,6 +778,8 @@ sesión» tiene un test en `App`). La del Plan 7 (`optimizar-arte.py` genera tam
 bocas, que no deben publicarse) es test: FI2 y `BOCAS_PUBLICADAS`. El Plan 8 no deja ninguna: sus
 cuidados (clases de Tailwind literales, sin `px` en `style`, `aria-disabled`) son tests (E4, S2, U7).
 
+El Plan 9 tampoco deja ninguna: sus cuidados (clases `world-N` literales, tokens del pie y la cabecera, el scroll horizontal de la zona del camino) son tests de clase y e2e.
+
 Ninguna trampa viva.
 
 ---
@@ -750,14 +798,14 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
 4. **Accesibilidad y objetivos táctiles < 72 px:** modelo, `SaveWarning`, tambor, `<input type="file">` y
    bandeja de `build` (12 px, no 16). El mapa del Plan 8 no la amplía; detalle en el archivo.
-5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
-   (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
+5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista (D21); sin
+   `mouth-*.webp`: rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
 6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
    glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
-8. **Minors y decisiones del Plan 8** (ledger y archivo): dos de producto, MP12 (logo de padres fuera de vista;
-   se mantiene `center`) y las ☆ (MP4, se mantienen): el autor las confirma con dispositivo real. Gusto, no test.
+8. **Minors y decisiones de los Planes 8 y 9** (ledgers y archivo; MP4 y MP12 cerradas, D59, D60): MP15, la continuidad del
+   camino entre fases, el color del wordmark y las tarjetas, el pie bajo el indicador de inicio (exige `viewportFit: "cover"`, cambio global), «Mis premios» a 320 px y M7/M8 solo en e2e.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo

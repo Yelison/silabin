@@ -25,10 +25,10 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-/** Mantiene pulsado el logo lo que pide la puerta del adulto. */
-function mantenerLogo() {
+/** Mantiene pulsado el candado de la cabecera lo que pide la puerta del adulto. */
+function mantenerCandado() {
 	vi.useFakeTimers();
-	fireEvent.pointerDown(screen.getByRole("heading", { name: "Silabín" }));
+	fireEvent.pointerDown(screen.getByRole("img", { name: "Panel de padres" }));
 	act(() => {
 		vi.advanceTimersByTime(PANEL_HOLD_MS);
 	});
@@ -55,12 +55,11 @@ describe("Panel de padres: integración", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await screen.findByRole("button", { name: "Empezar" }));
 		await waitFor(() =>
 			expect(container.querySelector("[data-unit]")).not.toBeNull(),
 		);
 
-		mantenerLogo();
+		mantenerCandado();
 
 		// Primer uso: PIN y confirmación.
 		const campo = () => screen.getByLabelText(/PIN/i);

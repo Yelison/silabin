@@ -49,8 +49,10 @@ const INSIGNIA: Record<NodeLook, BadgeId | null> = {
 function Estrellas({ n }: { n: number }) {
 	return (
 		<span className="text-celebrate">
-			{[0, 1, 2].map((i) => (
-				<span key={i}>{i < n ? "★" : "☆"}</span>
+			{/* D59: solo las estrellas ganadas, sin huecos. */}
+			{Array.from({ length: n }, (_, i) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: estrellas idénticas sin identidad propia
+				<span key={i}>★</span>
 			))}
 		</span>
 	);

@@ -64,6 +64,17 @@ export type AppStoreDeps = {
 	seed: () => number;
 };
 
+/**
+ * Si hay algo que contarle al adulto sobre el guardado (fallo al guardar, datos recuperados o
+ * lectura fallida). Lo comparten el aviso (`SaveWarning`) y la cabecera del mapa, que reserva
+ * el rincón del aviso: un solo predicado para que no se desincronicen.
+ */
+export function hayAvisoAdulto(
+	s: Pick<AppState, "saveFailed" | "recovered" | "readFailed">,
+): boolean {
+	return s.saveFailed || s.recovered || s.readFailed;
+}
+
 export type AppState = {
 	status: "loading" | "ready";
 	/** El último documento, guardado o pendiente de guardar. Es la fuente de verdad. */

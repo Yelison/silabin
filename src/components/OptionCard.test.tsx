@@ -138,4 +138,20 @@ describe("OptionCard", () => {
 		expect(pequeña.className).not.toContain("min-h-target");
 		expect(grande.className).toContain("min-h-target");
 	});
+
+	it("FN3: el botón que pinta la letra lleva font-reading (Andika, no Nunito)", () => {
+		render(
+			<OptionCard
+				state="idle"
+				disabled={false}
+				aria-label="a"
+				onSelect={() => {}}
+			>
+				a
+			</OptionCard>,
+		);
+		const boton = screen.getByRole("button", { name: "a" });
+		expect(boton.textContent).toBe("a");
+		expect(boton.className).toMatch(/\bfont-reading\b/);
+	});
 });

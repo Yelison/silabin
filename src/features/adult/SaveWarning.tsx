@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useApp } from "@/features/app-context";
+import { hayAvisoAdulto } from "@/store";
 
 const SIN_GUARDAR =
 	"El progreso no se está guardando en este dispositivo. Suele pasar en navegación privada o sin espacio libre. Exporta el progreso para no perderlo.";
@@ -18,10 +19,11 @@ export function SaveWarning() {
 	const saveFailed = useApp((s) => s.saveFailed);
 	const recovered = useApp((s) => s.recovered);
 	const readFailed = useApp((s) => s.readFailed);
+	const hayAviso = useApp(hayAvisoAdulto);
 	const retrySave = useApp((s) => s.retrySave);
 	const [open, setOpen] = useState(false);
 
-	if (!saveFailed && !recovered && !readFailed) {
+	if (!hayAviso) {
 		// Sin nada que contar, el panel vuelve cerrado: si el guardado falla otra vez, sale el
 		// icono y no un diálogo a pantalla completa encima del niño. Se reajusta durante el
 		// render (patrón de React para estado derivado), sin efecto ni parpadeo.
