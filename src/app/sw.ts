@@ -31,7 +31,7 @@ const serwist = new Serwist({
 	},
 	// Sin skipWaiting automático (S11): un SW nuevo que tomase el control a mitad de una
 	// sesión rompería la carga de fragmentos ya en curso. Solo se activa cuando
-	// `features/pwa/update.ts` pide `SKIP_WAITING`, y eso solo pasa desde `StartScreen`.
+	// `features/pwa/update.ts` pide `SKIP_WAITING`, y eso solo pasa desde `useArranque`.
 	skipWaiting: false,
 	clientsClaim: true,
 	navigationPreload: true,

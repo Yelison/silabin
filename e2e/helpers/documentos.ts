@@ -61,8 +61,8 @@ export function docConSilabas(): PersistedState {
 	return persistedStateSchema.parse(doc);
 }
 
+/** La app abre en el mapa: no hay pantalla de inicio. Espera al mapa sin tocar nada. */
 export async function empezar(page: Page): Promise<void> {
-	await page.getByRole("button", { name: "Empezar" }).click();
 	await page.getByRole("heading", { name: "Silabín" }).waitFor();
 }
 

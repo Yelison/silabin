@@ -3,10 +3,10 @@
  * Devuelve `true` si va a recargar. Sin `serviceWorker` o sin registro → `false`.
  *
  * Sin `skipWaiting` automático (S11): un SW nuevo podría borrar la precaché a mitad de una
- * sesión y romper la carga de fragmentos. Por eso esto solo se llama desde `StartScreen`,
+ * sesión y romper la carga de fragmentos. Por eso esto solo se llama desde `useArranque`,
  * nunca durante una sesión.
  *
- * `signal` sirve para desistir: si ya se abortó cuando el registro responde (la pantalla de inicio
+ * `signal` sirve para desistir: si ya se abortó cuando el registro responde (el arranque
  * dejó de esperar y arrancó la app), no se envía `SKIP_WAITING`; y si se aborta después de
  * enviarlo, el cambio de controlador ya no recarga (nunca a mitad de sesión).
  */

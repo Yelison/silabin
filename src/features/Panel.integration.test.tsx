@@ -55,7 +55,6 @@ describe("Panel de padres: integración", () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		const user = userEvent.setup();
-		await user.click(await screen.findByRole("button", { name: "Empezar" }));
 		await waitFor(() =>
 			expect(container.querySelector("[data-unit]")).not.toBeNull(),
 		);

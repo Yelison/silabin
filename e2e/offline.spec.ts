@@ -6,7 +6,6 @@ test("J3: el panel de padres crea el PIN, cambia la longitud a 6 y la sesión lo
 }) => {
 	await fijarSemilla(page);
 	await sembrar(page, documentoFase1());
-	await page.getByRole("button", { name: "Empezar" }).click();
 
 	// Mantener pulsado el logo (PANEL_HOLD_MS = 3000).
 	const logo = page.getByRole("heading", { name: "Silabín" });
@@ -68,7 +67,6 @@ test("J4: sin red la app arranca, muestra el mapa y carga una ilustración", asy
 	await context.setOffline(true);
 	await page.reload();
 
-	await page.getByRole("button", { name: "Empezar" }).click();
 	await expect(page.locator('[data-status="active"]').first()).toBeVisible();
 
 	const estado = await page.evaluate(async () => {

@@ -128,7 +128,7 @@ describe("fronteras de la interfaz", () => {
 			'import { BigButton } from "@/components/BigButton";',
 			'import { useApp } from "@/features/app-context";',
 			'import { x } from "./MapScreen";',
-			'import { x } from "../start/StartScreen";',
+			'import { x } from "../start/use-arranque";',
 			'import { create } from "zustand";',
 		];
 		it.each(permitidos)("permite: %s", (linea) => {
