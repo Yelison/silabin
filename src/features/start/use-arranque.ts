@@ -75,7 +75,8 @@ export function useArranque(
 			comprobacion.current = "hecha";
 			// Desiste de la actualización: ni `SKIP_WAITING` ni recarga si llegan tarde.
 			cancelar.abort();
-			onStart();
+			// El `onStart` de ahora, no el del toque: pasó hasta 1 s y la pantalla pudo cambiar.
+			ultimo.current.onStart();
 		};
 		let espera = setTimeout(empezar, ESPERA_ACTUALIZACION_MS);
 		(applyUpdate ?? actualizacionReal)(cancelar.signal).then(

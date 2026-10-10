@@ -174,6 +174,25 @@ describe("useArranque", () => {
 		expect(audio.unlock).toHaveBeenCalledTimes(3);
 	});
 
+	it("AR9: al decidir se llama al onStart más reciente, no al que había en el toque", async () => {
+		const viejo = vi.fn();
+		const nuevo = vi.fn();
+		const audio = fakeAudio();
+		const store = crearStore();
+		const wrapper = ({ children }: { children: ReactNode }) =>
+			conProveedores(store, audio, children);
+		const { result, rerender } = renderHook(
+			({ onStart }: { onStart: () => void }) =>
+				useArranque(onStart, () => new Promise<boolean>(() => {})),
+			{ wrapper, initialProps: { onStart: viejo } },
+		);
+		result.current();
+		rerender({ onStart: nuevo });
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(viejo).not.toHaveBeenCalled();
+		expect(nuevo).toHaveBeenCalledTimes(1);
+	});
+
 	it("un unlock que rechaza no impide empezar", async () => {
 		const onStart = vi.fn();
 		const { arrancar, audio } = montar(

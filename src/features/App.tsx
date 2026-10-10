@@ -51,6 +51,9 @@ function Screens() {
 	// Antes del `return null` (reglas de los hooks) y fuera de la rama del mapa, que se
 	// vuelve a montar tras cada sesión: la comprobación de actualización es solo la primera vez.
 	const arrancar = useArranque(() => {
+		// La comprobación de actualización puede resolverse (o agotar su espera de 1 s) cuando
+		// el adulto ya salió del mapa, a Premios o al panel: entonces no se abre una sesión.
+		if (screen !== "map") return;
 		beginSession();
 		setScreen("session");
 	});

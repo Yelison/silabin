@@ -273,6 +273,55 @@ describe("App", () => {
 		expect(fakeSynth.spoken[1]?.lang).toMatch(/^es-MX/);
 	});
 
+	describe("F4: la comprobación de actualización pendiente no inicia sesión fuera del mapa", () => {
+		/** Un Service Worker cuyo `getRegistration` no resuelve nunca: la espera de 1 s decide. */
+		function conComprobacionPendiente() {
+			Object.defineProperty(navigator, "serviceWorker", {
+				configurable: true,
+				value: {
+					getRegistration: () => new Promise<never>(() => {}),
+					addEventListener: () => {},
+				},
+			});
+		}
+		afterEach(() => {
+			Reflect.deleteProperty(navigator, "serviceWorker");
+		});
+
+		it("abrir Premios mientras se comprueba y agotarse la espera no abre la sesión", async () => {
+			conComprobacionPendiente();
+			const store = crearStore();
+			const { container } = render(<App store={store} audio={fakeAudio()} />);
+			const activa = await alMapa(container);
+			vi.useFakeTimers();
+			fireEvent.click(activa);
+			fireEvent.click(screen.getByRole("button", { name: "Mis premios" }));
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+			expect(container.querySelector('[data-screen="session"]')).toBeNull();
+			expect(store.getState().run).toBeNull();
+			expect(
+				screen.queryByRole("button", { name: "Volver al mapa" }),
+			).not.toBeNull();
+		});
+
+		it("el caso normal: sin salir del mapa, al agotarse la espera la sesión se abre", async () => {
+			conComprobacionPendiente();
+			const store = crearStore();
+			const { container } = render(<App store={store} audio={fakeAudio()} />);
+			const activa = await alMapa(container);
+			vi.useFakeTimers();
+			fireEvent.click(activa);
+			expect(container.querySelector('[data-screen="session"]')).toBeNull();
+			act(() => {
+				vi.advanceTimersByTime(1500);
+			});
+			expect(container.querySelector('[data-screen="session"]')).not.toBeNull();
+			expect(store.getState().run).not.toBeNull();
+		});
+	});
+
 	it("el fondo cosmético envuelve el mapa y la galería, pero nunca la sesión", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);

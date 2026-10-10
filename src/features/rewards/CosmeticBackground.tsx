@@ -24,7 +24,7 @@ export function CosmeticBackground(props: { children: ReactNode }) {
 	return (
 		<div
 			data-cosmetic-background={equipped.background}
-			className={`relative isolate min-h-screen bg-gradient-to-b ${fondo.gradient}`}
+			className={`relative isolate min-h-dvh bg-gradient-to-b ${fondo.gradient}`}
 		>
 			{fondo.src !== "" && fallida !== fondo.src && (
 				// biome-ignore lint/performance/noImgElement: el WebP ya viene a su tamaño y la PWA lo precachea tal cual; el optimizador de next/image no aporta nada y necesita servidor

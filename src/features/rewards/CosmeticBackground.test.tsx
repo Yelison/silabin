@@ -61,6 +61,23 @@ describe("CosmeticBackground", () => {
 		expect(despues?.textContent).toBe("mapa");
 	});
 
+	it("F5: la altura mínima es dvh, no vh: en Safari sin instalar 100vh es más alto que la ventana y el documento haría scroll bajo el mapa (h-dvh)", async () => {
+		const store = crearStore();
+		await store.getState().load();
+		const { container } = render(
+			conProveedores(
+				store,
+				fakeAudio(),
+				<CosmeticBackground>mapa</CosmeticBackground>,
+			),
+		);
+		const clases = (
+			container.querySelector("[data-cosmetic-background]")?.className ?? ""
+		).split(/\s+/);
+		expect(clases).toContain("min-h-dvh");
+		expect(clases).not.toContain("min-h-screen");
+	});
+
 	it("F4: un equipped.background bloqueado (importado) pinta el fondo por defecto", async () => {
 		const doc = documentoConUnidadesHechas(null);
 		const store = crearStore(
