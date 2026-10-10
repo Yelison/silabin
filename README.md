@@ -805,7 +805,7 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
 8. **Minors y decisiones de los Planes 8 y 9** (ledgers y archivo; MP4 y MP12 cerradas, D59, D60): MP15, la continuidad del
-   camino entre fases, el color del wordmark y las tarjetas, el pie sin `safe-area-inset-bottom`, «Mis premios» a 320 px y M7/M8 solo en e2e.
+   camino entre fases, el color del wordmark y las tarjetas, el pie bajo el indicador de inicio (exige `viewportFit: "cover"`, cambio global), «Mis premios» a 320 px y M7/M8 solo en e2e.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo

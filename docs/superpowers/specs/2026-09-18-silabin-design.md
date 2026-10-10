@@ -336,7 +336,7 @@ Service worker precachea la app, imágenes y los audios del acento activo (los o
 - **Pantallas**: Inicio/mapa (camino de unidades con el compañero), Sesión (un ejercicio a pantalla completa, barra de progreso de la sesión arriba, botón de salir para el adulto), Fin de sesión (estrellas, logro si hay), Recompensas (galería y equipar), Padres.
 - **Sin texto para el niño**: toda instrucción es audio + icono. Los textos visibles son solo las letras/sílabas/palabras objetivo y la UI del adulto.
 - **Toques**: objetivos táctiles ≥ 72 px, un solo gesto por ejercicio, sin scroll dentro de un ejercicio.
-- **Audio en iOS**: la primera pantalla exige un toque ("Toca para empezar") que desbloquea el `AudioContext`.
+- **Audio en iOS**: no hay pantalla previa: la app abre en el mapa y el primer toque que inicia una sesión (un nodo o «Jugar») desbloquea el `AudioContext` dentro del gesto y, solo esa primera vez, comprueba si hay una actualización esperando (D52 del Plan 9). Antes de ese toque no suena nada.
 - **Orientación**: horizontal y vertical; el trazo usa el lado corto como referencia.
 - **Accesibilidad**: contraste AA, estados no solo por color, `prefers-reduced-motion`, panel de padres navegable con teclado.
 

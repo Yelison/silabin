@@ -228,8 +228,11 @@ desarrollo). Aquí solo se repite lo que cambia con el despliegue real (I1, I3, 
   toca Jugar.
 - **Esperado:** (a) el candado **no** se abre con un toque; se abre a los 3 s. (b) Suena a la primera:
   el audio se desbloquea dentro del gesto. (c) El pie no queda bajo el indicador de inicio del iPhone
-  (hoy no hay `safe-area-inset-bottom`, `minor (deferred)` de T4: anota si lo tapa). (d) Solo se
-  desplaza el camino, con inercia; cabecera y pie quedan fijos. (e) El primer Jugar recarga y vuelve
+  (anota si lo tapa: sin `viewportFit: "cover"` en `src/app/layout.tsx` el valor de
+  `env(safe-area-inset-bottom)` es 0, así que no se arregla con una clase del pie; hacerlo de verdad
+  exige `viewportFit: "cover"`, un cambio global que afecta a todas las pantallas; `minor (deferred)` de T4). (d) Solo se
+  desplaza el camino, con inercia; cabecera y pie quedan fijos. En Safari sin instalar, con la barra
+  visible, el documento no se desplaza y la cabecera no sube al centrar la activa. (e) El primer Jugar recarga y vuelve
   al mapa sin sesión (MC15); **se acepta si solo pasa una vez** por actualización.
 - [ ] Bien  [ ] Falla: ______________________________________________
 
@@ -288,7 +291,7 @@ marcan aparte en la tabla).
 
 - **Pasos:** en Safari, Compartir → «Añadir a pantalla de inicio». Ábrela desde el icono.
 - **Esperado:** se instala con el nombre «Silabín»; abre a **pantalla completa** (sin barra de
-  Safari) y llega a «Toca para empezar».
+  Safari) y llega al mapa.
 - [ ] Bien  [ ] Falla: ______________________________________________
 
 ### P2. El icono de la pantalla de inicio, sin recortes (arte)
@@ -329,7 +332,7 @@ marcan aparte en la tabla).
 ### P6. Actualización tras un segundo despliegue (Plan 6, punto 8)
 
 - **Pasos:** despliega un cambio mínimo (`docs/despliegue-vercel.md`). Abre la app instalada y
-  toca «Toca para empezar».
+  toca «Jugar» en el mapa.
 - **Esperado:** se recarga **una vez** con la versión nueva y sin romper nada; nunca a mitad de
   una sesión.
 - [ ] Bien  [ ] Falla: ______________________________________________
@@ -353,7 +356,7 @@ marcan aparte en la tabla).
 
 ### P9. Audio tras el primer toque, ya instalada (spec §10)
 
-- **Pasos:** cierra la PWA del todo, ábrela y escucha antes de tocar; toca «Toca para empezar».
+- **Pasos:** cierra la PWA del todo, ábrela y escucha antes de tocar; toca «Jugar» en el mapa.
 - **Esperado:** silencio hasta el toque y voz desde el primer ejercicio, como en Safari.
 - [ ] Bien  [ ] Falla: ______________________________________________
 

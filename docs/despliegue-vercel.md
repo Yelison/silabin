@@ -30,8 +30,8 @@ Después de que el despliegue esté listo, con un iPad real:
 3. **Cómo se actualiza:** tras publicar un cambio y un nuevo despliegue, volver a abrir la
    app instalada. La primera vez puede tardar en notar la actualización (el service worker
    viejo sigue sirviendo mientras el nuevo se descarga en segundo plano); ese SW nuevo se
-   queda «esperando». La próxima vez que se toque «Toca para empezar» en la pantalla de
-   inicio, la app debe recargarse sola una vez (nunca a mitad de una sesión) y, tras eso, el
+   queda «esperando». La próxima vez que se toque «Jugar» (o un nodo del camino) en el mapa,
+   la app debe recargarse sola una vez (nunca a mitad de una sesión) y, tras eso, el
    cambio debe verse.
 
 ## Probar un preview
