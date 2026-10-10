@@ -136,7 +136,7 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 | T1 | completa (f875024, revisión limpia) | 0 | n/a (sin mutación) |
 | T2 | completa (de5622a, revisión limpia) | 0 | 0 de 6 (implementador) + 6 propias del revisor, 0 sobreviven |
 | T3 | completa (32a237d, revisión limpia) | 0 | 0 de 5 (implementador) + 10 de 12 propias del revisor mueren; M7 y M8 solo las ve un navegador (e2e) |
-| T4 | sin empezar | | |
+| T4 | completa (b133042, revisión limpia) | 1 | 0 de 5 (implementador); 4 de 13 propias del revisor sobrevivían (tests de clase) y mueren tras la ronda 1 |
 | T5 | sin empezar | | |
 
 ## Ejecución
@@ -171,7 +171,7 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 ### T4 (sesión 3)
 - Task 4: implementación b2ee3bf (base ae3feeb), DONE_WITH_CONCERNS. Effort `high`. pnpm test 1484 verdes, e2e mapa+offline 32/32. `MapScreen.tsx` 311 → 224 líneas. 5 mutaciones del implementador mueren (la 3 solo por PI3; LE6 no la ve porque el pie es `bg-card` opaco).
 - Revisión de T4: spec ✅, calidad con 2 Important y minors. 9 de 13 mutaciones propias del revisor mueren; sobreviven `chapter-edge` revertido, wordmark sin `text-brand`, pie sin `bg-card` y compañero `size-8` (todas por falta de test de clase).
-- Task 4: fix round 1/2 abierta: Important (1) los e2e de «sin scroll horizontal», LY3 y LY4 miden `documentElement.scrollWidth` y no ven el desbordamiento dentro de la zona `overflow-y-auto`; (2) `bg-card` del pie sin test (MC14). Más tests de clase para las cuatro mutaciones que sobreviven.
+- Task 4: fix round 1/2 (cerrada, 2 Important y 4 minors atendidos, 0 abiertas; commits b2ee3bf..b133042). Era: Important (1) los e2e de «sin scroll horizontal», LY3 y LY4 miden `documentElement.scrollWidth` y no ven el desbordamiento dentro de la zona `overflow-y-auto`; (2) `bg-card` del pie sin test (MC14). Más tests de clase para las cuatro mutaciones que sobreviven.
 - Ruling: `SavedMark` pasa al flujo de la cabecera, junto al wordmark, y deja de ser flotante. **Enmienda MC10**: fijo a la izquierda (`fixed top-2 left-2`) tapaba el wordmark, y «bajar bajo la cabecera» no lo resolvía. Lo protege CB4. Si es erróneo, cuesta devolverlo a flotante y mover el wordmark.
 - Ruling: borde de la tarjeta de capítulo = token nuevo `chapter-edge` (#b4aebd, 1,4-2,0 : 1) en vez de `border-node-locked-depth` (decidido en la pasada visual, como pedía el ruling de T3). Cuesta un token y una clase.
 - Ruling: `MapHeader` recibe `avisoAdulto` (deja `pr-12`) porque LY4 detectó que `SaveWarning` pisaba el candado a 320 (aviso x276, candado x260); `MapScreen` lo calcula como `saveFailed || recovered || readFailed`, igual que `SaveWarning.tsx:24`. `BigButton` gana `compact` (72 px) porque un override por `className` no vence a `min-h-24`. `Companion` encoge con `className`.
@@ -182,3 +182,6 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 - Task 4: minor (deferred): LY2 no mide `pie.r`.
 - Task 4: minor (deferred): `docs/diseno-visual.md` y la skill `silabin-design` desfasados (tokens `brand`, `world-*`, `chapter-edge`; «puerta = el logo»). Es trabajo de T5.
 - Task 4: pasada visual con Chromium y WebKit emulado (iPad Pro 11) a 6 tamaños, capturas en `~/qa-silabin/out/t4/`. No sustituye iPad real.
+- Task 4: complete (commits ae3feeb..b133042, review clean tras 1 ronda). Re-revisión: todos ADDRESSED; la mutación «pie sin bg-card» y «wordmark sin text-brand» repetidas por el revisor mueren. pnpm test 1486 verdes, e2e 33/33 (con el temporal, ya borrado).
+- Task 4: minor (deferred): quedan tres «CO1» anteriores a la tarea en `tokens.test.ts` (l.129, 141, 167).
+- Task 4: minor (deferred): LE6 no mata la opacidad en el botón `soon` (la mata PI3).
