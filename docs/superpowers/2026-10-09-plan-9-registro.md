@@ -135,7 +135,7 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 |---|---|---|---|
 | T1 | completa (f875024, revisión limpia) | 0 | n/a (sin mutación) |
 | T2 | completa (de5622a, revisión limpia) | 0 | 0 de 6 (implementador) + 6 propias del revisor, 0 sobreviven |
-| T3 | sin empezar | | |
+| T3 | completa (32a237d, revisión limpia) | 0 | 0 de 5 (implementador) + 10 de 12 propias del revisor mueren; M7 y M8 solo las ve un navegador (e2e) |
 | T4 | sin empezar | | |
 | T5 | sin empezar | | |
 
@@ -155,3 +155,15 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 - Task 2: minor (deferred): comentario desfasado «Toca para empezar» en `src/audio/types.ts:20`.
 - Ruling: los cuatro minors de T2 se difieren al triaje de la revisión final. Si el primero resulta importante, cuesta una guarda `screen !== "map"` en `empezar`.
 - I17 (README) no existe: el cierre del plan (T5) debe decidir si lo crea o lo omite.
+
+### T3 (sesión 2)
+- Task 3: complete (commits 484ed64..32a237d, review clean, 0 rondas). Effort `high`. pnpm test 1470 verdes, typecheck y lint limpios, e2e `mapa.spec.ts` 24/24.
+- Ruling: borde de la tarjeta = `border-node-locked-depth` (lo sugería el brief; sin opacidad). Casi no se distingue sobre `world-3` y `bg-surface` (≈ 1,1-1,3 : 1). Es decoración (D48). Se decide en la pasada visual de T4: un token por mundo o uno más oscuro. Cuesta una clase.
+- Ruling: el e2e «ficha a la altura de su vecina» compara el centro de la ficha con el de su celda (con la onda los vecinos ya no comparten fila). Sigue detectando que las estrellas empujen la ficha.
+- Ruling: `bg-world-N` no cuenta como superficie para `legibility.test.tsx`; el contraste `ink` sobre `world-0..3` ≥ 7 : 1 ya lo cubre `tokens.test.ts:141-147` (T1).
+- Task 3: minor (deferred): `e2e/mapa.spec.ts` (~l.96-103) `closest("[data-unit]")?.parentElement ?? e` cae al propio `span` si cambia el DOM y el test pasaría sin proteger; mejor lanzar error.
+- Task 3: minor (deferred): `ChapterCard.test.tsx:215-221` no comprueba el token del borde.
+- Task 3: minor (deferred): ST1 con 3 estrellas pasa sin implementación; quien mata el regreso de ☆ es N5 (2 estrellas) y «una unidad terminada muestra sus mejores estrellas». No presentarlo como cobertura.
+- Task 3: minor (deferred): M7 (`--cb/--rb`) y M8 (capa base visible en md) solo mueren en e2e; ese e2e es la única red ahí. Recordarlo al cerrar el plan.
+- Task 3: minor (deferred): sin pasada visual real (390/834) de la tarjeta y la onda: ritmo de 9 rem por fila y borde. Va a la pasada visual de T4.
+- Task 3: minor (deferred): `silabin-design` y el spec aún dicen «2 columnas en teléfono», «☆ las que faltan» y separador; es el trabajo de T5. El sitio de `UnitDots` en la cabecera queda libre hasta T4.
