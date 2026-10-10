@@ -134,7 +134,7 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 | Tarea | Estado | Rondas | Mutaciones que sobreviven |
 |---|---|---|---|
 | T1 | completa (f875024, revisión limpia) | 0 | n/a (sin mutación) |
-| T2 | sin empezar | | |
+| T2 | completa (de5622a, revisión limpia) | 0 | 0 de 6 (implementador) + 6 propias del revisor, 0 sobreviven |
 | T3 | sin empezar | | |
 | T4 | sin empezar | | |
 | T5 | sin empezar | | |
@@ -146,3 +146,12 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 - Ruling: `--color-brand` = #a86300 (4,72 : 1 sobre card); #b86f13 da 3,95. Si es erróneo, cuesta cambiar un token.
 - Auditoría FN3: ningún texto de lectura sin `font-reading`; FN3 añadido sobre `OptionCard`.
 - Task 1: minor (deferred): regex del className en `layout.test.ts` frágil ante clsx; `tokens.test.ts:202` repite el id «CO1»; no se abrió `count-syllables/Evaluation.tsx:43` para confirmar que `silabas` no se pinta.
+
+### T2 (sesión 1)
+- Task 2: complete (commits c7a9b84..de5622a, review clean). Effort `high`.
+- Task 2: minor (deferred): `empezar` llama a `onStart` sin mirar la pantalla; si en el 1 s de la primera comprobación (3 s con actualización esperando) el niño abre Premios o Panel, lo saca de allí a la sesión. Improbable, una vez por apertura.
+- Task 2: minor (deferred): el test «sin vista registrada» de `App.test.tsx` (~l.118) espera 50 ms con aserción negativa; sustituir por `waitFor` sobre algo observable.
+- Task 2: minor (deferred): ningún test de `App` protege la colocación del gancho en `Screens` (fuera de la rama `"map"`, MC7); no automatizable sin inyectar `serviceWorker`.
+- Task 2: minor (deferred): comentario desfasado «Toca para empezar» en `src/audio/types.ts:20`.
+- Ruling: los cuatro minors de T2 se difieren al triaje de la revisión final. Si el primero resulta importante, cuesta una guarda `screen !== "map"` en `empezar`.
+- I17 (README) no existe: el cierre del plan (T5) debe decidir si lo crea o lo omite.
