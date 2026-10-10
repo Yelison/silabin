@@ -167,3 +167,18 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 - Task 3: minor (deferred): M7 (`--cb/--rb`) y M8 (capa base visible en md) solo mueren en e2e; ese e2e es la única red ahí. Recordarlo al cerrar el plan.
 - Task 3: minor (deferred): sin pasada visual real (390/834) de la tarjeta y la onda: ritmo de 9 rem por fila y borde. Va a la pasada visual de T4.
 - Task 3: minor (deferred): `silabin-design` y el spec aún dicen «2 columnas en teléfono», «☆ las que faltan» y separador; es el trabajo de T5. El sitio de `UnitDots` en la cabecera queda libre hasta T4.
+
+### T4 (sesión 3)
+- Task 4: implementación b2ee3bf (base ae3feeb), DONE_WITH_CONCERNS. Effort `high`. pnpm test 1484 verdes, e2e mapa+offline 32/32. `MapScreen.tsx` 311 → 224 líneas. 5 mutaciones del implementador mueren (la 3 solo por PI3; LE6 no la ve porque el pie es `bg-card` opaco).
+- Revisión de T4: spec ✅, calidad con 2 Important y minors. 9 de 13 mutaciones propias del revisor mueren; sobreviven `chapter-edge` revertido, wordmark sin `text-brand`, pie sin `bg-card` y compañero `size-8` (todas por falta de test de clase).
+- Task 4: fix round 1/2 abierta: Important (1) los e2e de «sin scroll horizontal», LY3 y LY4 miden `documentElement.scrollWidth` y no ven el desbordamiento dentro de la zona `overflow-y-auto`; (2) `bg-card` del pie sin test (MC14). Más tests de clase para las cuatro mutaciones que sobreviven.
+- Ruling: `SavedMark` pasa al flujo de la cabecera, junto al wordmark, y deja de ser flotante. **Enmienda MC10**: fijo a la izquierda (`fixed top-2 left-2`) tapaba el wordmark, y «bajar bajo la cabecera» no lo resolvía. Lo protege CB4. Si es erróneo, cuesta devolverlo a flotante y mover el wordmark.
+- Ruling: borde de la tarjeta de capítulo = token nuevo `chapter-edge` (#b4aebd, 1,4-2,0 : 1) en vez de `border-node-locked-depth` (decidido en la pasada visual, como pedía el ruling de T3). Cuesta un token y una clase.
+- Ruling: `MapHeader` recibe `avisoAdulto` (deja `pr-12`) porque LY4 detectó que `SaveWarning` pisaba el candado a 320 (aviso x276, candado x260); `MapScreen` lo calcula como `saveFailed || recovered || readFailed`, igual que `SaveWarning.tsx:24`. `BigButton` gana `compact` (72 px) porque un override por `className` no vence a `min-h-24`. `Companion` encoge con `className`.
+- Deuda de T3 cerrada: el selector de `e2e/mapa.spec.ts` ya lanza error si no hay celda.
+- Task 4: minor (deferred): sin `safe-area-inset-bottom` en el pie.
+- Task 4: minor (deferred): a 320 de ancho «Mis premios» parte en dos líneas.
+- Task 4: minor (deferred): sin medir `recovered` + ✓ de guardado a 320.
+- Task 4: minor (deferred): LY2 no mide `pie.r`.
+- Task 4: minor (deferred): `docs/diseno-visual.md` y la skill `silabin-design` desfasados (tokens `brand`, `world-*`, `chapter-edge`; «puerta = el logo»). Es trabajo de T5.
+- Task 4: pasada visual con Chromium y WebKit emulado (iPad Pro 11) a 6 tamaños, capturas en `~/qa-silabin/out/t4/`. No sustituye iPad real.
