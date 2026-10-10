@@ -617,7 +617,7 @@ confirmada con el autor** (D7 y D24), ya con los planes 2 a 9 construidos.
 | ~~6~~ | ~~Panel de padres con PIN y ajustes, importar, trazo en minúsculas, recompensas y cosméticos con marcadores, avance en el mapa, PWA y e2e~~ **hecho** (PR #7; la prueba manual pasa a `docs/checklist-ipad.md`, D35) | Una app completa y desplegable, aún con marcadores en vez de arte |
 | ~~7~~ | ~~Identidad visual (D24): el arte del loro y el elefantito, fondos, pegatinas, trofeo, rastros, iconos, paleta final y `docs/checklist-ipad.md`~~ **hecho** (PR #8). **Sin hacer:** la boca (aplazada) y la prueba del autor con la lista | La versión con cara propia; falta probarla en dispositivo real |
 | 8 | **El mapa como camino en serpiente** (D37-D45): nodos redondos con icono, cuatro aspectos y 2, 3 o 5 columnas. **Ejecutado en su rama** `feat/plan-8-mapa-camino`. Revisión final hecha y corregida. Pasada visual local hecha; MP12 y las ☆ de MP4 se cerraron en el Plan 9 (D59, D60). **Sin hacer:** el preview desplegado por el autor. PR abierto contra `main` (incluye el #10) | Un mapa que se lee como un viaje |
-| 9 | **El mapa con cabecera, capítulos y pie** (D46-D60): tarjeta de color por mundo, onda en teléfono, pie con Jugar, la app abre en el mapa y Nunito en la interfaz. **Ejecutado en su rama** `feat/plan-9-mapa-composicion`. **Sin hacer:** revisión final en Opus, pasada visual, confirmar con el autor el color del wordmark y las tarjetas, y el PR | La composición completa de la referencia |
+| 9 | **El mapa con cabecera, capítulos y pie** (D46-D60): tarjeta de color por mundo, onda en teléfono, pie con Jugar, la app abre en el mapa y Nunito en la interfaz. **Ejecutado en su rama** `feat/plan-9-mapa-composicion`. **Sin hacer:** revisión final en Opus, pasada visual y el PR | La composición completa de la referencia |
 | Después | Spike de Azure, audios neurales en 3 acentos (`do`, `mx`, `neutro`), evaluador `browser`, y **locuciones de sílabas sueltas** para las pistas de `count-syllables` (hoy las dice `speechSynthesis` a partir del texto), más las de `ending:`, `stretch:` y `stretch-in:` | Validación automática de pronunciación |
 | Idea aparcada | **Refactor de diseño del resto de pantallas** con el plugin `frontend-design`, en un plan aparte (el mapa ya lo hicieron los Planes 8 y 9). El mapa ya tiene la composición completa (Plan 9); quedan los colores de mundo fuera de la tarjeta | Pantallas con más personalidad |
 | Idea aparcada | **Objetos para los compañeros** (pajarita, gafas redondas, bufanda, corona, capa), como capas transparentes ganadas con hitos distintos. Pide cosméticos y logros nuevos en el motor y un punto de anclaje por compañero; ver el ledger del Plan 7 | Personalización del compañero |
@@ -644,11 +644,10 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 **Planes 8 y 9 fusionados (#11, #12).** Queda, en este orden:
 
-1. **Confirmar con el autor el color del wordmark y de las tarjetas** (`brand` #a86300; cuesta un token).
-2. **Desplegar el preview** (D29) y **cerrar la deuda 1 con dispositivo real** en
+1. **Desplegar el preview** (D29) y **cerrar la deuda 1 con dispositivo real** en
    `docs/checklist-ipad.md` (I1-I3, I6, H1, P1-P3, P8, P9, I12-I13, I15 con niño, I16 y el nuevo I17).
    Nadie lo prueba por el autor.
-3. **Después:** rehacer la boca (deuda 5) y, si procede, el refactor del resto de pantallas o los
+2. **Después:** rehacer la boca (deuda 5) y, si procede, el refactor del resto de pantallas o los
    objetos de los compañeros.
 
 ---
@@ -735,6 +734,7 @@ texto completo y los rulings MC1-MC16 en su [registro](docs/superpowers/2026-10-
 | D58 | Tarjeta con antetítulo «MUNDO N» y el nombre del spec («Oído de explorador», «Las vocales», «Las sílabas», «Más letras»), en `content/` |
 | D59 | Solo las estrellas ganadas, sin ☆; cierra MP4 |
 | D60 | Cabecera y pie fijos; solo se desplaza el camino; cierra MP12 |
+| D61 | El autor fija el color del wordmark y de las tarjetas: `brand` #5b3fd6 y mundos #c9b8ff, #a8dcff, #ffc29e, #d9cdb8 (2026-10-10); el morado es pariente de `trace-ink`, aviso aceptado. `chapter-edge` se aclara de #b4aebd a #a69fb3 para seguir ≥ 1,4 : 1 sobre `world-0` |
 
 **Pares confundibles de `trace` (dato conocido, del prototipo de la Tarea 1 del Plan 4):** con
 las constantes de partida (`TOLERANCE`, `MIN_COVERAGE`, `MIN_PRECISION`) que trae hoy el
@@ -793,7 +793,7 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
 8. **Minors y decisiones de los Planes 8 y 9** (ledgers y archivo; MP4 y MP12 cerradas, D59, D60): MP15, la continuidad del
-   camino entre fases, el color del wordmark y las tarjetas, el pie bajo el indicador de inicio (exige `viewportFit: "cover"`, cambio global), «Mis premios» a 320 px y M7/M8 solo en e2e.
+   camino entre fases, el pie bajo el indicador de inicio (exige `viewportFit: "cover"`, cambio global), «Mis premios» a 320 px y M7/M8 solo en e2e.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo

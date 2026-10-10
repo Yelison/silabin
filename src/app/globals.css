@@ -32,16 +32,17 @@
 	--color-node-locked: #edeef2;
 	--color-node-locked-depth: #d9dce4;
 	--color-node-locked-ink: #757a88;
-	/* Plan 9: el wordmark (MC8) y los capítulos del mapa. Se oscureció #B86F13 (3,9 : 1) hasta
-	   #A86300 (4,7 : 1 sobre `card`). Los colores de mundo se usan con `ink` (≥ 7 : 1). */
-	--color-brand: #a86300;
-	--color-world-0: #d8ccff;
-	--color-world-1: #cbeaff;
-	--color-world-2: #ffd8c2;
-	--color-world-3: #e9e2d7;
+	/* Plan 9: el wordmark (MC8) y los capítulos del mapa. Los colores los fijó el autor el
+	   2026-10-10 (D61): el morado del wordmark da 6,72 : 1 sobre `card` (aviso aceptado: es
+	   pariente de `trace-ink`) y los de mundo se usan con `ink` (8,0-9,7 : 1). */
+	--color-brand: #5b3fd6;
+	--color-world-0: #c9b8ff;
+	--color-world-1: #a8dcff;
+	--color-world-2: #ffc29e;
+	--color-world-3: #d9cdb8;
 	/* El filo inferior de la tarjeta de capítulo: `node-locked-depth` casi no se veía sobre `world-2`,
-	   `world-3` ni `surface` (1,1-1,3 : 1). Un gris violáceo único (1,4-2,0 : 1): es decoración. */
-	--color-chapter-edge: #b4aebd;
+	   `world-3` ni `surface` (1,1-1,3 : 1). Un gris violáceo único (1,4-2,4 : 1): es decoración. */
+	--color-chapter-edge: #a69fb3;
 	--radius-card: 1.5rem;
 	--spacing-target: 8rem;
 	--font-reading: var(--font-andika);
