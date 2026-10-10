@@ -1,8 +1,8 @@
 # Archivo de trampas y deuda menor
 
 Texto completo de las trampas y la deuda menor tal como estaban en el README al cerrar el
-Plan 4 (2026-09-27), más lo que salió del README al cerrar los Planes 5, 6 y 7 (secciones
-«Plan 5», «Plan 6» y «Plan 7» del final). **No se lee al retomar**: el README solo guarda lo
+Plan 4 (2026-09-27), más lo que salió del README al cerrar los Planes 5, 6, 7 y 8 (secciones
+«Plan 5», «Plan 6», «Plan 7» y «Plan 8» del final). **No se lee al retomar**: el README solo guarda lo
 vivo (ver la regla de poda en `CLAUDE.md`). Consulta aquí el detalle con `grep -n` cuando una
 entrada del README remita a él.
 
@@ -345,3 +345,50 @@ siguen vivas, con el mismo contenido, en menos líneas.
 - **Deuda 10 (e2e frágil):** semilla 7 (S22), el solver solo prueba `initial-sound`, `say-it`,
   `listen-tap` y `trace`, espera fija de 3300 ms acoplada a `PANEL_HOLD_MS`, y WebKit
   (`PW_WEBKIT=1`) sin probar. No se automatiza más sin forzar el planificador.
+
+**Plan 8 (2026-10-09): lo que salió del README al podarlo**
+
+Al cerrar el Plan 8 había 10 deudas y cero trampas vivas. Para añadir lo del mapa sin pasar de 10
+se fusionaron dos entradas. Cada una, con su destino:
+
+- **Deuda 7 (minors de los Planes 2, 3 y 6) y deuda 8 (minors del Plan 7) se fusionan** en la
+  nueva 7, «Minors de los Planes 2, 3, 6 y 7». Su texto completo sigue arriba (deudas 7 y 8 de la
+  sección «Plan 7, ronda de corrección 1 de la Tarea 6»). Sigue viva: limpieza sin test posible.
+- **Deuda 4 (objetivos táctiles < 72 px), comprobada:** el mapa del Plan 8 no la amplía. El nodo
+  mide 88 px (`size-22`, MP11), el botón tiene `min-h-18 min-w-18` y `e2e/mapa.spec.ts` exige ≥ 72 px
+  y ≥ 16 px (15,5 por el subpíxel) entre vecinos en 2, 3 y 5 columnas. Sigue viva por lo demás.
+- **Deuda 8 nueva (minors y decisiones del Plan 8):**
+  - mutaciones que sobreviven en T2 (`aria-hidden` y `bg-card` de la pastilla de estrellas,
+    `translate-y-0.5` en los cuatro aspectos, el aro `before:` también en `locked`) y en T3
+    (visibilidad de los SVG por punto de corte, `fill="none"`, la clase del trazo, `vector-effect`,
+    `z-10` de la celda);
+  - `MapNode.tsx` usa `-right-1` y la referencia −5 px; el aro (−14 px) y el foco (offset 18)
+    desbordan el botón de 88 px y no se han medido en navegador;
+  - `serpentinePath` conserva `_columns` sin usar (firma fijada por el brief);
+  - **MP12 (producto):** el centrado de la activa (`scrollIntoView({ block: "center" })`) deja el
+    logo del panel de padres fuera de vista al abrir; `e2e/offline.spec.ts` (J3) añade
+    `scrollIntoViewIfNeeded()`. Opciones: `block: "nearest"` o centrar solo si la activa queda
+    fuera de la primera pantalla (una línea y su test S3). A confirmar con el autor en el preview;
+  - **MP4 (producto):** las ☆ de las estrellas que faltan se mantienen; D37 decía a la vez «las 3» y
+    «nunca huecos»;
+  - **a arreglar en la revisión final, antes del PR:** `SavedMark` (`z-10`) queda tapada por las
+    celdas de los nodos (`z-10`, después en el DOM): `z-20`; y falta la aserción e2e de cuál de los
+    tres SVG (`svg[data-columns]:visible`) se ve en cada punto de corte.
+  Destino: la revisión final y la pasada visual lo resuelven o lo dejan en el ledger. Si no, sigue
+  viva: es limpieza y gusto del autor, sin test posible.
+- **Deuda 10 ampliada (e2e y tests frágiles):** además de la semilla 7 (S22), el solver limitado, la
+  espera fija de 3300 ms y WebKit sin probar, `e2e/apaisado.spec.ts` › `build` es inestable ya en la
+  base (fallos distintos según la corrida, atascado en `piezas.nth(n-2).click()`) y
+  `src/engine/planner.test.ts` («30 semillas por 3 estados») agota los 5000 ms de Vitest con la suite
+  completa bajo carga (5,8 s con carga ~18) y pasa solo (47/47 en 4 s). No es del Plan 8. Sigue viva:
+  arreglarlo exige forzar el planificador o tocar el e2e de `build`.
+- **Trampas:** ninguna nueva. Las del Plan 8 son test: E4 (sin `px` en `style` ni anchos fijos), S2
+  (los tres caminos con su `viewBox`), U7 y U7b (`aria-disabled`, «soon» y bloqueado sin opacidad) y
+  el e2e `mapa.spec.ts` (2, 3 y 5 columnas con clases literales de Tailwind).
+- **Deuda 4 (texto completo, Plan 8):** círculos del modelo (56 px), `SaveWarning` (~36 px), tambor con
+  224 px fijos, el `<input type="file">` de importar (lo controla el navegador) y las piezas de la
+  bandeja de `build`, separadas 12 px en vez de 16. El mapa del Plan 8 no la amplía: nodo de 88 px y
+  ≥ 16 px entre vecinos (`e2e/mapa.spec.ts`).
+- **Deuda 10 (texto completo, Plan 8):** semilla 7 (S22), solver limitado, espera fija de 3300 ms,
+  WebKit sin probar, `apaisado › build` inestable en la base y `planner.test.ts` que agota 5000 ms
+  bajo carga.

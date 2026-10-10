@@ -2,13 +2,14 @@
 
 Es la única pasada manual del autor (spec §10, D35). Se hace **una vez**, sobre la **versión final
 desplegada en Vercel** (D29: despliega el autor, nadie lo hace por él; ver
-`docs/despliegue-vercel.md`). Reúne cuatro cosas que estaban repartidas:
+`docs/despliegue-vercel.md`). Reúne cinco cosas que estaban repartidas:
 
 - los cuatro puntos del spec §10 (permiso de micrófono, audio tras el primer toque, instalación
   en pantalla de inicio y comportamiento sin red);
 - los **11 puntos de la prueba manual del Plan 6** y sus dos añadidos (que no se hicieron);
 - la **deuda 1** del README (iPhone, iPad, Firefox, 360 × 640 y 640 × 360, adaptadores reales);
-- **el arte del Plan 7**, que solo se puede juzgar en pantalla y con un niño delante.
+- **el arte del Plan 7**, que solo se puede juzgar en pantalla y con un niño delante;
+- **el mapa en serpiente del Plan 8** (I16), que se juzga con el dedo y girando el iPad.
 
 Del Plan 5 no queda nada por hacer: sus 8 puntos se confirmaron el 2026-09-28 (con `mkcert`, en
 desarrollo). Aquí solo se repite lo que cambia con el despliegue real (I1, I3, P8).
@@ -201,6 +202,21 @@ desarrollo). Aquí solo se repite lo que cambia con el despliegue real (I1, I3, 
   un niño** (D21). Anota cuáles se confunden.
 - [ ] Bien  [ ] Falla: ______________________________________________
 - Formas que el niño confunde: ______________________________________
+
+### I16. El mapa en serpiente (Plan 8; D41; deuda 1)
+
+- **Pasos:** abre el mapa con el progreso de la receta de «Antes de empezar», con la unidad activa
+  lejos de la primera fila. (a) Mira dónde queda el mapa al abrir. (b) Con el mapa abierto, gira
+  el iPad de vertical (3 columnas) a apaisado (5 columnas) y vuelve. (c) Toca con el dedo los
+  nodos: la unidad activa, una terminada, una bloqueada y, si hay, una «soon». (d) Recorre el
+  camino mirando los bordes de cada nodo.
+- **Esperado:** (a) la unidad activa queda centrada, sin animación. **Anota si el logo del panel
+  de padres queda fuera de vista** (MP12; decisión de producto abierta). (b) El camino pasa de 3 a
+  5 columnas sin saltos raros y los conectores siguen uniendo los centros. (c) Solo la activa
+  inicia sesión; terminada, bloqueada y «soon» no hacen nada y no se activan por error al rozarlas;
+  el toque no lo intercepta el camino. (d) El aro de la activa, el foco y la insignia no se
+  recortan ni pisan al nodo vecino, y la insignia «Guardado» no queda tapada por los nodos.
+- [ ] Bien  [ ] Falla: ______________________________________________
 
 ---
 
@@ -409,6 +425,7 @@ dónde viene cada punto para que, si falla, se sepa qué documento abrir.
 | I13 | Partículas al trazar y al arrastrar | arte (Plan 7) |  | el autor no lo reportó |
 | I14 | Cursor con trackpad (si hay) | arte (Plan 7); V11 | OK (autor) |  |
 | I15 | Boca: fluida y cada forma distinguible a 128 px, con niño | arte (Plan 7); D21; deuda 1; bocas aplazadas | OK con nota (autor) | la boca esquemática no se anima (deuda 5, `minor (deferred)`); falta la prueba con niño 👶 |
+| I16 | El mapa en serpiente: centrado de la activa, girar el iPad, toque con el dedo, aro e insignia sin recortes | Plan 8 (D41; MP12); deuda 1 | | dispositivo real; anota si el logo de padres queda fuera de vista |
 | H1 | Micrófono y audio tras el primer toque (iPhone) | spec §10; deuda 1 | | dispositivo real |
 | H2 | Franja de 3 botones de `trace` en apaisado | Plan 6, añadido; deuda 1 | OK (emulado) | Arreglado en la T8 del Plan 7 (defecto B), protegido por `e2e/apaisado.spec.ts`. Preview `4a1ea31`, Chromium: sin scroll en 640×360 («Listo» acaba en y=340, lienzo 499×280) y 667×375 (y=348, lienzo 520×295) |
 | H3 | Pantalla estrecha en vertical | deuda 1 (iPhone) | OK (emulado) | Chromium 360×640 vertical (no es Safari real): sin scroll dentro de `initial-sound`, `trace`, `say-it`, `build`, `listen-tap` ni en el fin; ningún botón fuera de la pantalla; en el mapa el compañero y el 🎁 no se pisan (captura). Falta iPhone real |

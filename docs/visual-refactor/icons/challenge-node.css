@@ -1,0 +1,84 @@
+.sl-challenge {
+  --node-size: 88px;
+  --node-face: #e8eaf0;
+  --node-depth: #cfd3dd;
+  --node-ink: #65748b;
+  --node-rim: #f7f8fa;
+  --badge-face: #f5f6f9;
+  --badge-ink: #738094;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--node-size);
+  height: var(--node-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--node-face);
+  color: var(--node-ink);
+  box-shadow: inset 0 -5px 0 var(--node-depth);
+  touch-action: manipulation;
+  transition: transform 120ms ease;
+}
+.sl-challenge-face {
+  position: absolute;
+  inset: 9px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--node-rim);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sl-challenge-face > svg { width: 36px; height: 36px; display: block; }
+.sl-challenge-face > svg[data-letter] { width: 44px; height: 44px; }
+.sl-challenge[data-state="available"] {
+  --node-face: #ffca3e;
+  --node-depth: #dda016;
+  --node-ink: #71500a;
+  --node-rim: #fff5c7;
+}
+.sl-challenge[data-state="available"]::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border: 5px solid #ffda75;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.sl-challenge[data-state="completed"] {
+  --node-face: #408dca;
+  --node-depth: #286091;
+  --node-ink: #ffffff;
+  --node-rim: #8fc9f4;
+  --badge-face: #e6f4ff;
+  --badge-ink: #327bb7;
+}
+.sl-challenge[data-state="locked"] {
+  --node-face: #343b47;
+  --node-depth: #272d36;
+  --node-ink: #91a0b5;
+  --node-rim: #495362;
+  --badge-face: #495365;
+  --badge-ink: #d4deed;
+}
+.sl-challenge-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 3px solid var(--node-depth);
+  border-radius: 50%;
+  background: var(--badge-face);
+  color: var(--badge-ink);
+  pointer-events: none;
+}
+.sl-challenge-badge svg { width: 14px; height: 14px; }
+.sl-challenge:enabled { cursor: pointer; }
+.sl-challenge:enabled:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 var(--node-depth); }
+.sl-challenge:focus-visible { outline: 3px solid #6a4cff; outline-offset: 18px; }
+@media (prefers-reduced-motion: reduce) { .sl-challenge { transition: none; } }

@@ -1,0 +1,212 @@
+[
+  {
+    "id": "count-syllables",
+    "title": "Palabras con palmas",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/count-syllables.svg"
+  },
+  {
+    "id": "rhyme",
+    "title": "Rimas saltarinas",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/rhyme.svg"
+  },
+  {
+    "id": "initial-sound",
+    "title": "Detectives de sonidos",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/initial-sound.svg"
+  },
+  {
+    "id": "hear-it",
+    "title": "¿Lo oyes?",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/hear-it.svg"
+  },
+  {
+    "id": "listen-tap",
+    "title": "Escucha y toca",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/listen-tap.svg"
+  },
+  {
+    "id": "build",
+    "title": "Construye sílabas",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/build.svg"
+  },
+  {
+    "id": "trace",
+    "title": "Traza la letra",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/trace.svg"
+  },
+  {
+    "id": "say-it",
+    "title": "Di el sonido",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/say-it.svg"
+  },
+  {
+    "id": "read-word",
+    "title": "Lee la palabra",
+    "kind": "exercise",
+    "future": false,
+    "svg": "svg/exercise/read-word.svg"
+  },
+  {
+    "id": "phase0:clap",
+    "title": "Palabras con palmas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase0-clap.svg"
+  },
+  {
+    "id": "phase0:rhyme",
+    "title": "Rimas saltarinas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase0-rhyme.svg"
+  },
+  {
+    "id": "phase0:initial",
+    "title": "Detectives de sonidos",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase0-initial.svg"
+  },
+  {
+    "id": "phase0:hear-it",
+    "title": "¿Lo oyes?",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase0-hear-it.svg"
+  },
+  {
+    "id": "phase1:vowel-a",
+    "title": "La vocal a",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase1-vowel-a.svg"
+  },
+  {
+    "id": "phase1:vowel-e",
+    "title": "La vocal e",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase1-vowel-e.svg"
+  },
+  {
+    "id": "phase1:vowel-o",
+    "title": "La vocal o",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase1-vowel-o.svg"
+  },
+  {
+    "id": "phase1:vowel-i",
+    "title": "La vocal i",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase1-vowel-i.svg"
+  },
+  {
+    "id": "phase1:vowel-u",
+    "title": "La vocal u",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase1-vowel-u.svg"
+  },
+  {
+    "id": "phase2:m",
+    "title": "La m y sus sílabas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase2-m.svg"
+  },
+  {
+    "id": "phase2:l",
+    "title": "La l y sus sílabas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase2-l.svg"
+  },
+  {
+    "id": "phase2:s",
+    "title": "La s y sus sílabas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase2-s.svg"
+  },
+  {
+    "id": "phase2:p",
+    "title": "La p y sus sílabas",
+    "kind": "unit",
+    "future": false,
+    "svg": "svg/unit/phase2-p.svg"
+  },
+  {
+    "id": "phase3:t",
+    "title": "La t",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-t.svg"
+  },
+  {
+    "id": "phase3:n",
+    "title": "La n",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-n.svg"
+  },
+  {
+    "id": "phase3:d",
+    "title": "La d",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-d.svg"
+  },
+  {
+    "id": "phase3:r",
+    "title": "La r suave",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-r.svg"
+  },
+  {
+    "id": "phase3:f",
+    "title": "La f",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-f.svg"
+  },
+  {
+    "id": "phase3:enie",
+    "title": "La ñ",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-enie.svg"
+  },
+  {
+    "id": "phase3:c",
+    "title": "La c con a, o, u",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-c.svg"
+  },
+  {
+    "id": "phase3:b",
+    "title": "La b",
+    "kind": "unit",
+    "future": true,
+    "svg": "svg/unit/phase3-b.svg"
+  }
+]
