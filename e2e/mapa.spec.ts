@@ -87,9 +87,11 @@ for (const vp of VIEWPORTS) {
 					.first()
 					.evaluate((e) => {
 						const r = e.getBoundingClientRect();
-						const c = (
-							e.closest("[data-unit]")?.parentElement ?? e
-						).getBoundingClientRect();
+						// Si cambia el DOM y no hay celda, el test debe fallar: no comparar la ficha consigo misma.
+						const celda = e.closest("[data-unit]")?.parentElement;
+						if (!celda)
+							throw new Error("La ficha no está dentro de una celda de unidad");
+						const c = celda.getBoundingClientRect();
 						return {
 							y: r.top + r.height / 2 - (c.top + c.height / 2),
 							h: r.height,
@@ -159,3 +161,139 @@ for (const vp of VIEWPORTS) {
 		});
 	});
 }
+
+/** Las cajas de la cabecera, la zona del camino y el pie de `main` (MC4). */
+async function cajasFijas(page: Page) {
+	return page.evaluate(() => {
+		const caja = (selector: string) => {
+			const el = document.querySelector(selector);
+			if (!el) throw new Error(`No hay ${selector}`);
+			const r = el.getBoundingClientRect();
+			return { t: r.top, b: r.bottom, l: r.left, r: r.right };
+		};
+		return {
+			cabecera: caja("main > header"),
+			zona: caja("main > div"),
+			pie: caja("main > footer"),
+			alto: innerHeight,
+			ancho: innerWidth,
+		};
+	});
+}
+
+for (const vp of VIEWPORTS) {
+	test(`LY2: a ${vp.width} la cabecera y el pie siguen dentro de la ventana, antes y después de desplazar el camino`, async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: vp.width, height: vp.height });
+		await page.goto("/");
+		await empezar(page);
+		await expect(page.locator("[data-unit]").first()).toBeVisible();
+		const dentro = async (cuando: string) => {
+			const c = await cajasFijas(page);
+			expect(c.cabecera.t, `cabecera arriba ${cuando}`).toBeGreaterThanOrEqual(
+				-0.5,
+			);
+			expect(c.cabecera.b, `cabecera ${cuando}`).toBeLessThanOrEqual(c.alto);
+			expect(c.pie.b, `pie abajo ${cuando}`).toBeLessThanOrEqual(c.alto + 0.5);
+			expect(c.pie.t, `pie ${cuando}`).toBeGreaterThanOrEqual(c.cabecera.b);
+			expect(c.cabecera.r, `cabecera a lo ancho ${cuando}`).toBeLessThanOrEqual(
+				c.ancho + 0.5,
+			);
+			const { pagina, ventana } = await page.evaluate(() => ({
+				pagina: document.documentElement.scrollHeight,
+				ventana: innerHeight,
+			}));
+			expect(pagina, `la página no se desplaza ${cuando}`).toBeLessThanOrEqual(
+				ventana,
+			);
+		};
+		await dentro("antes");
+		const desplazable = await page.locator("main > div").evaluate((e) => {
+			e.scrollTop = e.scrollHeight;
+			return e.scrollHeight > e.clientHeight;
+		});
+		expect(desplazable, "la zona del camino se desplaza por dentro").toBe(true);
+		await dentro("después");
+		await expect(
+			page.getByRole("img", { name: "Panel de padres" }),
+		).toBeInViewport();
+		await expect(page.getByRole("button", { name: "Jugar" })).toBeInViewport();
+	});
+}
+
+test("LY3: a 844 × 390 el nodo activo, con 14 px de aro, cabe entre la cabecera y el pie, sin scroll horizontal", async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 844, height: 390 });
+	await page.goto("/");
+	await empezar(page);
+	await expect(page.locator("[data-unit]").first()).toBeVisible();
+	await page.waitForTimeout(300);
+	const activo = await page
+		.locator('[data-status="active"]')
+		.first()
+		.evaluate((e) => {
+			const r = e.getBoundingClientRect();
+			return { t: r.top, b: r.bottom };
+		});
+	const c = await cajasFijas(page);
+	expect(
+		activo.t - 14,
+		"el aro no pasa bajo la cabecera",
+	).toBeGreaterThanOrEqual(c.cabecera.b);
+	expect(activo.b + 14, "el aro no pasa bajo el pie").toBeLessThanOrEqual(
+		c.pie.t,
+	);
+	const { scroll, ancho } = await page.evaluate(() => ({
+		scroll: document.documentElement.scrollWidth,
+		ancho: document.documentElement.clientWidth,
+	}));
+	expect(scroll).toBeLessThanOrEqual(ancho);
+});
+
+test("LY4: con el aviso de guardado a la vista, su icono y el candado de la cabecera no se solapan", async ({
+	page,
+}) => {
+	// La lectura del disco falla (IndexedDB inaccesible): `readFailed` hace salir `SaveWarning`.
+	await page.addInitScript(() => {
+		if (sessionStorage.getItem("fallar-lectura") !== "1") return;
+		IDBObjectStore.prototype.get = () => {
+			throw new Error("lectura bloqueada por el test");
+		};
+	});
+	for (const vp of VIEWPORTS) {
+		await page.setViewportSize({ width: vp.width, height: vp.height });
+		await page.goto("/");
+		await page.evaluate(() => sessionStorage.setItem("fallar-lectura", "1"));
+		await page.reload();
+		await empezar(page);
+		const aviso = page.getByRole("button", {
+			name: "Aviso para el adulto sobre el progreso guardado",
+		});
+		await expect(aviso).toBeVisible();
+		const a = await aviso.boundingBox();
+		const l = await page
+			.getByRole("img", { name: "Panel de padres" })
+			.boundingBox();
+		if (a === null || l === null) throw new Error("Sin caja");
+		const solapa =
+			a.x < l.x + l.width &&
+			l.x < a.x + a.width &&
+			a.y < l.y + l.height &&
+			l.y < a.y + a.height;
+		const { scroll, ancho } = await page.evaluate(() => ({
+			scroll: document.documentElement.scrollWidth,
+			ancho: document.documentElement.clientWidth,
+		}));
+		expect(
+			scroll,
+			`${vp.width}: sin scroll horizontal con el aviso`,
+		).toBeLessThanOrEqual(ancho);
+		expect(
+			solapa,
+			`${vp.width}: aviso ${JSON.stringify(a)} candado ${JSON.stringify(l)}`,
+		).toBe(false);
+		await page.evaluate(() => sessionStorage.removeItem("fallar-lectura"));
+	}
+});

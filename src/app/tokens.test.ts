@@ -148,6 +148,22 @@ describe("tokens de color (V14)", () => {
 		}
 	});
 
+	it("CO1: el borde del capítulo se distingue de cada mundo y del panel (≥ 1,4 : 1, decoración)", () => {
+		for (const fondo of [
+			"world-0",
+			"world-1",
+			"world-2",
+			"world-3",
+			"surface",
+		]) {
+			const ratio = contraste(
+				token(TOKENS, "chapter-edge"),
+				token(TOKENS, fondo),
+			);
+			expect(ratio, `chapter-edge sobre ${fondo}`).toBeGreaterThanOrEqual(1.4);
+		}
+	});
+
 	it("CO1: la fórmula da los ratios de referencia de WCAG (negro/blanco 21, iguales 1)", () => {
 		expect(contraste("#000000", "#ffffff")).toBeCloseTo(21, 5);
 		expect(contraste("#777777", "#777777")).toBeCloseTo(1, 5);

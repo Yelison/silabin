@@ -7,13 +7,12 @@ test("J3: el panel de padres crea el PIN, cambia la longitud a 6 y la sesión lo
 	await fijarSemilla(page);
 	await sembrar(page, documentoFase1());
 
-	// Mantener pulsado el logo (PANEL_HOLD_MS = 3000).
-	const logo = page.getByRole("heading", { name: "Silabín" });
-	await expect(logo).toBeVisible();
-	// El mapa centra la unidad activa al montar (MP12): el logo puede haber quedado fuera de vista.
-	await logo.scrollIntoViewIfNeeded();
-	const caja = await logo.boundingBox();
-	if (caja === null) throw new Error("El logo no tiene caja");
+	// Mantener pulsado el candado de la cabecera (PANEL_HOLD_MS = 3000). La cabecera es fija
+	// (D60): el candado siempre está a la vista y no hace falta desplazar nada.
+	const candado = page.getByRole("img", { name: "Panel de padres" });
+	await expect(candado).toBeVisible();
+	const caja = await candado.boundingBox();
+	if (caja === null) throw new Error("El candado no tiene caja");
 	await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
 	await page.mouse.down();
 	await page.waitForTimeout(3300);

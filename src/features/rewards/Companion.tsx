@@ -32,7 +32,12 @@ export function Companion(props: { className?: string; size?: number }) {
 			data-wears-cap={cap}
 			className={`inline-flex items-center justify-center ${className}`}
 		>
-			<ArtImage art={art} size={size} />
+			{/* `max-*` deja que `className` encoja la caja (p. ej. 56 px en `apaisado-bajo:`) sin tocar `size`. */}
+			<ArtImage
+				art={art}
+				size={size}
+				className="max-h-full max-w-full object-contain"
+			/>
 		</span>
 	);
 }

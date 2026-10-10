@@ -218,13 +218,15 @@ describe("App", () => {
 		expect(audio.beat).toHaveBeenCalled();
 	});
 
-	it("N9: mantener el logo del mapa 3 s abre la puerta del panel, y Volver regresa al mapa", async () => {
+	it("N9: mantener el candado del mapa 3 s abre la puerta del panel, y Volver regresa al mapa", async () => {
 		const store = crearStore();
 		const { container } = render(<App store={store} audio={fakeAudio()} />);
 		await alMapa(container);
 		vi.useFakeTimers();
 		try {
-			fireEvent.pointerDown(screen.getByText("Silabín"));
+			fireEvent.pointerDown(
+				screen.getByRole("img", { name: "Panel de padres" }),
+			);
 			act(() => {
 				vi.advanceTimersByTime(3000);
 			});

@@ -53,7 +53,7 @@ export function ChapterCard(props: {
 	const { phase, mastered } = props;
 	return (
 		<div
-			className={`flex items-center justify-between gap-3 rounded-card border-b-4 border-node-locked-depth px-4 py-3 text-ink ${fondoDeMundo(phase)}`}
+			className={`flex items-center justify-between gap-3 rounded-card border-b-4 border-chapter-edge px-4 py-3 text-ink ${fondoDeMundo(phase)}`}
 		>
 			<div className="flex flex-col">
 				<span className="text-xs font-bold tracking-widest">
