@@ -17,8 +17,8 @@ retomar, léelo primero con `grep -n "^## \|^### "` y el tramo final.
 | Decisiones con el autor (D46-D60) | **hechas** (2026-10-09, abajo) |
 | Rulings de diseño (prefijo MC) | **fijados** (abajo) |
 | Revisión del autor de este spec | **aprobado** (2026-10-09) |
-| Redacción del plan | **hecha** (2026-10-09, Opus). Pendiente de la revisión del autor |
-| Ejecución | sin empezar. Siguiente: T1 en Sonnet, `/effort medium` |
+| Redacción del plan | **hecha** (2026-10-09, Opus) |
+| Ejecución | **hecha**: T1-T5, revisión final, corrección (47098aa, 057730c, 89011d3) y pasada visual. Pendiente: color del wordmark y de las tarjetas, y el PR (solo con permiso expreso; el #11 sigue abierto, D46) |
 
 ## Objetivo
 
