@@ -67,10 +67,10 @@ Dirección aprobada por el autor (2026-10-03). Desde el Plan 9 (D48) las **bases
 
 | Mundo | Tono | Base (token) | Acento aprox. |
 |---|---|---|---|
-| Fase 0, «Oído de explorador» | lila suave (casa con el elefantito) | `world-0` `#D8CCFF` | `#A994F4` |
-| Fase 1, «Las vocales» | azul cielo | `world-1` `#CBEAFF` | `#82C8F5` |
-| Fase 2, «Las sílabas» | melocotón suave | `world-2` `#FFD8C2` | `#F3A77C` |
-| Fases futuras | beis neutro y desaturado | `world-3` `#E9E2D7` | — |
+| Fase 0, «Oído de explorador» | lila suave (casa con el elefantito) | `world-0` `#C9B8FF` | `#A994F4` |
+| Fase 1, «Las vocales» | azul cielo | `world-1` `#A8DCFF` | `#82C8F5` |
+| Fase 2, «Las sílabas» | melocotón suave | `world-2` `#FFC29E` | `#F3A77C` |
+| Fases futuras | beis neutro y desaturado | `world-3` `#D9CDB8` | — |
 
 - **El amarillo (`action`) es solo para la unidad activa, las acciones principales y lo
   claramente interactivo.** Ningún color de mundo compite con él. El melocotón es el que más
@@ -159,8 +159,8 @@ D46-D60 y MC1-MC16). Lo pinta `features/map/MapScreen` en tres filas de alto fij
 `MapHeader`, la zona del camino y `MapFooter`. **Solo se desplaza el camino** (D60). La referencia
 visual es `docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), con las excepciones de los ledgers.
 
-- **Cabecera fija** (`MapHeader`, `bg-card` opaco, MC14): el wordmark «Silabín ✦» en `brand` (`#a86300`,
-  4,72 : 1 sobre `card`, MC8) con la marca ✓ de «guardado» **en su flujo, a su lado** (enmienda de MC10: ya no
+- **Cabecera fija** (`MapHeader`, `bg-card` opaco, MC14): el wordmark «Silabín ✦» en `brand` (`#5b3fd6`,
+  6,72 : 1 sobre `card`, MC8) con la marca ✓ de «guardado» **en su flujo, a su lado** (enmienda de MC10: ya no
   flota); las estrellas «★ n» con la barra fina al próximo hito debajo (D56); y a la derecha el **candado**
   de la puerta de padres (D51), un `role="img"` que se abre con 3 s de pulsación larga. El wordmark ya no es la
   puerta. Con un aviso de guardado a la vista, el prop `avisoAdulto` deja libre el rincón del candado.
@@ -172,8 +172,8 @@ visual es `docs/visual-refactor/` (`CLAUDE-HANDOFF.md` e `icons/demo.html`), con
 - **Tarjeta de capítulo** (`ChapterCard`): abre cada mundo y **corta el camino** (D50; sustituye al separador
   discontinuo). Lleva el antetítulo «MUNDO N» (fase + 1, MC5) y el nombre del mundo, que vive en `content/`
   (D58, MC6): «Oído de explorador», «Las vocales», «Las sílabas» y «Más letras». Su color es el de su mundo
-  (`world-0`…`world-3`, D48) con el texto en `ink`; el borde inferior es el token `chapter-edge` (`#b4aebd`,
-  1,4-2,0 : 1). Es decoración: ningún estado depende de su color. Sin icono (MC2). En la del capítulo activo van
+  (`world-0`…`world-3`, D48) con el texto en `ink`; el borde inferior es el token `chapter-edge` (`#a69fb3`,
+  1,4-2,4 : 1). Es decoración: ningún estado depende de su color. Sin icono (MC2). En la del capítulo activo van
   los **puntos de avance** (D57).
 - **Camino:** una **columna con ondas por debajo de 768 px** (D49, MC3: cuatro posiciones horizontales en
   ciclo) y la **serpiente de 3 columnas en `md:` y 5 en `lg:`** desde 768 px (D41). Todo sale de
@@ -271,5 +271,5 @@ nunca deciden pedagogía.
 - **Mapa:** qué hace una unidad terminada al tocarla (cambiaría el motor; hoy no hace nada, MP15),
   si las fases futuras se ven enteras y **la continuidad del camino entre fases** (hoy cada fase
   tiene su serpiente y la corta su tarjeta de capítulo, MP8, D50). MP4 y MP12 están cerradas (D59, D60).
-- **El color del wordmark y de las tarjetas**, a confirmar con el autor en la pasada visual del Plan 9.
+- **El color del wordmark y de las tarjetas** quedó fijado por el autor el 2026-10-10 (D61): no se toca sin él.
 - Arte pendiente: la boca esquemática (deuda 5) y los glifos sin arte (🔁, ✓, ✕, ★/☆; V10).
