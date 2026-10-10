@@ -18,8 +18,10 @@ import {
 import { MapScreen } from "@/features/map/MapScreen";
 import {
 	COLUMNAS,
-	serpentine,
-	serpentinePath,
+	DISPOSICIONES,
+	layoutCells,
+	layoutPath,
+	layoutRows,
 } from "@/features/map/serpentine";
 import { conProveedores, crearStore, fakeAudio } from "@/features/test-support";
 import { createMemoryAdapter } from "@/store";
@@ -156,7 +158,7 @@ describe("MapScreen", () => {
 		expect(clap.getAttribute("data-status")).toBe("done");
 		expect(clap.getAttribute("aria-label")).toContain("2 de 3 estrellas");
 		expect(within(clap).getAllByText("★")).toHaveLength(2);
-		expect(within(clap).getAllByText("☆")).toHaveLength(1);
+		expect(within(clap).queryByText("☆")).toBeNull();
 	});
 
 	it("una unidad bloqueada lleva candado y no arranca nada al tocarla", async () => {
@@ -262,6 +264,48 @@ describe("MapScreen", () => {
 	it("E2: sin ítems dominados no se pinta ningún punto", async () => {
 		montar(await storeConDisco(() => {}));
 		expect(screen.queryByLabelText(/letras aprendidas/)).toBeNull();
+	});
+
+	it("CA4: los puntos de avance van en la tarjeta del mundo de la unidad activa, no en otra", async () => {
+		// Fase 0 entera terminada: la activa es la primera vocal (Fase 1), con 1 de 2 ítems dominado.
+		const store = await storeConDisco((doc) => {
+			for (const [id, unit] of curriculum.units)
+				if (unit.phase === 0 && unit.introduces.length > 0)
+					doc.units[id] = { status: "done", bestStars: 3 };
+			const id = curriculum.units.get("phase1:vowel-a")?.introduces[0] ?? "";
+			doc.items[id] = {
+				...emptyItemProgress(),
+				presented: true,
+				firstTryCorrect: 3,
+			};
+		});
+		const { unidad } = montar(store);
+		expect(unidad("phase1:vowel-a").getAttribute("data-status")).toBe("active");
+		const puntos = screen.getAllByLabelText(/letras aprendidas/);
+		expect(puntos).toHaveLength(1);
+		const fase1 = screen.getByRole("region", { name: "Fase 1" });
+		expect(within(fase1).getByLabelText("1 letras aprendidas")).toBe(puntos[0]);
+		for (const otra of [0, 2, 3])
+			expect(
+				within(
+					screen.getByRole("region", { name: `Fase ${otra}` }),
+				).queryByLabelText(/letras aprendidas/),
+			).toBeNull();
+	});
+
+	it("CA5: cada fase abre con su tarjeta de mundo y no queda ningún separador discontinuo", async () => {
+		const { container } = montar(await storeConDisco(() => {}));
+		expect(container.innerHTML).not.toContain("border-dashed");
+		for (const [fase, nombre] of [
+			[0, "Oído de explorador"],
+			[1, "Las vocales"],
+			[2, "Las sílabas"],
+			[3, "Más letras"],
+		] as const) {
+			const seccion = screen.getByRole("region", { name: `Fase ${fase}` });
+			expect(within(seccion).getByText(`MUNDO ${fase + 1}`)).toBeDefined();
+			expect(within(seccion).getByText(nombre)).toBeDefined();
+		}
 	});
 
 	it("E3: la marca de guardado muestra la hora local de lastSavedAt", async () => {
@@ -394,55 +438,66 @@ describe("MapScreen", () => {
 		);
 	});
 
-	it("S1: cada nodo declara su celda en las tres rejillas (base 1): la séptima de la Fase 3 es (4, 2) en cinco columnas", async () => {
+	it("S1: cada nodo declara su celda en las tres rejillas (base 1): la séptima de la Fase 3 es (3, 7) en base", async () => {
 		const { unidad } = montar(await storeConDisco(() => {}));
 		const ids = curriculum.unitOrder.filter(
 			(id) => curriculum.units.get(id)?.phase === 3,
 		);
 		expect(ids).toHaveLength(8);
-		for (const cols of COLUMNAS) {
-			const celdas = serpentine(ids.length, cols);
+		const celdas = layoutCells(ids.length);
+		// Las variables CSS: --cb/--rb en base y --c3/--r3 y --c5/--r5 en md y lg.
+		const sufijo = { base: "b", md: "3", lg: "5" } as const;
+		for (const d of DISPOSICIONES) {
 			ids.forEach((id, i) => {
 				const estilo = unidad(id).parentElement?.style;
-				expect(estilo?.getPropertyValue(`--c${cols}`), `${id} c${cols}`).toBe(
-					String((celdas[i]?.col ?? -2) + 1),
+				const s = sufijo[d];
+				expect(estilo?.getPropertyValue(`--c${s}`), `${id} ${d} col`).toBe(
+					String((celdas[d][i]?.col ?? -2) + 1),
 				);
-				expect(estilo?.getPropertyValue(`--r${cols}`), `${id} r${cols}`).toBe(
-					String((celdas[i]?.row ?? -2) + 1),
+				expect(estilo?.getPropertyValue(`--r${s}`), `${id} ${d} fila`).toBe(
+					String((celdas[d][i]?.row ?? -2) + 1),
 				);
 			});
 		}
 		const septima = unidad(ids[6] ?? "").parentElement?.style;
+		expect(septima?.getPropertyValue("--cb")).toBe("3");
+		expect(septima?.getPropertyValue("--rb")).toBe("7");
 		expect(septima?.getPropertyValue("--c5")).toBe("4");
 		expect(septima?.getPropertyValue("--r5")).toBe("2");
+		expect(septima?.getPropertyValue("--c2")).toBe("");
 	});
 
-	it("S2: cada fase trae tres caminos (2, 3 y 5 columnas) con el viewBox y el trazo de su rejilla", async () => {
+	it("S2: cada fase trae tres caminos (base, md y lg) con el viewBox y el trazo de su rejilla", async () => {
 		montar(await storeConDisco(() => {}));
 		for (const fase of [0, 1, 2, 3]) {
 			const seccion = screen.getByRole("region", { name: `Fase ${fase}` });
 			const n = curriculum.unitOrder.filter(
 				(id) => curriculum.units.get(id)?.phase === fase,
 			).length;
-			const svgs = [...seccion.querySelectorAll("svg[data-columns]")];
+			const celdas = layoutCells(n);
+			const svgs = [...seccion.querySelectorAll("svg[data-layout]")];
 			expect(
-				svgs.map((e) => e.getAttribute("data-columns")),
+				svgs.map((e) => e.getAttribute("data-layout")),
 				`Fase ${fase}`,
-			).toEqual(["2", "3", "5"]);
+			).toEqual(["base", "md", "lg"]);
+			const esperado = {
+				base: `0 0 5 ${n}`,
+				md: `0 0 3 ${Math.ceil(n / 3)}`,
+				lg: `0 0 5 ${Math.ceil(n / 5)}`,
+			};
 			for (const svg of svgs) {
-				const cols = Number(svg.getAttribute("data-columns"));
+				const d = svg.getAttribute("data-layout") as keyof typeof esperado;
 				expect(svg.getAttribute("aria-hidden")).toBe("true");
+				expect(svg.getAttribute("viewBox"), `${fase} ${d}`).toBe(esperado[d]);
 				expect(svg.getAttribute("viewBox")).toBe(
-					`0 0 ${cols} ${Math.ceil(n / cols)}`,
+					`0 0 ${COLUMNAS[d]} ${layoutRows(d, n)}`,
 				);
 				expect(svg.getAttribute("preserveAspectRatio")).toBe("none");
 				expect(svg.getAttribute("class")).toContain("pointer-events-none");
 				const trazo = svg.querySelector("path");
 				if (n < 2) expect(trazo).toBeNull();
 				else {
-					expect(trazo?.getAttribute("d")).toBe(
-						serpentinePath(serpentine(n, cols), cols),
-					);
+					expect(trazo?.getAttribute("d")).toBe(layoutPath(d, celdas[d]));
 					expect(trazo?.getAttribute("fill")).toBe("none");
 					expect(trazo?.getAttribute("vector-effect")).toBe(
 						"non-scaling-stroke",

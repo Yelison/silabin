@@ -97,11 +97,19 @@ describe("nodo del mapa (Plan 8, T2)", () => {
 		expect(boton.getAttribute("aria-label")).toMatch(/2 de 3 estrellas$/);
 		const texto = boton.textContent ?? "";
 		expect(texto.match(/★/g)?.length).toBe(2);
-		expect(texto.match(/☆/g)?.length).toBe(1);
+		// D59: solo las estrellas ganadas, sin huecos.
+		expect(texto).not.toContain("☆");
 		expect(boton.querySelector('[data-badge="check"]')).not.toBeNull();
 		expect(boton.hasAttribute("aria-disabled")).toBe(false);
 		fireEvent.click(boton);
 		expect(onStart).not.toHaveBeenCalled();
+	});
+
+	it("ST1: con 3 estrellas se ven tres ★ y ningún ☆", () => {
+		const { boton } = pintar(CLAP, { status: "done", bestStars: 3 }, true);
+		const texto = boton.textContent ?? "";
+		expect(texto.match(/★/g)?.length).toBe(3);
+		expect(texto).not.toContain("☆");
 	});
 
 	it("N6: sin progreso se pinta como bloqueada", () => {

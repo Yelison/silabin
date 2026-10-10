@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, Fragment, useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import { BigButton } from "@/components/BigButton";
 import { Icon } from "@/components/Icon";
 import {
@@ -15,13 +15,16 @@ import {
 } from "@/engine";
 import { AdultDoor } from "@/features/adult/AdultDoor";
 import { useApp } from "@/features/app-context";
+import { ChapterCard } from "@/features/map/ChapterCard";
 import { LLEGA_DESPUES, MapNode } from "@/features/map/MapNode";
 import {
 	type Cell,
 	COLUMNAS,
-	type Columnas,
-	serpentine,
-	serpentinePath,
+	DISPOSICIONES,
+	type Disposicion,
+	layoutCells,
+	layoutPath,
+	layoutRows,
 } from "@/features/map/serpentine";
 import { Companion } from "@/features/rewards/Companion";
 import {
@@ -32,8 +35,8 @@ import {
 type Fase = {
 	phase: number;
 	units: Unit[];
-	/** Dónde va cada unidad en la rejilla de cada número de columnas. */
-	celdas: Record<Columnas, Cell[]>;
+	/** Dónde va cada unidad en la rejilla de cada disposición. */
+	celdas: Record<Disposicion, Cell[]>;
 };
 
 function unidadesPorFase(): Fase[] {
@@ -50,11 +53,7 @@ function unidadesPorFase(): Fase[] {
 		.map(([phase, units]) => ({
 			phase,
 			units,
-			celdas: {
-				2: serpentine(units.length, 2),
-				3: serpentine(units.length, 3),
-				5: serpentine(units.length, 5),
-			},
+			celdas: layoutCells(units.length),
 		}));
 }
 
@@ -134,48 +133,27 @@ function StarCounter({
 }
 
 /**
- * Avance de la unidad activa (S17): un punto lleno por ítem dominado, sin huecos vacíos —el
- * niño ve lo ganado, no lo que falta. Con 0 dominados no se pinta nada (lo decide quien llama).
+ * Una tabla literal por disposición: Tailwind solo genera las clases que aparecen escritas
+ * enteras, así que nada de montarlas con plantillas a partir de `DISPOSICIONES`.
  */
-function UnitDots({ mastered }: { mastered: number }) {
-	return (
-		<div
-			role="img"
-			aria-label={`${mastered} letras aprendidas`}
-			className="flex flex-wrap items-center justify-center gap-1"
-		>
-			{Array.from({ length: mastered }, (_, i) => (
-				<span
-					// biome-ignore lint/suspicious/noArrayIndexKey: puntos idénticos sin identidad propia
-					key={i}
-					aria-hidden="true"
-					data-unit-dot
-					className="h-3 w-3 rounded-full bg-calm-border"
-				/>
-			))}
-		</div>
-	);
-}
-
-/**
- * Una tabla literal por número de columnas: Tailwind solo genera las clases que aparecen
- * escritas enteras, así que nada de montarlas con plantillas a partir de `COLUMNAS`.
- */
-const CAMINO: Record<Columnas, string> = {
-	2: "md:hidden",
-	3: "hidden md:block lg:hidden",
-	5: "hidden lg:block",
+const CAMINO: Record<Disposicion, string> = {
+	base: "md:hidden",
+	md: "hidden md:block lg:hidden",
+	lg: "hidden lg:block",
 };
 
 /** La celda de cada nodo: su columna y su fila (base 1) en cada rejilla, sin unidades. */
 const CELDA =
-	"relative z-10 grid place-items-center col-start-(--c2) row-start-(--r2) md:col-start-(--c3) md:row-start-(--r3) lg:col-start-(--c5) lg:row-start-(--r5)";
+	"relative z-10 grid place-items-center col-start-(--cb) row-start-(--rb) md:col-start-(--c3) md:row-start-(--r3) lg:col-start-(--c5) lg:row-start-(--r5)";
 
-function posicion(celdas: Record<Columnas, Cell[]>, i: number): CSSProperties {
-	const [c2, c3, c5] = COLUMNAS.map((cols) => celdas[cols][i]);
+function posicion(
+	celdas: Record<Disposicion, Cell[]>,
+	i: number,
+): CSSProperties {
+	const [cb, c3, c5] = DISPOSICIONES.map((d) => celdas[d][i]);
 	return {
-		"--c2": (c2?.col ?? 0) + 1,
-		"--r2": (c2?.row ?? 0) + 1,
+		"--cb": (cb?.col ?? 0) + 1,
+		"--rb": (cb?.row ?? 0) + 1,
 		"--c3": (c3?.col ?? 0) + 1,
 		"--r3": (c3?.row ?? 0) + 1,
 		"--c5": (c5?.col ?? 0) + 1,
@@ -189,25 +167,25 @@ function posicion(celdas: Record<Columnas, Cell[]>, i: number): CSSProperties {
  * recibe toques.
  */
 function Camino({
-	cols,
+	layout,
 	count,
 	cells,
 }: {
-	cols: Columnas;
+	layout: Disposicion;
 	count: number;
 	cells: readonly Cell[];
 }) {
 	return (
 		<svg
 			aria-hidden="true"
-			data-columns={cols}
-			viewBox={`0 0 ${cols} ${Math.ceil(count / cols)}`}
+			data-layout={layout}
+			viewBox={`0 0 ${COLUMNAS[layout]} ${layoutRows(layout, count)}`}
 			preserveAspectRatio="none"
-			className={`pointer-events-none absolute inset-0 size-full ${CAMINO[cols]}`}
+			className={`pointer-events-none absolute inset-0 size-full ${CAMINO[layout]}`}
 		>
 			{cells.length >= 2 && (
 				<path
-					d={serpentinePath(cells, cols)}
+					d={layoutPath(layout, cells)}
 					fill="none"
 					className="stroke-node-locked-depth"
 					strokeWidth={8}
@@ -246,6 +224,13 @@ export function MapScreen(props: {
 	const sinActiva = idActivo === null;
 	const avanceActivo =
 		idActivo === null ? null : unitProgress(curriculum, progress, idActivo);
+	const faseActiva =
+		idActivo === null ? null : (curriculum.units.get(idActivo)?.phase ?? null);
+	/** Los puntos de avance van solo en la tarjeta del mundo de la unidad activa (D57). */
+	const dominadosEn = (phase: number): number | null =>
+		avanceActivo !== null && faseActiva === phase && avanceActivo.mastered > 0
+			? avanceActivo.mastered
+			: null;
 	const estrellas = totalStars(progress);
 	const hito = nextMilestone(estrellas);
 	// MP12: la celda de la unidad activa se centra una vez, al montar y sin animación.
@@ -275,30 +260,19 @@ export function MapScreen(props: {
 					</button>
 				</div>
 				<StarCounter total={estrellas} milestone={hito} />
-				{avanceActivo !== null && avanceActivo.mastered > 0 && (
-					<UnitDots mastered={avanceActivo.mastered} />
-				)}
 			</div>
 			{/* El camino va en un panel opaco (MP10, V13): ensancha con la pantalla, la cabecera no. */}
-			<div className="mx-auto flex w-full max-w-xl flex-col gap-4 rounded-card bg-surface p-2 md:max-w-2xl md:p-4 lg:max-w-4xl">
-				{FASES.map(({ phase, units, celdas }, f) => (
-					<Fragment key={phase}>
-						{f > 0 && (
-							<div
-								aria-hidden="true"
-								className="border-t-4 border-dashed border-node-locked-depth"
-							/>
-						)}
-						<section
-							aria-label={`Fase ${phase}`}
-							className="relative grid grid-cols-2 auto-rows-[9rem] md:grid-cols-3 lg:grid-cols-5"
-						>
-							{COLUMNAS.map((cols) => (
+			<div className="mx-auto flex w-full max-w-xl flex-col gap-6 rounded-card bg-surface p-2 md:max-w-2xl md:p-4 lg:max-w-4xl">
+				{FASES.map(({ phase, units, celdas }) => (
+					<section key={phase} aria-label={`Fase ${phase}`}>
+						<ChapterCard phase={phase} mastered={dominadosEn(phase)} />
+						<div className="relative grid grid-cols-5 auto-rows-[9rem] md:grid-cols-3 lg:grid-cols-5">
+							{DISPOSICIONES.map((layout) => (
 								<Camino
-									key={cols}
-									cols={cols}
+									key={layout}
+									layout={layout}
 									count={units.length}
-									cells={celdas[cols]}
+									cells={celdas[layout]}
 								/>
 							))}
 							{units.map((unit, i) => (
@@ -316,8 +290,8 @@ export function MapScreen(props: {
 									/>
 								</div>
 							))}
-						</section>
-					</Fragment>
+						</div>
+					</section>
 				))}
 			</div>
 			{sinActiva && (
