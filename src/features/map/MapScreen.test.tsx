@@ -15,6 +15,7 @@ import {
 	type ProgressState,
 	type TemplateId,
 } from "@/engine";
+import { SaveWarning } from "@/features/adult/SaveWarning";
 import { MapScreen } from "@/features/map/MapScreen";
 import {
 	COLUMNAS,
@@ -314,6 +315,37 @@ describe("MapScreen", () => {
 		});
 		expect(cabecera?.className).toContain("pr-12");
 	});
+
+	it.each(["saveFailed", "recovered", "readFailed"] as const)(
+		"E5b: con solo %s, la cabecera reserva el rincón y SaveWarning se pinta",
+		async (flag) => {
+			const store = await storeConDisco(() => {});
+			const { container } = render(
+				conProveedores(
+					store,
+					fakeAudio(),
+					<>
+						<MapScreen
+							onStart={vi.fn()}
+							onOpenPanel={vi.fn()}
+							onOpenRewards={vi.fn()}
+						/>
+						<SaveWarning />
+					</>,
+				),
+			);
+			const cabecera = container.querySelector("main > header");
+			expect(cabecera?.className).not.toContain("pr-12");
+			expect(screen.queryByRole("button", { name: /progreso/i })).toBeNull();
+			act(() => {
+				store.setState({ [flag]: true });
+			});
+			expect(cabecera?.className).toContain("pr-12");
+			expect(
+				screen.queryByRole("button", { name: /progreso/i }),
+			).not.toBeNull();
+		},
+	);
 
 	it("E4: el mapa sigue sin scroll horizontal (sin anchos fijos en píxeles)", async () => {
 		const store = await storeConDisco((doc) => {

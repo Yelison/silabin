@@ -29,6 +29,7 @@ import {
 	IMPLEMENTED_TEMPLATES,
 	isSessionPlayable,
 } from "@/features/session/registry";
+import { hayAvisoAdulto } from "@/store";
 
 type Fase = {
 	phase: number;
@@ -144,9 +145,7 @@ export function MapScreen(props: {
 	const progress: ProgressState = useApp((s) => s.progress);
 	const lastSavedAt = useApp((s) => s.lastSavedAt);
 	const saveFailed = useApp((s) => s.saveFailed);
-	const avisoAdulto = useApp(
-		(s) => s.saveFailed || s.recovered || s.readFailed,
-	);
+	const avisoAdulto = useApp(hayAvisoAdulto);
 	const playable = isSessionPlayable(curriculum, progress, implemented);
 	const idActivo = activeUnitId(curriculum, progress);
 	/** La cara del botón grande del pie (D53): jugar la activa, repasar o «llega después». */
