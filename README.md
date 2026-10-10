@@ -16,7 +16,7 @@ como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acomp
 > abre en el mapa) está **ejecutado en `feat/plan-9-mapa-composicion`**, que sale de la del Plan 8:
 > T1-T5 hechas, **falta** la revisión final de la rama y el PR.
 > Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
-> esquemática**. 1486 tests, y `typecheck` y `lint` en verde.
+> esquemática**. 1493 tests, y `typecheck` y `lint` en verde.
 
 ---
 
@@ -49,7 +49,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1486 tests (1 omitido: el de ficheros de audio)
+pnpm test        # Vitest: 1493 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
