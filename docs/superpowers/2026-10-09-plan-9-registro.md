@@ -137,7 +137,7 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 | T2 | completa (de5622a, revisión limpia) | 0 | 0 de 6 (implementador) + 6 propias del revisor, 0 sobreviven |
 | T3 | completa (32a237d, revisión limpia) | 0 | 0 de 5 (implementador) + 10 de 12 propias del revisor mueren; M7 y M8 solo las ve un navegador (e2e) |
 | T4 | completa (b133042, revisión limpia) | 1 | 0 de 5 (implementador); 4 de 13 propias del revisor sobrevivían (tests de clase) y mueren tras la ronda 1 |
-| T5 | sin empezar | | |
+| T5 | completa (96855b6, revisión limpia) | 1 | n/a (docs, sin mutación) |
 
 ## Ejecución
 
@@ -185,3 +185,10 @@ Después vienen la revisión final de la rama en Opus (`high`) y la pasada visua
 - Task 4: complete (commits ae3feeb..b133042, review clean tras 1 ronda). Re-revisión: todos ADDRESSED; la mutación «pie sin bg-card» y «wordmark sin text-brand» repetidas por el revisor mueren. pnpm test 1486 verdes, e2e 33/33 (con el temporal, ya borrado).
 - Task 4: minor (deferred): quedan tres «CO1» anteriores a la tarea en `tokens.test.ts` (l.129, 141, 167).
 - Task 4: minor (deferred): LE6 no mata la opacidad en el botón `soon` (la mata PI3).
+
+### T5 (sesión 3)
+- Task 5: complete (commits e62b118..96855b6, review clean tras 1 ronda). Effort `medium`. Solo Markdown; `pnpm lint` limpio, grep de `StartScreen|Empezar` en docs vivos sin salida. README: 0 trampas vivas (tope 8) y 10 deudas (tope 10), las deudas 5 y 8 en 2 líneas. Ronda 1: cifra 1443 → 1486 en README:52, deudas 5 y 8 acortadas, SKILL.md:43 aclarado.
+- Ruling: I17 se crea en `docs/checklist-ipad.md` con los cinco puntos del brief (el registro decía que lo decidía T5). Cuesta borrar la entrada si el autor no quiere una checklist de dispositivo para este plan.
+- Task 5: minor (deferred): el spec `specs/2026-09-18-silabin-design.md` l.339 aún dice «Toca para empezar» (contradice D52). Triaje en la revisión final.
+- Task 5: minor (deferred): D6 y D26 del README conservan «logo» como decisiones históricas; solo D26 lleva «(el candado desde D51)».
+- Sesión 3 cerrada con T4 y T5. Pendiente: revisión final de la rama (Opus, `high`), pasada visual local y PR (solo con permiso del autor).
