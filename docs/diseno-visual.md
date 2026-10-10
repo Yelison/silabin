@@ -47,9 +47,9 @@ La primera propuesta (Plan 3) se conserva en los valores «antes».
 | `--color-node-locked` | fondo del nodo bloqueado o «próximamente» (MP6) | `#EDEEF2` |
 | `--color-node-locked-depth` | sombra sólida del nodo bloqueado (MP6) | `#D9DCE4` |
 | `--color-node-locked-ink` | símbolo y candado del nodo bloqueado; la referencia traía `#A7ADBA` (1,94 : 1), que no llega a 3 : 1 (MP6) | `#757A88` |
-| `--color-brand` | wordmark «Silabín» de la cabecera del mapa (Plan 9, MC8); 4.72 : 1 sobre `card` | `#A86300` |
-| `--color-world-0` … `--color-world-3` | base de la tarjeta de capítulo: lila, cielo, melocotón y beis (D48); **solo ahí** | `#D8CCFF`, `#CBEAFF`, `#FFD8C2`, `#E9E2D7` |
-| `--color-chapter-edge` | filo inferior de la tarjeta de capítulo (decoración); 1.4-2.0 : 1 sobre las bases y `surface` | `#B4AEBD` |
+| `--color-brand` | wordmark «Silabín» de la cabecera del mapa (Plan 9, MC8); 6.72 : 1 sobre `card`; lo fijó el autor (D61), pariente de `trace-ink` (aviso aceptado) | `#5B3FD6` |
+| `--color-world-0` … `--color-world-3` | base de la tarjeta de capítulo: lila, cielo, melocotón y beis (D48; colores fijados por el autor, D61); **solo ahí** | `#C9B8FF`, `#A8DCFF`, `#FFC29E`, `#D9CDB8` |
+| `--color-chapter-edge` | filo inferior de la tarjeta de capítulo (decoración); 1.4-2.4 : 1 sobre las bases y `surface` (se aclaró el borde a `#A69FB3` con D61: `#B4AEBD` daba 1.21 sobre `world-0`) | `#A69FB3` |
 | `--color-mark` | fondo de la opción marcada por el modelo | `#FFE27A` |
 | `--color-mark-border` | borde de la opción marcada por el modelo | `#AC7600` |
 | `--color-celebrate` | solo celebraciones y estrellas | `#E99810` |
@@ -86,9 +86,9 @@ Calculado con la fórmula de contraste relativo de WCAG 2.x sobre los valores de
 | `card` sobre `calm-border` | 3.72 : 1 | Sí (símbolo blanco sobre el nodo completado, ≥ 3 : 1) |
 | `node-locked-ink` sobre `node-locked` | 3.70 : 1 | Sí (símbolo bloqueado, ≥ 3 : 1) |
 | `node-locked-ink` sobre `card` | 4.29 : 1 | Sí (candado sobre su insignia, ≥ 3 : 1) |
-| `brand` sobre `card` | 4.72 : 1 | Sí (wordmark; #b86f13 daba 3.95, Ruling de T1 del Plan 9) |
-| `ink` sobre `world-0` / `world-1` / `world-2` / `world-3` | 9.45 / 11.31 / 10.70 / 11.02 : 1 | Sí (≥ 7 : 1, texto de la tarjeta) |
-| `chapter-edge` sobre `world-0` / `world-1` / `world-2` / `world-3` / `surface` | 1.44 / 1.72 / 1.63 / 1.68 / 2.04 : 1 | Decoración: el test exige ≥ 1.4 : 1 y no hay texto |
+| `brand` sobre `card` | 6.72 : 1 | Sí (wordmark; color del autor, D61) |
+| `ink` sobre `world-0` / `world-1` / `world-2` / `world-3` | 7.95 / 9.68 / 9.09 / 9.03 : 1 | Sí (≥ 7 : 1, texto de la tarjeta) |
+| `chapter-edge` sobre `world-0` / `world-1` / `world-2` / `world-3` / `surface` | 1.43 / 1.74 / 1.64 / 1.62 / 2.42 : 1 | Decoración: el test exige ≥ 1.4 : 1 y no hay texto |
 
 Todos estos pares los recalcula `src/app/tokens.test.ts` (CO1) leyendo `globals.css`; la página
 de desarrollo `/dev/arte` los enseña con el color que pinta el navegador. Fuera de la tabla:
