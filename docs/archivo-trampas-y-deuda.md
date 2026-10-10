@@ -29,8 +29,9 @@ se ignoraba. Estado tras el Plan 2:
 6. ✅ **Exportar no tenía interfaz.** Resuelta con una exportación mínima (D6):
    `ExportGesture` en `src/features/adult/`. **Importar** desde la interfaz sigue siendo del
    Plan 6.
-7. ✅ **iOS exige un gesto antes de cualquier audio.** Resuelta: la primera pantalla es
-   `StartScreen` («Toca para empezar») y todo audio pasa por la cola de `AudioPlayer`.
+7. ✅ **iOS exige un gesto antes de cualquier audio.** Resuelta: el primer toque que inicia una sesión
+   desbloquea el audio (`features/start/use-arranque`; antes, la pantalla de inicio) y todo audio
+   pasa por la cola de `AudioPlayer`.
 8. ✅ **Los tests de componentes necesitan `jsdom`.** Resuelta en el Plan 5 (T1, e91db39):
    `vitest.config.ts` usa `test.projects` (`node` para `*.test.ts`, `jsdom` para
    `*.test.tsx`), y los centinelas `src/test-env.test.tsx` y `src/test-env-node.test.ts` fallan

@@ -57,7 +57,7 @@ Después de que el despliegue esté listo, con un iPad real:
    un segundo despliegue con otro commit: la revisión de la precaché de `/` sale de
    `VERCEL_GIT_COMMIT_SHA` (`src/app/serwist/revision.ts`), así que un redespliegue del mismo
    commit no cambia nada. El SW nuevo queda «esperando» (`skipWaiting: false`) hasta que
-   `StartScreen` pide `SKIP_WAITING`. Para el modo sin red, abrir antes el preview con red para
+   el primer toque de juego (`use-arranque`) pide `SKIP_WAITING`. Para el modo sin red, abrir antes el preview con red para
    que el SW se instale y precachee; para comprobarlo, buscar `sw.js` bajo `/serwist/` en
    DevTools → Application, no en la raíz.
 
