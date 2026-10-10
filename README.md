@@ -49,7 +49,7 @@ Requisitos: Node 22 y pnpm 10 (`packageManager: pnpm@10.33.3`).
 
 ```bash
 pnpm install
-pnpm test        # Vitest: 1443 tests (1 omitido: el de ficheros de audio)
+pnpm test        # Vitest: 1486 tests (1 omitido: el de ficheros de audio)
 pnpm typecheck   # tsc --noEmit, TypeScript estricto
 pnpm lint        # biome check src e2e
 pnpm dev         # Next.js: la aplicación, con las Fases 0, 1 y 2 jugables
@@ -798,15 +798,14 @@ Solo lo **pendiente**, con tope de 10 entradas. Nada bloquea. El resto, y el det
    desbloquea con el disco vacío; **importar** (D27) o recargar sí lo resuelven.
 4. **Accesibilidad y objetivos táctiles < 72 px:** modelo, `SaveWarning`, tambor, `<input type="file">` y
    bandeja de `build` (12 px, no 16). El mapa del Plan 8 no la amplía; detalle en el archivo.
-5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista
-   (D21 pide esquemática) y no hay `mouth-*.webp`; hay que rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
+5. **La boca sigue esquemática (bocas aplazadas):** el autor rechazó dos veces el arte fotorrealista (D21); sin
+   `mouth-*.webp`: rehacer la sección 5 de los prompts y poner `BOCAS_PUBLICADAS = true`. Arte, no test.
 6. **Arte y glifos a criterio del autor:** ilustraciones dudosas (`una`, `asa`, `sumo`, iglú...) y los
    glifos sin arte (V10: 🔁, ✓, ✕, ★/☆). Es gusto, no test.
 7. **Minors de los Planes 2, 3, 6 y 7** (ledgers y archivo): `ParentGate` sin `.catch`, `DataSection`,
    `TrailLayer`, duplicaciones del motor y los del arte. Limpieza sin test posible.
-8. **Minors y decisiones de los Planes 8 y 9** (ledgers y archivo). MP4 y MP12 están **cerradas** (D59, D60). Vivas:
-   MP15 (tocar una terminada), la continuidad del camino entre fases, el color del wordmark y de las tarjetas, y, de T3 y T4, el pie
-   sin `safe-area-inset-bottom` en el pie, «Mis premios» partido a 320 px y M7/M8 solo vistos por e2e. Gusto o dispositivo, no test.
+8. **Minors y decisiones de los Planes 8 y 9** (ledgers y archivo; MP4 y MP12 cerradas, D59, D60): MP15, la continuidad del
+   camino entre fases, el color del wordmark y las tarjetas, el pie sin `safe-area-inset-bottom`, «Mis premios» a 320 px y M7/M8 solo en e2e.
 9. **`speechTarget` copia `item.text` y `phonemes` sin adaptar tildes ni acento** (M16, P14).
    Solo importa con evaluadores `browser`/`azure`, que aún no existen.
 10. **El e2e y algún test son frágiles:** semilla 7 (S22), `apaisado › build` y `planner.test.ts` bajo
