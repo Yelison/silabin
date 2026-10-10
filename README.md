@@ -5,18 +5,13 @@ español desde cero: conciencia fonológica, vocales y sílabas CV, con pistas e
 repaso espaciado, validación por voz y recompensas. Uso principal en iPad/iPhone con Safari,
 como PWA; debe funcionar en cualquier navegador moderno. El adulto siempre acompaña.
 
-> **Estado a 2026-10-09:** el núcleo (Plan 1, PR #1), la primera sesión jugable (Plan 2, PR #3),
+> **Estado a 2026-10-10:** el núcleo (Plan 1, PR #1), la primera sesión jugable (Plan 2, PR #3),
 > la Fase 0 (Plan 3, PR #4), `trace` (Plan 4, PR #5), la voz (Plan 5), lo funcional del Plan 6
-> (PR #7) y la identidad visual del Plan 7 (PR #8: arte del loro y el elefantito, fondos,
-> pegatinas, iconos y paleta final) están fusionados en `main`. Hoy son jugables las tres fases.
-> El **Plan 8** (el mapa como camino en serpiente) está **ejecutado en su rama**
-> `feat/plan-8-mapa-camino`, sin fusionar: T1-T4 y la revisión final (corregida) hechas;
-> pasada visual local hecha (2026-10-09); **falta** que el autor despliegue el preview (D29). El PR
-> contra `main` incluye el #10. El **Plan 9** (cabecera, tarjetas de capítulo y pie del mapa; la app
-> abre en el mapa) está **ejecutado en `feat/plan-9-mapa-composicion`**, que sale de la del Plan 8:
-> T1-T5 hechas, **falta** la revisión final de la rama y el PR.
-> Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35) y la **boca sigue
-> esquemática**. 1493 tests, y `typecheck` y `lint` en verde.
+> (PR #7), la identidad visual del Plan 7 (PR #8), el mapa como camino en serpiente del Plan 8
+> (PR #11, que incluye el #10) y su composición completa del Plan 9 (PR #12: cabecera, tarjetas de
+> capítulo, pie fijo; la app abre en el mapa) están fusionados en `main`. Hoy son jugables las tres
+> fases. Sigue pendiente la prueba del autor con `docs/checklist-ipad.md` (D29, D35, I17), el
+> despliegue del preview, y la **boca sigue esquemática**. 1493 tests, y `typecheck` y `lint` en verde.
 
 ---
 
@@ -588,11 +583,10 @@ falta la pasada visual del preview (ver «Siguientes pasos»).
 
 ## Lo que ya está hecho: Plan 9
 
-Plan 9 = **el mapa con cabecera, tarjetas de capítulo y pie**, en la rama `feat/plan-9-mapa-composicion`
-(5 tareas; plan en `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md`, ledger en
+Plan 9 = **el mapa con cabecera, tarjetas de capítulo y pie**, (PR #12, fusionado; 5 tareas; plan en `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md`, ledger en
 `docs/superpowers/2026-10-09-plan-9-registro.md`, con D46-D60 [en la tabla](#decisiones-tomadas) y los
-rulings MC1-MC16). Sale de la rama del Plan 8 (D46): si el #11 se fusiona antes, se rebasa sobre
-`main`. **Sin PR todavía**: faltan la revisión final de la rama y la pasada visual del cierre.
+rulings MC1-MC16). Salió de la rama del Plan 8 (D46); el #11 se fusionó antes y el #12 fue directo a `main`.
+Revisión final de la rama y pasada visual hechas; ver el cierre del ledger.
 
 - **T1, datos y tokens (`f875024`):** nombres de mundo en `content/`, tokens `brand`, `world-0`…`world-3`
   y Nunito como `--font-sans` (Andika sigue en lectura).
@@ -648,19 +642,13 @@ locuciones × 3 acentos (393 ficheros) se generan después sin rehacer nada.
 
 ## Siguientes pasos concretos
 
-**Plan 9 ejecutado en su rama (T1-T5, 2026-10-09); el Plan 8 sigue sin fusionar (#11).** Queda, en este orden:
+**Planes 8 y 9 fusionados (#11, #12).** Queda, en este orden:
 
-1. **Revisión final de la rama del Plan 9 en Opus (`high`)**, contra `feat/plan-8-mapa-camino` o contra
-   `main` si el #11 ya está fusionado (D46). Triaje de los `minor (deferred)` del ledger.
-2. **Pasada visual local** con `~/qa-silabin` (build de producción, webkit y chromium, a 320, 390, 834,
-   1194 y 844 × 390, contra `referencia-834.png`) y **confirmar con el autor el color del wordmark y de
-   las tarjetas**.
-3. **Abrir el PR del Plan 9** contra `main` cuando el autor lo autorice. Si el #11 sigue abierto, el
-   del Plan 8 va primero (D44, D46).
-4. **Desplegar el preview** (D29) y **cerrar la deuda 1 con dispositivo real** en
+1. **Confirmar con el autor el color del wordmark y de las tarjetas** (`brand` #a86300; cuesta un token).
+2. **Desplegar el preview** (D29) y **cerrar la deuda 1 con dispositivo real** en
    `docs/checklist-ipad.md` (I1-I3, I6, H1, P1-P3, P8, P9, I12-I13, I15 con niño, I16 y el nuevo I17).
    Nadie lo prueba por el autor.
-5. **Después:** rehacer la boca (deuda 5) y, si procede, el refactor del resto de pantallas o los
+3. **Después:** rehacer la boca (deuda 5) y, si procede, el refactor del resto de pantallas o los
    objetos de los compañeros.
 
 ---
