@@ -104,6 +104,13 @@ const PARES_TEXTO: [string, string][] = [
 	["ink-soft", "surface"],
 	["ink-soft", "card"],
 	["action-ink", "action"],
+	// Plan 9: el wordmark (MC8, texto normal para no abrir la categoría de «texto grande») y
+	// el texto del mapa sobre cada capítulo.
+	["brand", "card"],
+	["ink", "world-0"],
+	["ink", "world-1"],
+	["ink", "world-2"],
+	["ink", "world-3"],
 ];
 const PARES_BORDE: [string, string][] = [
 	["calm-border", "surface"],
@@ -128,6 +135,16 @@ describe("tokens de color (V14)", () => {
 		for (const [fg, bg] of PARES_BORDE) {
 			const ratio = contraste(token(tokens, fg), token(tokens, bg));
 			expect(ratio, `${fg} sobre ${bg}`).toBeGreaterThanOrEqual(3);
+		}
+	});
+
+	it("CO1: ink sobre cada color de mundo llega a 7 : 1 (texto del mapa sobre el capítulo)", () => {
+		for (const n of [0, 1, 2, 3]) {
+			const ratio = contraste(
+				token(TOKENS, "ink"),
+				token(TOKENS, `world-${n}`),
+			);
+			expect(ratio, `ink sobre world-${n}`).toBeGreaterThanOrEqual(7);
 		}
 	});
 
