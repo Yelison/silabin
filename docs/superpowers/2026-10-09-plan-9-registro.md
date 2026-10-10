@@ -2,7 +2,7 @@
 
 Rama: `feat/plan-9-mapa-composicion`, creada el 2026-10-09 sobre `feat/plan-8-mapa-camino`
 (`1884234`), porque el PR #11 del Plan 8 sigue abierto (D46).
-Plan: `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md` (por escribir).
+Plan: `docs/superpowers/plans/2026-10-09-silabin-mapa-composicion.md` (5 tareas).
 Referencia de diseño: `docs/visual-refactor/map-preview.html` (captura en
 `~/qa-silabin/out/mapa/referencia-834.png`; el estado de partida en `chromium-834-base.png`).
 
@@ -16,9 +16,9 @@ retomar, léelo primero con `grep -n "^## \|^### "` y el tramo final.
 |---|---|
 | Decisiones con el autor (D46-D60) | **hechas** (2026-10-09, abajo) |
 | Rulings de diseño (prefijo MC) | **fijados** (abajo) |
-| Revisión del autor de este spec | pendiente |
-| Redacción del plan | sin empezar (Opus, `superpowers:writing-plans`) |
-| Ejecución | sin empezar (Sonnet, `superpowers:subagent-driven-development`) |
+| Revisión del autor de este spec | **aprobado** (2026-10-09) |
+| Redacción del plan | **hecha** (2026-10-09, Opus). Pendiente de la revisión del autor |
+| Ejecución | sin empezar. Siguiente: T1 en Sonnet, `/effort medium` |
 
 ## Objetivo
 
@@ -88,6 +88,9 @@ Cada uno con su porqué y lo que costaría si fuera equivocado.
   inicio, es quitar una bandera.
 - **MC8 · El wordmark tiene token propio**, un ámbar oscuro que pase CO1 sobre `card` como texto
   grande (≥ 3 : 1). El de la referencia da menos. El ✦ va en `calm-border`. Coste: un token.
+  **Ajustado al escribir el plan:** se exige 4,5 : 1 (par de texto normal en `tokens.test.ts`)
+  para no abrir una categoría de «texto grande» en CO1. Coste: un ámbar algo más oscuro que la
+  referencia.
 - **MC9 · El compañero del pie mide 72 px, y 56 px en `apaisado-bajo:`** (teléfono en horizontal,
   donde el alto manda). No es un objetivo táctil. Coste: dos clases.
 - **MC10 · `SavedMark` no se mueve** (flotante, `z-20`). La pasada visual comprueba que no pisa
