@@ -120,4 +120,16 @@ describe("MapHeader", () => {
 			.closest("header");
 		expect(sin?.className).not.toContain("pr-12");
 	});
+
+	it("MC8: el wordmark va en text-brand, el ✦ en text-calm-border y la cabecera en bg-card opaco (MC14)", () => {
+		montar();
+		const titulo = screen.getByRole("heading", { name: "Silabín" });
+		expect(titulo.className.split(/\s+/)).toContain("text-brand");
+		expect(titulo.className).toContain("font-extrabold");
+		const estrella = titulo.querySelector('[aria-hidden="true"]');
+		expect(estrella?.className.split(/\s+/)).toContain("text-calm-border");
+		const cabecera = titulo.closest("header");
+		expect(cabecera?.className.split(/\s+/)).toContain("bg-card");
+		expect(cabecera?.className).not.toMatch(/opacity|bg-card\//);
+	});
 });

@@ -53,6 +53,9 @@ describe("ChapterCard", () => {
 		const { container } = render(<ChapterCard phase={1} mastered={null} />);
 		const clases = container.firstElementChild?.className ?? "";
 		expect(clases).toContain("border-b-4");
+		// El filo usa su propio token: `node-locked-depth` casi no se veía sobre world-2 y world-3.
+		expect(clases.split(/\s+/)).toContain("border-chapter-edge");
+		expect(clases).not.toContain("border-node-locked-depth");
 		expect(clases).toContain("text-ink");
 		expect(clases).not.toMatch(/opacity|\/\d/);
 	});

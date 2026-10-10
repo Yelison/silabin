@@ -76,7 +76,19 @@ describe("MapFooter", () => {
 		const pie = container.firstElementChild as HTMLElement;
 		const companero = screen.getByRole("img", { name: "Tu compañero" });
 		expect(pie.contains(companero)).toBe(true);
-		expect(companero.className).toContain("apaisado-bajo:");
+		// MC9: 72 px y 56 px en teléfono apaisado, con las clases enteras (no basta la variante).
+		const clases = companero.className.split(/\s+/);
+		expect(clases).toContain("size-18");
+		expect(clases).toContain("apaisado-bajo:size-14");
+	});
+
+	it("MC14: la raíz del pie es una superficie opaca de token (bg-card), no solo sus botones", async () => {
+		const { container } = await montar("play");
+		const pie = container.firstElementChild as HTMLElement;
+		expect(pie.tagName).toBe("FOOTER");
+		const clases = pie.className.split(/\s+/);
+		expect(clases).toContain("bg-card");
+		expect(pie.className).not.toMatch(/opacity|bg-card\//);
 	});
 
 	it("el botón grande mide al menos 72 px en los tres modos", async () => {

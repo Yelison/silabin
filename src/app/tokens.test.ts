@@ -148,7 +148,7 @@ describe("tokens de color (V14)", () => {
 		}
 	});
 
-	it("CO1: el borde del capítulo se distingue de cada mundo y del panel (≥ 1,4 : 1, decoración)", () => {
+	it("CO5: el borde del capítulo se distingue de cada mundo y del panel (≥ 1,4 : 1, decoración)", () => {
 		for (const fondo of [
 			"world-0",
 			"world-1",

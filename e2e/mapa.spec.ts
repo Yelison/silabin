@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { curriculum } from "@/engine";
 import { emptyPersistedState, persistedStateSchema } from "@/store/schema";
+import { sinDesbordeHorizontal } from "./helpers/desborde";
 import { empezar } from "./helpers/documentos";
 import { sembrar } from "./helpers/seed";
 
@@ -108,12 +109,10 @@ for (const vp of VIEWPORTS) {
 			expect(Math.abs(clap.y - rhyme.y)).toBeLessThanOrEqual(1);
 		});
 
-		test("sin scroll horizontal", async ({ page }) => {
-			const { scroll, ancho } = await page.evaluate(() => ({
-				scroll: document.documentElement.scrollWidth,
-				ancho: innerWidth,
-			}));
-			expect(scroll).toBeLessThanOrEqual(ancho);
+		test("sin scroll horizontal, ni en el documento ni en la zona del camino", async ({
+			page,
+		}) => {
+			await sinDesbordeHorizontal(page, `${vp.width}`);
 		});
 
 		test(`la Fase 1 se reparte en ${vp.columnas} posiciones horizontales (${vp.layout})`, async ({
@@ -207,6 +206,7 @@ for (const vp of VIEWPORTS) {
 			expect(pagina, `la página no se desplaza ${cuando}`).toBeLessThanOrEqual(
 				ventana,
 			);
+			await sinDesbordeHorizontal(page, `${vp.width} ${cuando}`);
 		};
 		await dentro("antes");
 		const desplazable = await page.locator("main > div").evaluate((e) => {
@@ -245,11 +245,7 @@ test("LY3: a 844 × 390 el nodo activo, con 14 px de aro, cabe entre la cabecera
 	expect(activo.b + 14, "el aro no pasa bajo el pie").toBeLessThanOrEqual(
 		c.pie.t,
 	);
-	const { scroll, ancho } = await page.evaluate(() => ({
-		scroll: document.documentElement.scrollWidth,
-		ancho: document.documentElement.clientWidth,
-	}));
-	expect(scroll).toBeLessThanOrEqual(ancho);
+	await sinDesbordeHorizontal(page, "844×390");
 });
 
 test("LY4: con el aviso de guardado a la vista, su icono y el candado de la cabecera no se solapan", async ({
@@ -282,14 +278,7 @@ test("LY4: con el aviso de guardado a la vista, su icono y el candado de la cabe
 			l.x < a.x + a.width &&
 			a.y < l.y + l.height &&
 			l.y < a.y + a.height;
-		const { scroll, ancho } = await page.evaluate(() => ({
-			scroll: document.documentElement.scrollWidth,
-			ancho: document.documentElement.clientWidth,
-		}));
-		expect(
-			scroll,
-			`${vp.width}: sin scroll horizontal con el aviso`,
-		).toBeLessThanOrEqual(ancho);
+		await sinDesbordeHorizontal(page, `${vp.width} con el aviso`);
 		expect(
 			solapa,
 			`${vp.width}: aviso ${JSON.stringify(a)} candado ${JSON.stringify(l)}`,
